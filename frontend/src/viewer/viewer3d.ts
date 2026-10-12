@@ -41,6 +41,7 @@ import type { Building, Floor, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
 import { centroid, pointInPolygon, openingStyle, WALL_LAMP_Y } from "../model.ts";
 import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
+import { centredAt, floorLabelPosition, floorShowsMarkers, LabelPlacer, leftAt, project, stackFloorLabels, type FloorLabel, type ScreenPoint } from "./scene/labels.ts";
 import { easeFloor, fadeMaterials, floorShare, floorTarget } from "./scene/floor-motion.ts";
 import { atTarget, stepOpening, stepShare } from "./scene/opening-motion.ts";
 import { addCameraWedge, addLampHalo, addSpotCone, hiddenInCut, type HaloPoints } from "./scene/halos.ts";
@@ -426,7 +427,6 @@ export class NextFloorViewer {
   private floorMap = new Map<string, FloorView>();
   private labelsDirty = true;
   private readonly viewKey = new Float64Array(6);
-  private readonly placed = new WeakMap<HTMLElement, string>();
   private readonly pinMode = new WeakMap<HTMLElement, string>();
   private size = { w: 1, h: 1 };
   /** Width taken on the left by the host (the floor pictures); floor labels keep clear of it. */
@@ -453,6 +453,7 @@ export class NextFloorViewer {
   /** Furnishing: the selected device, the pin a pointer just went down on, and a device being dragged. */
   private selectedDevice: string | null = null;
   private pendingDevice: string | null = null;
+  private readonly labelPlacer = new LabelPlacer();
   /** What the device pins ask of this viewer. */
   private readonly pinHooks: PinHooks = {
     furnishing: () => this.furnish,
@@ -2617,74 +2618,39 @@ export class NextFloorViewer {
     return true;
   }
 
-  /** Move a label (null hides it); transform and hidden are only written when they changed. */
-  private place(el: HTMLElement, transform: string | null): void {
-    const hidden = transform === null;
-    if (el.hidden !== hidden) el.hidden = hidden;
-    if (transform !== null && this.placed.get(el) !== transform) {
-      this.placed.set(el, transform);
-      el.style.transform = transform;
-    }
+  /** The screen place of a point of a floor, which moves with the floor while it animates. */
+  private screenPoint(point: [number, number, number], margin = 1.05): ScreenPoint {
+    return project(this.camera, point, this.size, margin);
   }
 
+  /** Places the floor labels (house view), the room labels, and the pins of devices and persons. */
   private updateLabels(): void {
-    const { w, h } = this.size;
-    const v = new Vector3();
     const house = this.houseView;
-    const placed: { fv: FloorView; left: number; y: number; h: number }[] = [];
+    const labels: (FloorLabel & { fv: FloorView })[] = [];
     for (const fv of this.floors) {
       const box = fv.bbox;
       if (!(house && fv.o > 0.5 && box)) {
-        this.place(fv.label, null);
+        this.labelPlacer.place(fv.label, null);
         continue;
       }
-      // left of the leftmost corner of the floor's bounding box, at half the cut height;
-      // right of the rightmost one when the floor pictures take that space
-      let best: { x: number; y: number } | null = null;
-      let right: { x: number; y: number } | null = null;
+      // the corners of the floor's box at half the cut height
       const y = fv.floor.elevation + fv.y + fv.floor.cut_height * 0.5;
-      for (const x of [box.x0, box.x1]) {
-        for (const z of [box.z0, box.z1]) {
-          v.set(x, y, z).project(this.camera);
-          const sx = ((v.x + 1) / 2) * w;
-          const sy = ((1 - v.y) / 2) * h;
-          if (!best || sx < best.x) best = { x: sx, y: sy };
-          if (!right || sx > right.x) right = { x: sx, y: sy };
-        }
-      }
+      const corners = [box.x0, box.x1].flatMap((x) => [box.z0, box.z1].map((z) => this.screenPoint([x, y, z], Infinity)));
       if (fv.label.hidden) fv.label.hidden = false;
       fv.labelSize ??= { w: fv.label.offsetWidth, h: fv.label.offsetHeight };
-      const lw = fv.labelSize.w;
-      const minLeft = 8 + this.labelInset;
-      let left = best!.x - lw - 14;
-      let py = best!.y;
-      if (left < minLeft && this.labelInset) {
-        left = right!.x + 14;
-        py = right!.y;
-      }
-      placed.push({ fv, left: Math.max(minLeft, Math.min(w - lw - 8, left)), y: py, h: fv.labelSize.h });
+      const spot = floorLabelPosition(corners, fv.labelSize.w, { width: this.size.w, inset: this.labelInset });
+      labels.push({ fv, rank: fv.rank, left: spot.left, y: spot.y, height: fv.labelSize.h });
     }
-    // top floor first; each lower label keeps below the one above so labels never cover each other
-    placed.sort((a, b) => b.fv.rank - a.fv.rank);
-    for (let i = 1; i < placed.length; i++) {
-      const above = placed[i - 1];
-      placed[i].y = Math.max(placed[i].y, above.y + (above.h + placed[i].h) / 2 + 8);
-    }
-    for (const p of placed) this.place(p.fv.label, `translate(${p.left}px, ${p.y}px) translate(0, -50%)`);
-    this.updateDevicePins(w, h);
+    for (const label of stackFloorLabels(labels)) this.labelPlacer.place(label.fv.label, leftAt(label.left, label.y));
+    this.updateDevicePins();
     for (const fv of this.floors) {
-      // in the house view, room labels would pile up between the floors; in a room its panel names it;
-      // floors stacked below an opened floor carry no labels
+      // in the house view room labels would pile up between the floors, in a room its panel names it, and floors stacked below an
+      // opened floor carry none
       const hide = fv.to < 0.99 || fv.o < 0.9 || house || this.roomId !== null || this.otherFloor(fv);
       const y = fv.floor.elevation + fv.y + 0.05;
-      for (const rp of fv.roomPins) {
-        if (hide) {
-          this.place(rp.pin, null);
-          continue;
-        }
-        v.set(rp.cx, y, rp.cz).project(this.camera);
-        const off = v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1;
-        this.place(rp.pin, off ? null : `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px) translate(-50%, -50%)`);
+      for (const roomPin of fv.roomPins) {
+        const spot = hide ? null : this.screenPoint([roomPin.cx, y, roomPin.cz], 1.1);
+        this.labelPlacer.place(roomPin.pin, spot && !spot.off ? centredAt(spot) : null);
       }
     }
   }
@@ -2694,45 +2660,35 @@ export class NextFloorViewer {
     return this.floorId !== null && fv.floor.id !== this.floorId;
   }
 
-  private updateDevicePins(w: number, h: number): void {
-    const v = new Vector3();
+  private updateDevicePins(): void {
     const house = this.houseView;
-    for (const p of this.persons) {
-      const pin = this.personPins.get(p.id);
-      const fv = this.floorMap.get(p.floorId);
+    for (const person of this.persons) {
+      const pin = this.personPins.get(person.id);
+      const fv = this.floorMap.get(person.floorId);
       if (!pin) continue;
-      if (!fv || house || fv.to < 0.99 || fv.o < 0.9 || this.otherFloor(fv)) {
-        this.place(pin, null);
-        continue;
-      }
-      v.set(p.x, fv.floor.elevation + fv.y + 0.9, p.z).project(this.camera);
-      const off = v.z > 1 || Math.abs(v.x) > 1.05 || Math.abs(v.y) > 1.05;
-      this.place(pin, off ? null : `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px) translate(-50%, -50%)`);
+      const spot = fv && !house && floorShowsMarkers(fv, this.otherFloor(fv)) ? this.screenPoint([person.x, fv.floor.elevation + fv.y + 0.9, person.z]) : null;
+      this.labelPlacer.place(pin, spot && !spot.off ? centredAt(spot) : null);
     }
-    for (const d of this.devices) {
-      const pin = this.devicePins.get(d.id)?.el;
+    for (const marker of this.devices) {
+      const pin = this.devicePins.get(marker.id)?.el;
       if (!pin) continue;
-      const fv = this.floorMap.get(d.floorId);
-      // device markers belong to the floor and room views; the house view only shows floor labels –
-      // except what a camera detects right now: that is worth a pin on the whole house too
-      const alert = d.id.startsWith("detect:");
-      if (!fv || (house && !alert) || fv.to < 0.99 || fv.o < 0.9 || d.pin === false || this.otherFloor(fv)) {
-        this.place(pin, null);
+      const fv = this.floorMap.get(marker.floorId);
+      // device markers belong to the floor and room views; the house view only shows floor labels, except what a camera detects
+      // right now, which deserves a pin on the whole house too
+      const alert = marker.id.startsWith("detect:");
+      const shown = !!fv && (!house || alert) && floorShowsMarkers(fv, this.otherFloor(fv)) && marker.pin !== false;
+      const spot = shown ? this.screenPoint([marker.x, fv.floor.elevation + fv.y + marker.y, marker.z]) : null;
+      if (!spot || spot.off) {
+        this.labelPlacer.place(pin, null);
         continue;
       }
-      v.set(d.x, fv.floor.elevation + fv.y + d.y, d.z).project(this.camera);
-      const off = v.z > 1 || Math.abs(v.x) > 1.05 || Math.abs(v.y) > 1.05;
-      if (off) {
-        this.place(pin, null);
-        continue;
-      }
-      const mode = this.roomId === null ? (d.full ? "full" : "") : d.roomId === this.roomId ? "full" : "dim";
+      const mode = this.roomId === null ? (marker.full ? "full" : "") : marker.roomId === this.roomId ? "full" : "dim";
       if (this.pinMode.get(pin) !== mode) {
         this.pinMode.set(pin, mode);
         pin.classList.toggle("nf-dev-full", mode === "full");
         pin.classList.toggle("nf-dev-dim", mode === "dim");
       }
-      this.place(pin, `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px) translate(-50%, -50%)`);
+      this.labelPlacer.place(pin, centredAt(spot));
     }
   }
 

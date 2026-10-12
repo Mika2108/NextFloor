@@ -21,6 +21,8 @@ export interface LiveScreen {
   app: string | null;
   picture: string | null;
   playing: boolean;
+  /** Strength of the glow on the wall behind the screen: 1 is the usual, 0 switches it off. */
+  ambilight?: number;
 }
 
 const DEG = Math.PI / 180;
@@ -182,7 +184,8 @@ export class ScreenLayer {
     v.glow.rotation.set(0, -a, 0);
     v.glow.scale.set(w * 2.4, h * 2.6, 1);
     (v.glow.material as MeshBasicMaterial).color = new Color(s.color[0] / 255, s.color[1] / 255, s.color[2] / 255);
-    v.screen.visible = v.glow.visible = l.visible;
+    v.screen.visible = l.visible;
+    v.glow.visible = l.visible && (s.ambilight ?? 1) > 0;
   }
 
   step(now: number): boolean {
@@ -191,7 +194,7 @@ export class ScreenLayer {
       this.place(v);
       // the ambilight breathes while it plays, and rests dim while paused
       const m = v.glow.material as MeshBasicMaterial;
-      m.opacity = v.s.playing ? 0.55 + 0.25 * Math.sin(now / 900 + v.s.x) : 0.25;
+      m.opacity = (v.s.playing ? 0.55 + 0.25 * Math.sin(now / 900 + v.s.x) : 0.25) * Math.min(1.5, v.s.ambilight ?? 1);
       moving ||= v.s.playing;
     }
     return moving;

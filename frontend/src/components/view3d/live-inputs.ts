@@ -68,6 +68,7 @@ export function liveScreens(hass: HomeAssistant, building: Building, links: Read
         app,
         picture: text(attributes, "entity_picture") || null,
         playing: state.state === "playing",
+        ambilight: furniture.ambilight ?? 1,
       });
     }
   }

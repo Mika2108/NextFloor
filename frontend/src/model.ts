@@ -138,6 +138,8 @@ export interface Furniture {
   show_name?: boolean;
   /** Lamps: how strongly the lamp glows in 3D, 0.1–1.5 (1 = as bright as the light reports) – #181. */
   glow_scale?: number | null;
+  /** Screens: how strongly the glow behind a playing TV shines, 0 to 1.5 (null = 1, 0 = off). */
+  ambilight?: number | null;
   /** An own symbol for the marker: a Material Design icon name without "mdi:" (null = by kind). */
   icon?: string | null;
   /** Linked entity, e.g. the TV's media player (null = automatic, "none" = none). */

@@ -1,49 +1,51 @@
-// Furniture from imported packs (see custom_components/nextfloor/packs.py for the format). Pack
-// furniture has the type "pack:<pack id>:<item id>". Every bundle (main, editor, 3D) keeps its own
-// registry, filled with setPacks() from the packs the backend returns.
+// Furniture packs. A pack is a file with items made of simple parts (format: custom_components/nextfloor/packs.py).
+// Placed pack furniture has the type "pack:<pack id>:<item id>". Each bundle (main, editor, 3D) holds its own
+// registry, filled through setPacks() with what the backend returned.
 
 import { builtinBase, ELECTRIC_FURNITURE, FURNITURE_SIZE, surfaceHeight, WALL_LAMP_Y, type Floor, type Furniture } from "./model.ts";
 import type { LampModel } from "./viewer/viewer3d.ts";
 
+/** One building block of an item. Positions and extents are fractions of the item's own size. */
 export interface PackPart {
-  /** A box, a cylinder, a loft (a box whose top face is another rectangle) or a sweep (a smooth body along z). */
+  /** box, cylinder, loft (a box whose top face is a different rectangle) or sweep (a smooth body along z). */
   shape: "box" | "cyl" | "loft" | "sweep";
-  /** Centre across and in depth (fractions -0.5..0.5 of the item's width and depth, front at +z). */
+  /** Centre across and in depth, -0.5..0.5 of width and depth; the front is +z. */
   x: number;
   z: number;
-  /** Extent in fractions of the item's width and depth; a cylinder's diameter is the smaller one. */
+  /** Extent in fractions of width and depth (a cylinder's diameter is the smaller of the two). */
   w: number;
   d: number;
-  /** Bottom and height in fractions of the item's height. */
+  /** Underside and height, as fractions of the item's height. */
   y: number;
   h: number;
-  /** "#rrggbb" or a palette role ("body", "fabric", "wood", …). */
+  /** "#rrggbb", or the name of a palette role such as "body", "fabric" or "wood". */
   color: string;
   top?: string;
-  /** Outline: true (soft blue), "glow" (cyan like the walls) or "faint". */
+  /** Edge lines: true (soft blue), "glow" (cyan, like the walls) or "faint". */
   edges?: boolean | "glow" | "faint";
-  /** Lamps: shines in the colour and brightness of the linked light. */
+  /** A lamp part: lights up in the colour and brightness of the linked light. */
   glow?: boolean;
-  /** A screen: shows the linked media player's app colour and picture on its front (+z). */
+  /** A screen: shows the colour and picture of the linked media player on its front face. */
   screen?: boolean;
-  /** Loft: centre and extent of the top rectangle (defaults: the same as the bottom). */
+  /** Loft: centre and size of the top rectangle (default: same as the base). */
   tx?: number;
   tz?: number;
   tw?: number;
   td?: number;
-  /** Cylinder axis: upright (y, default) or lying along x or z (wheels, pipes, rollers). */
+  /** Cylinder axis: upright (y, the default) or lying along x or z (wheels, pipes, rollers). */
   axis?: "x" | "y" | "z";
-  /** Sweep: cross sections along z as [z, bottom, top, width] in fractions of the item's depth, height and width. */
+  /** Sweep: cross sections along z as [z, bottom, top, width], as fractions of depth, height and width. */
   stations?: [number, number, number, number][];
-  /** Sweep: how boxy the cross section is (2 = ellipse) and how many points go round it. */
+  /** Sweep: how boxy a cross section is (2 is an ellipse) and how many points go around it. */
   exp?: number;
   n?: number;
-  /** A body part drawn in the colour the item's owner picked (see PackItem.colors). */
+  /** Drawn in the colour the owner picked for the item (see PackItem.colors). */
   paint?: boolean;
-  /** Turn of the part around its own centre (degrees around the vertical axis). */
+  /** Turn around the part's own vertical axis, in degrees. */
   rot?: number;
 }
 
+/** A line drawing of an item for the 2D plan. */
 export type PackSymbol =
   | { shape: "rect"; x: number; z: number; w: number; d: number; fill?: boolean }
   | { shape: "circle"; x: number; z: number; r: number }
@@ -53,25 +55,25 @@ export interface PackItem {
   id: string;
   /** Names by language code. */
   name: Record<string, string>;
-  /** Default width, depth, height (metres). */
+  /** Standard width, depth and height in metres. */
   size: [number, number, number];
   electric?: boolean;
-  /** On the floor, on the furniture below, on a wall (bottom at wall_y) or hanging from the ceiling. */
+  /** Stands on the floor, on furniture below it, on a wall (from wall_y up) or hangs from the ceiling. */
   mount?: "floor" | "surface" | "wall" | "ceiling";
   wall_y?: number;
-  /** Its top carries other items. */
+  /** Other items can stand on its top. */
   surface?: boolean;
-  /** A 3D model the owner uploaded (id of a .glb on their Home Assistant); the parts are the fallback. */
+  /** A 3D model the owner uploaded (the id of a .glb on their Home Assistant). The parts remain the fallback. */
   mesh?: string;
-  /** A vehicle: offered for parking spots. */
+  /** A vehicle; offered for parking spots. */
   vehicle?: boolean;
-  /** Stairs: cuts a stairwell opening into the floor above when it reaches it. */
+  /** Stairs: cut a stairwell into the floor above where they reach it. */
   hole?: boolean;
-  /** A lamp: how its light spreads. */
+  /** A lamp: the way its light spreads. */
   light?: LampModel;
   parts: PackPart[];
   symbol?: PackSymbol[];
-  /** Colours to choose from (stored as the furniture's variant); the first one is the default. */
+  /** Colours to choose from, stored as the furniture's variant. The first is the default. */
   colors?: { id: string; name: Record<string, string>; hex: string }[];
 }
 
@@ -80,94 +82,87 @@ export interface FurniturePack {
   name: string;
   publisher: string;
   description?: string;
-  /** Release number; a newer release of the same id replaces the installed one. */
+  /** A newer release of an installed id replaces it. */
   release?: number;
-  /** Comes with NextFloor (cannot be removed). */
+  /** Ships with NextFloor and cannot be removed. */
   builtin?: boolean;
   items: PackItem[];
   imported_at?: number;
 }
 
-let registry: FurniturePack[] = [];
-let items = new Map<string, PackItem>();
-let version = 0;
+// ---------------------------------------------------------------- registry
 
+let installed: FurniturePack[] = [];
+let byType = new Map<string, PackItem>();
+let generation = 0;
+
+export const packType = (packId: string, itemId: string): string => `pack:${packId}:${itemId}`;
+export const isPackType = (type: string): boolean => type.startsWith("pack:");
+
+/** Replaces the registry. */
 export function setPacks(packs: FurniturePack[]): void {
-  registry = packs;
-  items = new Map(packs.flatMap((p) => p.items.map((it) => [packType(p.id, it.id), it] as const)));
-  version++;
+  installed = packs;
+  byType = new Map();
+  for (const pack of packs) for (const item of pack.items) byType.set(packType(pack.id, item.id), item);
+  generation += 1;
 }
 
-export function getPacks(): readonly FurniturePack[] {
-  return registry;
+export const getPacks = (): readonly FurniturePack[] => installed;
+
+/** Increases with every setPacks(), so callers can tell that packs changed. */
+export const packsVersion = (): number => generation;
+
+/** Old pack ids that were merged into another pack; furniture placed from them keeps working. */
+const MERGED_PACKS: Record<string, string> = {};
+
+/** The item behind a pack type, or undefined for built-in types and removed packs. */
+export function packItem(type: string): PackItem | undefined {
+  if (!isPackType(type)) return undefined;
+  const direct = byType.get(type);
+  if (direct) return direct;
+  const [, packId, ...itemParts] = type.split(":");
+  const successor = MERGED_PACKS[packId];
+  return successor ? byType.get(packType(successor, itemParts.join(":"))) : undefined;
 }
 
-/** Changes with every setPacks(), to notice new packs. */
-export function packsVersion(): number {
-  return version;
-}
+// ---------------------------------------------------------------- what an item is
 
-export function packType(packId: string, itemId: string): string {
-  return `pack:${packId}:${itemId}`;
-}
+/** The screen part of an item, if it has one. */
+export const packScreen = (type: string): PackPart | undefined => packItem(type)?.parts.find((part) => part.screen);
 
-export function isPackType(type: string): boolean {
-  return type.startsWith("pack:");
-}
+const MIN_DISPLAY = 0.06; // metres
 
-/** The pack item of a furniture type (undefined for built-in types and removed packs). */
-/** Packs that were merged into another one: furniture placed from them keeps working. */
-const PACK_ALIASES: Record<string, string> = {};
-
-/** The screen part of a pack item (a TV or monitor), if it has one. */
-export function packScreen(type: string): PackPart | undefined {
-  return packItem(type)?.parts.find((p) => p.screen);
-}
-
-/**
- * A pack item with a real display (a TV, a monitor, a smart display) rather than a small status light (a
- * printer's panel, a wallbox's LED): one of its screen parts is at least 6 cm on both sides of its face.
- */
+/** A real display (TV, monitor) as opposed to a status light: some screen part is at least 6 cm in both directions. */
 export function packDisplay(type: string): boolean {
   const item = packItem(type);
   if (!item) return false;
-  const [W, D, H] = item.size;
-  return item.parts.some((p) => {
-    if (!p.screen) return false;
-    const [a, b] = [p.w * W, p.d * D, p.h * H].sort((x, y) => y - x);
-    return a >= 0.06 && b >= 0.06;
-  });
+  const [width, depth, height] = item.size;
+  return item.parts
+    .filter((part) => part.screen)
+    .some((part) => {
+      const [longest, middle] = [part.w * width, part.d * depth, part.h * height].sort((a, b) => b - a);
+      return middle >= MIN_DISPLAY && longest >= MIN_DISPLAY;
+    });
 }
 
-export function packItem(type: string): PackItem | undefined {
-  if (!isPackType(type)) return undefined;
-  const hit = items.get(type);
-  if (hit) return hit;
-  const [, pack, ...rest] = type.split(":");
-  const alias = PACK_ALIASES[pack];
-  return alias ? items.get(`pack:${alias}:${rest.join(":")}`) : undefined;
-}
-
-/** Default size of any furniture type. */
+/** The standard size of any furniture type; an unknown type gets a small default. */
 export function furnitureSize(type: string): [number, number, number] {
   return (FURNITURE_SIZE as Record<string, [number, number, number]>)[type] ?? packItem(type)?.size ?? [0.6, 0.6, 0.8];
 }
 
-/** Whether a type can be linked with entities (power sensor, switch …). */
+/** Whether entities (power sensor, switch ...) can be linked. A pack item that only lights counts: it links a light like a lamp. */
 export function isElectric(type: string): boolean {
-  // a pack item that only lights (a mirror with light, an aquarium) links a light like any lamp
-  return ELECTRIC_FURNITURE.has(type) || !!packItem(type)?.electric || !!packItem(type)?.light;
+  const item = packItem(type);
+  return ELECTRIC_FURNITURE.has(type) || !!item?.electric || !!item?.light;
 }
 
-/** Name of a pack item in a language (English, then the first name as fallback). */
+/** An item's name in a language: that language, else English, else whatever is there, else its id. */
 export function packItemName(item: PackItem, language: string): string {
-  const lang = language.split("-")[0];
-  return item.name[lang] ?? item.name.en ?? Object.values(item.name)[0] ?? item.id;
+  return item.name[language.split("-")[0]] ?? item.name.en ?? Object.values(item.name)[0] ?? item.id;
 }
 
-
-// English names of the packs that come with NextFloor: a pack file carries one (German) name, the furniture inside both
-const PACK_NAMES_EN: Record<string, string> = {
+// Pack files carry one name (German). The packs that ship with NextFloor get English names here.
+const ENGLISH_NAMES: Record<string, string> = {
   wohnen: "Living & Pets",
   kino: "Home Cinema & Gaming",
   kueche: "Kitchen Extras",
@@ -180,54 +175,51 @@ const PACK_NAMES_EN: Record<string, string> = {
   fahrzeuge: "Vehicles",
 };
 
-/** A pack's name in the user's language: the built-in packs in English outside German, others as they come. */
+/** The pack's name for the user's language: built-in packs are English outside German, other packs keep their own name. */
 export function packName(pack: { id: string; name: string }, language: string): string {
   if (language.split("-")[0] === "de") return pack.name;
-  const m = /^nextfloor\.(.+)$/.exec(pack.id);
-  return (m && PACK_NAMES_EN[m[1]]) || pack.name;
+  const short = /^nextfloor\.(.+)$/.exec(pack.id)?.[1];
+  return (short && ENGLISH_NAMES[short]) || pack.name;
 }
 
-/** Height of the bottom of a pack item, a wall light or an LED strip above the floor (0 for other built-in furniture). */
-export function mountBase(floor: Floor, f: Pick<Furniture, "type" | "x" | "z" | "h"> & { mount_y?: number | null }): number {
-  const item = packItem(f.type);
-  if (f.mount_y != null) return f.mount_y;
-  // wall lights at the usual height, LED strips just under the ceiling
-  if (f.type === "lamp_wall") return WALL_LAMP_Y;
-  if (f.type === "led_strip") return Math.max(0, floor.height - 0.04 - Math.max(0.02, f.h));
-  switch (item?.mount) {
+/** How high above the floor the underside of a piece is: pack items by their mount, wall lights, LED strips and own heights included. */
+export function mountBase(floor: Floor, piece: Pick<Furniture, "type" | "x" | "z" | "h"> & { mount_y?: number | null }): number {
+  if (piece.mount_y != null) return piece.mount_y;
+  if (piece.type === "lamp_wall") return WALL_LAMP_Y;
+  // LED strips sit just below the ceiling
+  if (piece.type === "led_strip") return Math.max(0, floor.height - 0.04 - Math.max(0.02, piece.h));
+  const item = packItem(piece.type);
+  if (!item) return builtinBase(piece);
+  switch (item.mount) {
     case "surface":
-      return surfaceHeight(floor, f.x, f.z);
+      return surfaceHeight(floor, piece.x, piece.z);
     case "wall":
       return item.wall_y ?? 1;
     case "ceiling":
-      return Math.max(0, floor.height - f.h);
+      return Math.max(0, floor.height - piece.h);
     default:
-      // built-in models: where they are drawn by default (a wall cabinet at 1.45 m)
-      return item ? 0 : builtinBase(f);
+      return 0;
   }
 }
 
 // ---------------------------------------------------------------- owned 3D models
-/** Fetches a model file by id (null when there is none): set by the host, which knows Home Assistant's login. */
+
+/** Fetches a model file by id, or null. Set by the host, which has Home Assistant's login. */
 export type MeshSource = (id: string) => Promise<ArrayBuffer | null>;
+
 let meshSource: MeshSource | null = null;
-const meshesReady = new Set<string>();
+const loadedMeshes = new Set<string>();
 
-export function setMeshSource(source: MeshSource | null): void {
+export const setMeshSource = (source: MeshSource | null): void => {
   meshSource = source;
-}
+};
+export const getMeshSource = (): MeshSource | null => meshSource;
 
-export function getMeshSource(): MeshSource | null {
-  return meshSource;
-}
+/** Records that a model has loaded and is drawn in place of its item's parts. */
+export const markMeshReady = (id: string): void => void loadedMeshes.add(id);
 
-/** A model has been loaded and is drawn instead of the item's parts. */
-export function markMeshReady(id: string): void {
-  meshesReady.add(id);
-}
-
-/** The item's own model is loaded: its parts are not drawn into the merged geometry then. */
+/** Whether the item's own model has loaded (then its parts stay out of the merged geometry). */
 export function hasMesh(type: string): boolean {
-  const id = items.get(type)?.mesh;
-  return !!id && meshesReady.has(id);
+  const id = byType.get(type)?.mesh;
+  return id !== undefined && loadedMeshes.has(id);
 }

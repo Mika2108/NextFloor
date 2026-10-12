@@ -1,6 +1,6 @@
-// Room packages: a set of furniture for a kind of room, placed against the walls of the room's
-// bounding box (back wall = top in the plan) or in the middle. Sizes follow FURNITURE_SIZE; rows of
-// items along a wall are laid side by side. The result is a starting point to adjust in the editor.
+// Room packages: a ready-made set of furniture for a kind of room. Pieces stand against the walls of
+// the room's bounding box in rows (the "back" wall is the top edge of the plan), the rest is placed freely.
+// It is a starting point that the editor then adjusts.
 
 import { bounds, FURNITURE_SIZE, type Furniture, type FurnitureType, type Room } from "./model.ts";
 
@@ -8,179 +8,180 @@ export const PACKAGES = ["kitchen_row", "kitchen_l", "bath", "bedroom", "living"
 export type PackageId = (typeof PACKAGES)[number];
 
 type Wall = "back" | "front" | "left" | "right";
+type Size = [width: number, depth: number, height: number];
 
-interface Item {
-  type: FurnitureType;
-  /** Width, depth, height override. */
-  size?: [number, number, number];
-}
+/** A piece, optionally with its own size instead of the standard one. */
+type Piece = FurnitureType | [FurnitureType, Size];
 
-interface Row {
-  wall: Wall;
-  /** Where the row starts along the wall (seen from inside the room: left end, centre, right end). */
-  align: "start" | "center" | "end";
-  items: Item[];
-}
+/** Pieces side by side along a wall, starting at one end or centred. */
+type Row = [wall: Wall, align: "start" | "center" | "end", pieces: Piece[]];
 
-interface Free {
-  type: FurnitureType;
-  /** Position as a fraction of the room box (0..1), rotation in degrees. */
-  at: [number, number];
-  rotation: number;
-  size?: [number, number, number];
-}
+/** A piece somewhere in the room: [piece, share of the width, share of the depth, turn in degrees]. */
+type Spot = [piece: Piece, fx: number, fz: number, turn: number];
 
-interface Package {
+interface Recipe {
   rows: Row[];
-  free: Free[];
+  spots: Spot[];
 }
 
-const DEFS: Record<PackageId, Package> = {
+const RECIPES: Record<PackageId, Recipe> = {
   kitchen_row: {
     rows: [
-      { wall: "back", align: "start", items: [{ type: "fridge" }, { type: "kitchen_tall" }, { type: "kitchen", size: [0.9, 0.62, 0.92] }, { type: "sink" }, { type: "dishwasher" }, { type: "stove" }, { type: "kitchen", size: [0.6, 0.62, 0.92] }] },
-      { wall: "back", align: "start", items: [{ type: "kitchen_wall", size: [1.2, 0.35, 0.7] }] },
+      ["back", "start", ["fridge", "kitchen_tall", ["kitchen", [0.9, 0.62, 0.92]], "sink", "dishwasher", "stove", ["kitchen", [0.6, 0.62, 0.92]]]],
+      ["back", "start", [["kitchen_wall", [1.2, 0.35, 0.7]]]],
     ],
-    free: [
-      { type: "table", at: [0.5, 0.72], rotation: 0, size: [1.2, 0.8, 0.75] },
-      { type: "lamp_pendant", at: [0.5, 0.72], rotation: 0 },
-      { type: "lamp_ceiling", at: [0.5, 0.3], rotation: 0 },
+    spots: [
+      [["table", [1.2, 0.8, 0.75]], 0.5, 0.72, 0],
+      ["lamp_pendant", 0.5, 0.72, 0],
+      ["lamp_ceiling", 0.5, 0.3, 0],
     ],
   },
   kitchen_l: {
     rows: [
-      { wall: "back", align: "start", items: [{ type: "fridge" }, { type: "kitchen_tall" }, { type: "sink" }, { type: "dishwasher" }, { type: "kitchen", size: [0.6, 0.62, 0.92] }] },
-      { wall: "left", align: "end", items: [{ type: "stove" }, { type: "kitchen", size: [1.2, 0.62, 0.92] }] },
+      ["back", "start", ["fridge", ["kitchen", [0.9, 0.62, 0.92]], "sink", "dishwasher", "stove"]],
+      ["right", "start", [["kitchen", [0.9, 0.62, 0.92]], ["kitchen", [0.6, 0.62, 0.92]], "kitchen_tall"]],
+      ["back", "start", [["kitchen_wall", [1.2, 0.35, 0.7]]]],
     ],
-    free: [
-      { type: "island", at: [0.62, 0.62], rotation: 0, size: [1.6, 0.9, 0.92] },
-      { type: "bar_stool", at: [0.52, 0.86], rotation: 180 },
-      { type: "bar_stool", at: [0.72, 0.86], rotation: 180 },
-      { type: "lamp_ceiling", at: [0.5, 0.35], rotation: 0 },
+    spots: [
+      ["table", 0.4, 0.68, 0],
+      ["bar_stool", 0.72, 0.86, 180],
+      ["lamp_ceiling", 0.5, 0.35, 0],
     ],
   },
   bath: {
     rows: [
-      { wall: "back", align: "center", items: [{ type: "washbasin" }] },
-      { wall: "back", align: "end", items: [{ type: "wc" }] },
-      { wall: "front", align: "start", items: [{ type: "bathtub" }] },
-      { wall: "left", align: "start", items: [{ type: "washer" }] },
+      ["back", "center", ["washbasin"]],
+      ["back", "end", ["wc"]],
+      ["front", "start", ["bathtub"]],
+      ["left", "start", ["washer"]],
     ],
-    free: [{ type: "lamp_downlight", at: [0.5, 0.5], rotation: 0 }],
+    spots: [["lamp_downlight", 0.5, 0.5, 0]],
   },
   bedroom: {
     rows: [
-      { wall: "back", align: "center", items: [{ type: "nightstand" }, { type: "bed" }, { type: "nightstand" }] },
-      { wall: "left", align: "center", items: [{ type: "wardrobe", size: [2.0, 0.6, 2.1] }] },
-      { wall: "front", align: "end", items: [{ type: "dresser" }] },
+      ["back", "center", ["nightstand", "bed", "nightstand"]],
+      ["left", "center", [["wardrobe", [2, 0.6, 2.1]]]],
+      ["front", "end", ["dresser"]],
     ],
-    free: [{ type: "lamp_ceiling", at: [0.5, 0.55], rotation: 0 }],
+    spots: [["lamp_ceiling", 0.5, 0.55, 0]],
   },
   living: {
     rows: [
-      { wall: "back", align: "center", items: [{ type: "tv_board" }] },
-      { wall: "right", align: "start", items: [{ type: "shelf" }] },
+      ["back", "center", ["tv_board"]],
+      ["right", "start", ["shelf"]],
     ],
-    free: [
-      { type: "sofa", at: [0.5, 0.72], rotation: 180 },
-      { type: "coffee_table", at: [0.5, 0.52], rotation: 0 },
-      { type: "rug", at: [0.5, 0.55], rotation: 0, size: [2.2, 1.6, 0.01] },
-      { type: "armchair", at: [0.14, 0.5], rotation: 270 },
-      { type: "lamp_floor", at: [0.86, 0.8], rotation: 0 },
-      { type: "plant", at: [0.9, 0.12], rotation: 0 },
-      { type: "lamp_ceiling", at: [0.5, 0.45], rotation: 0 },
+    spots: [
+      ["sofa", 0.5, 0.72, 180],
+      ["coffee_table", 0.5, 0.52, 0],
+      [["rug", [2.2, 1.6, 0.01]], 0.5, 0.55, 0],
+      ["armchair", 0.14, 0.5, 270],
+      ["lamp_floor", 0.86, 0.8, 0],
+      ["plant", 0.9, 0.12, 0],
+      ["lamp_ceiling", 0.5, 0.45, 0],
     ],
   },
   dining: {
-    rows: [{ wall: "back", align: "center", items: [{ type: "sideboard" }] }],
-    free: [
-      { type: "table", at: [0.5, 0.55], rotation: 0 },
-      { type: "chair", at: [0.4, 0.35], rotation: 0 },
-      { type: "chair", at: [0.6, 0.35], rotation: 0 },
-      { type: "chair", at: [0.4, 0.75], rotation: 180 },
-      { type: "chair", at: [0.6, 0.75], rotation: 180 },
-      { type: "lamp_pendant", at: [0.5, 0.55], rotation: 0 },
+    rows: [["back", "center", ["sideboard"]]],
+    spots: [
+      ["table", 0.5, 0.55, 0],
+      ["chair", 0.4, 0.35, 0],
+      ["chair", 0.6, 0.35, 0],
+      ["chair", 0.4, 0.75, 180],
+      ["chair", 0.6, 0.75, 180],
+      ["lamp_pendant", 0.5, 0.55, 0],
     ],
   },
   office: {
     rows: [
-      { wall: "back", align: "center", items: [{ type: "desk" }] },
-      { wall: "left", align: "center", items: [{ type: "shelf" }, { type: "shelf" }] },
+      ["back", "center", ["desk"]],
+      ["left", "center", ["shelf", "shelf"]],
     ],
-    free: [
-      { type: "office_chair", at: [0.5, 0.38], rotation: 180 },
-      { type: "lamp_ceiling", at: [0.5, 0.55], rotation: 0 },
+    spots: [
+      ["office_chair", 0.5, 0.38, 180],
+      ["lamp_ceiling", 0.5, 0.55, 0],
     ],
   },
   kids: {
     rows: [
-      { wall: "left", align: "start", items: [{ type: "bed", size: [0.9, 2.0, 0.8] }] },
-      { wall: "back", align: "end", items: [{ type: "desk", size: [1.2, 0.6, 0.75] }] },
-      { wall: "right", align: "end", items: [{ type: "shelf" }] },
+      ["left", "start", [["bed", [0.9, 2, 0.8]]]],
+      ["back", "end", [["desk", [1.2, 0.6, 0.75]]]],
+      ["right", "end", ["shelf"]],
     ],
-    free: [
-      { type: "rug", at: [0.55, 0.6], rotation: 0, size: [1.6, 1.2, 0.01] },
-      { type: "lamp_ceiling", at: [0.5, 0.5], rotation: 0 },
+    spots: [
+      [["rug", [1.6, 1.2, 0.01]], 0.55, 0.6, 0],
+      ["lamp_ceiling", 0.5, 0.5, 0],
     ],
   },
   hall: {
-    rows: [{ wall: "left", align: "start", items: [{ type: "coat_rack" }] }],
-    free: [
-      { type: "lamp_downlight", at: [0.5, 0.3], rotation: 0 },
-      { type: "lamp_downlight", at: [0.5, 0.7], rotation: 0 },
+    rows: [["left", "start", ["coat_rack"]]],
+    spots: [
+      ["lamp_downlight", 0.5, 0.3, 0],
+      ["lamp_downlight", 0.5, 0.7, 0],
     ],
   },
 };
 
-/** Rotation (degrees) that turns an item's back to a wall; items' fronts are at +z. */
-const WALL_ROTATION: Record<Wall, number> = { back: 0, right: 90, front: 180, left: 270 };
+const typeOf = (piece: Piece): FurnitureType => (typeof piece === "string" ? piece : piece[0]);
+const sizeOf = (piece: Piece): Size => (typeof piece === "string" ? FURNITURE_SIZE[piece] : piece[1]);
 
-/** Furniture of a package for a room. `id` makes new ids. */
-export function furnishRoom(room: Room, pkg: PackageId, id: () => string): Furniture[] {
-  const b = bounds(room.points);
-  const W = b.x1 - b.x0;
-  const D = b.z1 - b.z0;
-  const def = DEFS[pkg];
-  const out: Furniture[] = [];
-  const add = (type: FurnitureType, x: number, z: number, rotation: number, size?: [number, number, number]) => {
-    const [w, d, h] = size ?? FURNITURE_SIZE[type];
-    out.push({ id: id(), type, x: round(x), z: round(z), rotation, w, d, h, variant: null, entity: null, power: null });
-  };
-  const gap = 0.02;
-  for (const row of def.rows) {
-    const items = row.items.map((it) => ({ type: it.type, size: it.size ?? FURNITURE_SIZE[it.type] }));
-    const along = row.wall === "back" || row.wall === "front" ? W : D;
-    // leave out items that do not fit any more
-    const fitting: typeof items = [];
-    let total = 0;
-    for (const it of items) {
-      if (total + it.size[0] > along - 0.1) break;
-      fitting.push(it);
-      total += it.size[0];
-    }
-    // start offset along the wall, measured from the left end as seen from inside the room
-    let pos = row.align === "start" ? 0.05 : row.align === "end" ? along - total - 0.05 : (along - total) / 2;
-    for (const it of fitting) {
-      const [w, d] = it.size;
-      const c = pos + w / 2;
-      const depth = d / 2 + gap;
-      // seen from inside: back wall runs left→right = +x; right wall runs back→front = +z;
-      // front wall runs right→left = -x; left wall runs front→back = -z
-      if (row.wall === "back") add(it.type, b.x0 + c, b.z0 + depth, 0, it.size);
-      else if (row.wall === "front") add(it.type, b.x1 - c, b.z1 - depth, 180, it.size);
-      else if (row.wall === "right") add(it.type, b.x1 - depth, b.z0 + c, 90, it.size);
-      else add(it.type, b.x0 + depth, b.z1 - c, WALL_ROTATION.left, it.size);
-      pos += w;
-    }
+const MARGIN = 0.05; // distance to a wall end or the room's edge
+const WALL_CLEARANCE = 0.02; // air between a piece and the wall
+
+const thousandths = (n: number) => Math.round(n * 1000) / 1000;
+
+/**
+ * Where a piece stands when it is `along` metres from the start of a wall and `depth` metres deep.
+ * A wall's start is its left end seen from inside the room, so the back wall runs towards +x, the right wall
+ * towards +z, the front wall towards -x and the left wall towards -z. The turn makes the piece face the room.
+ */
+function atWall(box: { x0: number; x1: number; z0: number; z1: number }, wall: Wall, along: number, depth: number): { x: number; z: number; turn: number } {
+  switch (wall) {
+    case "back":
+      return { x: box.x0 + along, z: box.z0 + depth, turn: 0 };
+    case "right":
+      return { x: box.x1 - depth, z: box.z0 + along, turn: 90 };
+    case "front":
+      return { x: box.x1 - along, z: box.z1 - depth, turn: 180 };
+    case "left":
+      return { x: box.x0 + depth, z: box.z1 - along, turn: 270 };
   }
-  for (const f of def.free) {
-    const [w, d] = f.size ?? FURNITURE_SIZE[f.type];
-    // keep free items inside the room
-    const x = Math.min(b.x1 - w / 2 - 0.05, Math.max(b.x0 + w / 2 + 0.05, b.x0 + W * f.at[0]));
-    const z = Math.min(b.z1 - d / 2 - 0.05, Math.max(b.z0 + d / 2 + 0.05, b.z0 + D * f.at[1]));
-    add(f.type, x, z, f.rotation, f.size);
-  }
-  return out;
 }
 
-const round = (v: number) => Math.round(v * 1000) / 1000;
+/** The furniture of a package for a room; `nextId` supplies the ids of the new pieces. */
+export function furnishRoom(room: Room, pkg: PackageId, nextId: () => string): Furniture[] {
+  const box = bounds(room.points);
+  const width = box.x1 - box.x0;
+  const depth = box.z1 - box.z0;
+  const made: Furniture[] = [];
+  const put = (type: FurnitureType, x: number, z: number, rotation: number, [w, d, h]: Size) => {
+    made.push({ id: nextId(), type, x: thousandths(x), z: thousandths(z), rotation, w, d, h, variant: null, entity: null, power: null });
+  };
+
+  for (const [wall, align, pieces] of RECIPES[pkg].rows) {
+    const room_along = wall === "back" || wall === "front" ? width : depth;
+    // pieces that no longer fit on the wall are left out
+    let used = 0;
+    const fitting: Piece[] = [];
+    for (const piece of pieces) {
+      if (used + sizeOf(piece)[0] > room_along - 0.1) break;
+      fitting.push(piece);
+      used += sizeOf(piece)[0];
+    }
+    let cursor = align === "start" ? MARGIN : align === "end" ? room_along - used - MARGIN : (room_along - used) / 2;
+    for (const piece of fitting) {
+      const size = sizeOf(piece);
+      const spot = atWall(box, wall, cursor + size[0] / 2, size[1] / 2 + WALL_CLEARANCE);
+      put(typeOf(piece), spot.x, spot.z, spot.turn, size);
+      cursor += size[0];
+    }
+  }
+
+  for (const [piece, fx, fz, turn] of RECIPES[pkg].spots) {
+    const size = sizeOf(piece);
+    const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+    const x = clamp(box.x0 + width * fx, box.x0 + size[0] / 2 + MARGIN, box.x1 - size[0] / 2 - MARGIN);
+    const z = clamp(box.z0 + depth * fz, box.z0 + size[1] / 2 + MARGIN, box.z1 - size[1] / 2 - MARGIN);
+    put(typeOf(piece), x, z, turn, size);
+  }
+  return made;
+}

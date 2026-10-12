@@ -1,33 +1,35 @@
-// Websocket calls to the backend (custom_components/nextfloor/websocket.py).
+// The calls NextFloor makes to its backend over the Home Assistant websocket
+// (custom_components/nextfloor/websocket.py).
 
 import type { Building } from "./model.ts";
 import type { FurniturePack } from "./packs.ts";
 import type { HomeAssistant } from "./types.ts";
 
-export async function fetchBuilding(hass: HomeAssistant): Promise<{ building: Building; revision: number; version?: string }> {
-  return hass.callWS({ type: "nextfloor/building/get" });
-}
+/** Sends one command of this integration. */
+const call = <T = unknown>(hass: HomeAssistant, command: string, payload: Record<string, unknown> = {}): Promise<T> => hass.callWS<T>({ type: `nextfloor/${command}`, ...payload });
 
+export const fetchBuilding = (hass: HomeAssistant) => call<{ building: Building; revision: number; version?: string }>(hass, "building/get");
+
+/** Saves the plan and returns its new revision. */
 export async function saveBuilding(hass: HomeAssistant, building: Building): Promise<number> {
-  const res = await hass.callWS<{ revision: number }>({ type: "nextfloor/building/save", building });
-  return res.revision;
+  return (await call<{ revision: number }>(hass, "building/save", { building })).revision;
 }
 
-export function subscribeBuilding(hass: HomeAssistant, callback: (revision: number) => void): Promise<() => Promise<void>> {
-  return hass.connection.subscribeMessage<{ revision: number }>((msg) => callback(msg.revision), {
-    type: "nextfloor/building/subscribe",
-  });
+/** Calls back with the new revision whenever the plan is saved anywhere. Resolves to the unsubscribe function. */
+export function subscribeBuilding(hass: HomeAssistant, onRevision: (revision: number) => void): Promise<() => Promise<void>> {
+  return hass.connection.subscribeMessage<{ revision: number }>((event) => onRevision(event.revision), { type: "nextfloor/building/subscribe" });
 }
 
+/** A stored picture as a data string. */
 export async function fetchImage(hass: HomeAssistant, imageId: string): Promise<string> {
-  const res = await hass.callWS<{ data: string }>({ type: "nextfloor/image/get", image_id: imageId });
-  return res.data;
+  return (await call<{ data: string }>(hass, "image/get", { image_id: imageId })).data;
 }
 
 export async function storeImage(hass: HomeAssistant, imageId: string, data: string): Promise<void> {
-  await hass.callWS({ type: "nextfloor/image/set", image_id: imageId, data });
+  await call(hass, "image/set", { image_id: imageId, data });
 }
 
+/** An automatic copy of the plan the user can go back to. */
 export interface Snapshot {
   id: string;
   revision: number;
@@ -39,22 +41,20 @@ export interface Snapshot {
 }
 
 export async function listHistory(hass: HomeAssistant): Promise<Snapshot[]> {
-  const res = await hass.callWS<{ snapshots: Snapshot[] }>({ type: "nextfloor/history/list" });
-  return res.snapshots;
+  return (await call<{ snapshots: Snapshot[] }>(hass, "history/list")).snapshots;
 }
 
 export async function takeSnapshot(hass: HomeAssistant): Promise<void> {
-  await hass.callWS({ type: "nextfloor/history/snapshot" });
+  await call(hass, "history/snapshot");
 }
 
+/** Goes back to a snapshot and returns the new revision. */
 export async function restoreSnapshot(hass: HomeAssistant, snapshotId: string): Promise<number> {
-  const res = await hass.callWS<{ revision: number }>({ type: "nextfloor/history/restore", snapshot_id: snapshotId });
-  return res.revision;
+  return (await call<{ revision: number }>(hass, "history/restore", { snapshot_id: snapshotId })).revision;
 }
 
 export async function listPacks(hass: HomeAssistant): Promise<FurniturePack[]> {
-  const res = await hass.callWS<{ packs: FurniturePack[] }>({ type: "nextfloor/packs/list" });
-  return res.packs;
+  return (await call<{ packs: FurniturePack[] }>(hass, "packs/list")).packs;
 }
 
 export interface ImportedPack {
@@ -64,16 +64,14 @@ export interface ImportedPack {
   items: number;
 }
 
-/** Import a pack file; the backend checks its content (errors carry a code, e.g. "invalid_content"). */
-export async function importPack(hass: HomeAssistant, text: string): Promise<ImportedPack> {
-  return hass.callWS<ImportedPack>({ type: "nextfloor/packs/import", pack: text });
-}
+/** Imports a pack file. The backend validates it and rejects with a code such as "invalid_content". */
+export const importPack = (hass: HomeAssistant, text: string) => call<ImportedPack>(hass, "packs/import", { pack: text });
 
 export async function removePack(hass: HomeAssistant, packId: string): Promise<void> {
-  await hass.callWS({ type: "nextfloor/packs/remove", pack_id: packId });
+  await call(hass, "packs/remove", { pack_id: packId });
 }
 
-/** A full backup file: the plan, the packs and every stored picture. */
+/** A complete backup: the plan, the packs and every stored picture. */
 export interface BackupFile {
   format: "nextfloor-backup";
   version: 1;
@@ -83,15 +81,8 @@ export interface BackupFile {
   images?: Record<string, string>;
 }
 
-export function fetchBackup(hass: HomeAssistant): Promise<Pick<BackupFile, "format" | "version" | "building" | "packs">> {
-  return hass.callWS({ type: "nextfloor/backup/export" });
-}
+export const fetchBackup = (hass: HomeAssistant) => call<Pick<BackupFile, "format" | "version" | "building" | "packs">>(hass, "backup/export");
 
-/** Replace plan and packs from a backup (pictures follow one by one); packs that fail their check are skipped. */
-export function restoreBackup(
-  hass: HomeAssistant,
-  building: Building,
-  packs: FurniturePack[],
-): Promise<{ revision: number; building: Building; packs: number; skipped: { id: string; reason: string }[] }> {
-  return hass.callWS({ type: "nextfloor/backup/import", building, packs });
-}
+/** Replaces plan and packs from a backup (pictures are sent one by one afterwards). Packs failing validation are skipped. */
+export const restoreBackup = (hass: HomeAssistant, building: Building, packs: FurniturePack[]) =>
+  call<{ revision: number; building: Building; packs: number; skipped: { id: string; reason: string }[] }>(hass, "backup/import", { building, packs });

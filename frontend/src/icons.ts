@@ -1,33 +1,34 @@
-// Line icons (24 × 24, drawn with stroke="currentColor") for device markers and the room panel.
+// Marker and panel icons: simple outline drawings on a 24 × 24 grid, stroked in the current text colour.
 
 import type { DeviceKind } from "./devices.ts";
 
-const ICONS: Record<DeviceKind, string> = {
-  light: "M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2v.5h5V16c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z",
-  switch: "M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zM12 8v8",
-  fan: "M12 12c0-4 1-8 4-8s2 5-4 8zm0 0c4 0 8 1 8 4s-5 2-8-4zm0 0c0 4-1 8-4 8s-2-5 4-8zm0 0c-4 0-8-1-8-4s5-2 8 4z",
-  cover: "M4 4h16v3H4zM5 7v13M19 7v13M7 10h10M7 13h10M7 16h10",
-  climate: "M12 14.5V5a2 2 0 1 0-4 0v9.5a4 4 0 1 0 4 0zM10 11v6M16 6h4M16 10h3",
-  media: "M4 6h16v10H4zM9 20h6M12 16v4M10.5 8.8v4.4l3.8-2.2z",
-  lock: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3M12 14.5v2",
-  sensor: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2",
-  binary: "M5 21V4h11v17M16 21H4M8 21V7h5v14M12.5 13.5h.01",
-  camera: "M4 7h11v10H4zM15 10.5l5-3v9l-5-3",
-  scene: "M5 19l9-9M14 4l.8 2.2L17 7l-2.2.8L14 10l-.8-2.2L11 7l2.2-.8zM19 11l.5 1.5L21 13l-1.5.5L19 15l-.5-1.5L17 13l1.5-.5z",
-  script: "M8 4h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2h9M8 4a2 2 0 0 0-2 2v10M9 9h6M9 12h4",
+/** One path per kind of device. */
+const SHAPES: Record<DeviceKind, string> = {
+  light: "M8.5 17.5h7M9.5 20.5h5M12 2.5a6.5 6.5 0 0 0-3.5 12v1.5h7V14.5A6.5 6.5 0 0 0 12 2.5z",
+  switch: "M6 5h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM12 7.5v9M9 12h6",
+  fan: "M12 11.5c-1-3.5 0-7 2.5-7s2 4-2.5 7zm.5.5c3.5-1 7 0 7 2.5s-4 2-7-2.5zm-.5.5c1 3.5 0 7-2.5 7s-2-4 2.5-7zm-.5-.5c-3.5 1-7 0-7-2.5s4-2 7 2.5z",
+  cover: "M3.5 3.5h17v3h-17zM6 6.5v12M18 6.5v12M8.5 9.5h7M8.5 12.5h7M8.5 15.5h7",
+  climate: "M12 15V5.5a2.5 2.5 0 0 0-5 0V15a4.5 4.5 0 1 0 5 0zM9.5 9v7M15 5.5h5M15 9.5h4",
+  media: "M3.5 5.5h17v11h-17zM8 20.5h8M12 16.5v4M10 8.5v5l4.5-2.5z",
+  lock: "M5.5 10.5h13v9.5h-13zM8 10.5V7.5a4 4 0 0 1 8 0v3M12 14v3",
+  sensor: "M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM12 7.5v4.5l3.5 2",
+  binary: "M5.5 20.5v-17h10v17M3.5 20.5h14M9 20.5v-13h4.5v13M12.5 14h.01",
+  camera: "M3.5 7.5h11.5v9H3.5zM15 10.5l5.5-3v9l-5.5-3",
+  scene: "M5.5 18.5l8-8M14 3.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1zM18.5 12l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z",
+  script: "M8.5 3.5h8.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7.5a2 2 0 0 1-2-2v-2h9M8.5 3.5a2 2 0 0 0-2 2v10M9.5 8.5h6M9.5 11.5h4",
 };
 
-export function iconPath(kind: DeviceKind): string {
-  return ICONS[kind];
-}
+/** The path data of a device kind's icon. */
+export const iconPath = (kind: DeviceKind): string => SHAPES[kind];
 
-/** Markup for an own symbol: Home Assistant's icon element with a Material Design icon name. */
+/** Markup for a user-chosen icon: Home Assistant's own icon element, given a Material Design Icons name. */
 export function mdiIcon(name: string): string {
-  const clean = name.replace(/^mdi:/, "").replace(/[^a-z0-9-]/gi, "");
-  return `<ha-icon icon="mdi:${clean}" style="--mdc-icon-size:18px"></ha-icon>`;
+  const safe = name.replace(/^mdi:/, "").replace(/[^a-z0-9-]/gi, "");
+  return `<ha-icon icon="mdi:${safe}" style="--mdc-icon-size:18px"></ha-icon>`;
 }
 
-/** Markup for an inline SVG icon (static strings only). */
+/** Inline SVG for a device kind. Only static strings go in here. */
 export function iconSvg(kind: DeviceKind): string {
-  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[kind]}"/></svg>`;
+  const look = 'fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"';
+  return `<svg viewBox="0 0 24 24" width="18" height="18" ${look} aria-hidden="true"><path d="${SHAPES[kind]}"/></svg>`;
 }

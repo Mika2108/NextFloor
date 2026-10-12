@@ -1,0 +1,109 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { emptyBuilding, newFloor, type RoofSection } from "../model.ts";
+import { GROUND, fieldFace, groundFace, groundFloor, roofFaces, topFloor, wallFaces } from "./faces.ts";
+import { cottage, field, near } from "./fixtures.ts";
+
+const section = (patch: Partial<RoofSection> = {}): RoofSection => ({ id: "s", x0: 0, z0: 0, x1: 12, z1: 8, shape: "gable", axis: "x", eave_a: 3, eave_b: 3, pitch_a: 40, pitch_b: 40, base: 3, overhang: 0, ...patch });
+
+test("no roof, no faces", () => {
+  assert.deepEqual(roofFaces(cottage({ type: "none", pitch: 35, overhang: 0.4 })), []);
+  assert.deepEqual(roofFaces(emptyBuilding()), []);
+});
+
+test("a gable roof has two slopes with the roof's pitch that face away from each other", () => {
+  const faces = roofFaces(cottage({ type: "gable", pitch: 30, overhang: 0.5 }));
+  assert.deepEqual(faces.map((f) => f.key), ["main:a", "main:b"]);
+  for (const f of faces) {
+    near(f.pitch, 30);
+    assert.ok(f.n[1] > 0, "normals point up");
+    assert.equal(f.flat, false);
+  }
+  assert.ok(faces[0].facing[1] * faces[1].facing[1] < 0, "opposite directions across the ridge");
+  // each slope reaches the ridge: half of 7 + 2 × 0.8 m of depth, along the slope
+  near(faces[0].ls, (7 + 2 * 0.8) / 2 / Math.cos((30 * Math.PI) / 180));
+});
+
+test("the ridge of the single roof can run along the short side", () => {
+  const long = roofFaces(cottage({ type: "gable", pitch: 30, overhang: 0.5 }))[0];
+  const short = roofFaces(cottage({ type: "gable", pitch: 30, overhang: 0.5, ridge: "short" }))[0];
+  assert.ok(long.lu > short.lu);
+});
+
+test("a flat roof is one level face sitting on the slab", () => {
+  const [face] = roofFaces(cottage({ type: "flat", pitch: 0, overhang: 0.5 }));
+  assert.equal(face.key, "main:top");
+  assert.equal(face.flat, true);
+  near(face.o[1], 2.6 + 0.25);
+  near(face.lu, 12 + 2 * 0.8);
+});
+
+test("sections of a custom roof give their own faces: a hip adds two end triangles, a pyramid has four faces in all", () => {
+  const roof = (s: RoofSection) => {
+    const b = cottage({ type: "custom", pitch: 35, overhang: 0, sections: [s] });
+    return roofFaces(b);
+  };
+  assert.deepEqual(roof(section()).map((f) => f.key), ["s:a", "s:b"]);
+  assert.deepEqual(roof(section({ shape: "hip" })).map((f) => f.key), ["s:a", "s:b", "s:c", "s:d"]);
+  assert.equal(roof(section({ shape: "pyramid", x1: 8 })).length, 4);
+  assert.deepEqual(roof(section({ shape: "pent" })).map((f) => f.key), ["s:a"]);
+  assert.deepEqual(roof(section({ shape: "flat" })).map((f) => f.key), ["s:top"]);
+});
+
+test("a hip slope narrows towards the ridge", () => {
+  const b = cottage({ type: "custom", pitch: 35, overhang: 0, sections: [section({ shape: "hip", x1: 14 })] });
+  const slope = roofFaces(b)[0];
+  const [low0, low1] = slope.span(0);
+  const [high0, high1] = slope.span(slope.ls * 0.9);
+  assert.ok(high1 - high0 < low1 - low0);
+});
+
+test("walls: outer faces of an outer wall, both faces of a free wall, nothing for short walls", () => {
+  const b = cottage({ type: "none", pitch: 0, overhang: 0 });
+  const faces = wallFaces(b);
+  assert.equal(faces.length, 4);
+  assert.ok(faces.every((f) => f.wall?.floorId === "g" && f.pitch === 90 && f.n[1] === 0));
+  assert.equal(wallFaces(b, "nothing").length, 0);
+  // the outer face looks away from the house centre
+  for (const f of faces) {
+    const centre: [number, number] = [6, 3.5];
+    const middle: [number, number] = [f.o[0] + f.eu[0] * f.lu / 2, f.o[2] + f.eu[2] * f.lu / 2];
+    const away = (middle[0] - centre[0]) * f.n[0] + (middle[1] - centre[1]) * f.n[2];
+    assert.ok(away > 0, f.key);
+  }
+});
+
+test("the top floor is the highest with rooms; the ground floor skips a cellar", () => {
+  const b = emptyBuilding();
+  const cellar = newFloor("c", "Cellar", -2.6);
+  const ground = newFloor("g", "Ground", 0);
+  const upper = newFloor("u", "Upper", 2.7);
+  const empty = newFloor("e", "Empty", 5.4);
+  const room = { id: "r", name: "R", area_id: null, points: [[0, 0], [4, 0], [4, 4], [0, 4]] as [number, number][], floor_material: "wood" as const };
+  [cellar, ground, upper].forEach((f) => (f.rooms = [room]));
+  b.floors = [cellar, ground, upper, empty];
+  assert.equal(topFloor(b)?.id, "u");
+  assert.equal(groundFloor(b)?.id, "g");
+  assert.equal(topFloor(emptyBuilding()), null);
+});
+
+test("the ground face is level, unbounded and turns with the field", () => {
+  const b = cottage({ type: "none", pitch: 0, overhang: 0 });
+  const face = groundFace(b, { u: 3, v: 2, rotation: 90, base: null });
+  assert.equal(face.unbounded, true);
+  assert.equal(face.key, GROUND);
+  near(face.eu[2], 1);
+  near(face.es[0], -1);
+  assert.deepEqual(face.n, [0, 1, 0]);
+  // a field on its own surface height sits there
+  assert.equal(groundFace(b, { u: 0, v: 0, rotation: null, base: 2.6 }).o[1], 2.6);
+});
+
+test("a field's face is found by its key; a vanished roof face gives null", () => {
+  const b = cottage({ type: "gable", pitch: 30, overhang: 0.5 });
+  assert.equal(fieldFace(b, field("main:b"))?.key, "main:b");
+  assert.equal(fieldFace(b, field("gone:a")), null);
+  assert.equal(fieldFace(b, field(GROUND))?.unbounded, true);
+  const wall = wallFaces(b)[0];
+  assert.equal(fieldFace(b, field(wall.key))?.key, wall.key);
+});

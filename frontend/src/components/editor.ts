@@ -11,7 +11,6 @@ import { polygonBox } from "../roof-sections.ts";
 import { clampField, faceAt, fieldFace, pointOnFace, roofFaces, turnGroundField, fieldCenter, wallFaces, windowAsField, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
 import {
-  OUTDOOR_TOP,
   sidelightLayout,
   type FreeWall,
 } from "../model.ts";
@@ -30,10 +29,6 @@ import {
   isLamp,
   LAMP_MODEL,
   isAxisRect,
-  OUTDOOR_TYPES,
-  outdoorStanding,
-  SLOPE_DIRS,
-  type SlopeDir,
   step,
   type Direction,
   signedArea,
@@ -50,7 +45,6 @@ import {
   type LampMount,
   type SolarField,
   type OutdoorArea,
-  type OutdoorType,
   type Placement,
   type Opening,
   type OpeningType,
@@ -72,6 +66,8 @@ import { backgroundLayer } from "./editor/canvas/background.ts";
 import { BackgroundTool, readPictureInBrowser } from "./editor/background-tool.ts";
 import { renderBackgroundForm } from "./editor/forms/background.ts";
 import { dragRotation, pictureCentre, pictureLocal } from "./editor/ops/background.ts";
+import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWallActions, type MeasureActions, type MeasureState, type OutdoorActions } from "./editor/forms/outdoor.ts";
+import { outdoorRectangleAfter } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
 import { renderDeviceForm, type DeviceActions } from "./editor/forms/device.ts";
 import { renderFurnitureForm, type FurnitureActions } from "./editor/forms/furniture.ts";
@@ -311,6 +307,38 @@ export class NfEditor extends LitElement {
 
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
     return translate(this.hass, key, vars);
+  }
+
+  private measureState(): MeasureState {
+    return { draft: this._draft, length: this._measureLen, rectSize: this._rectSize };
+  }
+
+  private measureActions(): MeasureActions {
+    return {
+      setLength: (metres) => (this._measureLen = metres),
+      step: (direction) => this.measureStep(direction),
+      close: () => this.closeDraft(),
+      undo: () => (this._draft = this._draft.slice(0, -1)),
+      setRectSize: (size) => (this._rectSize = size),
+      addRectangle: () => this.rectBySize(),
+    };
+  }
+
+  private freeWallActions(): FreeWallActions {
+    return { update: (patch) => this.updateFreeWall(patch), remove: () => this.deleteFreeWall(), lockButton: this.fixButton("wall", this.sel.wall ?? "") };
+  }
+
+  private outdoorActions(): OutdoorActions {
+    return {
+      update: (patch) => this.updateOutdoor(patch),
+      setRectangle: (field, value) => {
+        const area = this.outdoorArea;
+        if (area) this.updateOutdoor({ points: outdoorRectangleAfter(area, field, value) });
+      },
+      duplicate: () => this.duplicateOutdoor(),
+      remove: () => this.deleteOutdoor(),
+      lockButton: this.fixButton("outdoor", this.sel.outdoor ?? ""),
+    };
   }
 
   private deviceActions(): DeviceActions {
@@ -1837,66 +1865,6 @@ export class NfEditor extends LitElement {
     this._draft = [];
   }
 
-  private renderMeasureForm() {
-    const draft = this._draft;
-    const first = draft[0];
-    const last = draft[draft.length - 1];
-    const gap = first && last && draft.length > 1 ? Math.hypot(last[0] - first[0], last[1] - first[1]) : 0;
-    const arrows: [Direction, string][] = [
-      ["up", "↑"],
-      ["left", "←"],
-      ["right", "→"],
-      ["down", "↓"],
-    ];
-    const len = (v: number) => formatNumber(this.hass, v, 2);
-    return html`<section>
-      <h3>${this.t("measure")}</h3>
-      ${!first
-        ? html`<p class="nf-sub">${this.t("measure_start")}</p>`
-        : html`<p class="nf-sub">${this.t("measure_from", { x: len(first[0]), z: len(first[1]) })}</p>
-            <div class="nf-form">
-              <label class="nf-field nf-wide"
-                >${this.t("measure_length")}
-                <input
-                  class="nf-measure-input"
-                  type="number"
-                  inputmode="decimal"
-                  step="0.01"
-                  min="0.05"
-                  .value=${String(this._measureLen)}
-                  @input=${(e: Event) => (this._measureLen = parseFloat((e.target as HTMLInputElement).value.replace(",", ".")) || 0)}
-                  @keydown=${(e: KeyboardEvent) => {
-                    const dir = { ArrowRight: "right", ArrowLeft: "left", ArrowUp: "up", ArrowDown: "down" }[e.key] as Direction | undefined;
-                    if (dir) {
-                      e.preventDefault();
-                      this.measureStep(dir);
-                    } else if (e.key === "Enter") this.closeDraft();
-                  }}
-              /></label>
-              <div class="nf-arrows nf-wide">
-                ${arrows.map(([dir, label]) => html`<button class="nf-btn nf-arrow-${dir}" title=${this.t(`dir_${dir}`)} @click=${() => this.measureStep(dir)}>${label}</button>`)}
-              </div>
-            </div>
-            ${draft.length > 1
-              ? html`<ol class="nf-measure-list">
-                  ${draft.slice(1).map((p, i) => html`<li>${len(Math.hypot(p[0] - draft[i][0], p[1] - draft[i][1]))} m</li>`)}
-                </ol>`
-              : nothing}
-            <div class="nf-actions">
-              <button class="nf-btn nf-primary" ?disabled=${draft.length < 3} @click=${() => this.closeDraft()}>${this.t("measure_close")}</button>
-              <button class="nf-btn" ?disabled=${draft.length < 2} @click=${() => (this._draft = draft.slice(0, -1))}>${this.t("measure_undo")}</button>
-            </div>
-            ${draft.length >= 3 ? html`<p class="nf-sub">${this.t("measure_gap", { gap: len(gap) })}</p>` : nothing}`}
-      <h4 class="nf-lib-head">${this.t("rect_by_size")}</h4>
-      <div class="nf-form">
-        ${this.num(this.t("width"), this._rectSize[0], (v) => (this._rectSize = [Math.max(0.1, v), this._rectSize[1]]), 0.01, 0.1)}
-        ${this.num(this.t("depth"), this._rectSize[1], (v) => (this._rectSize = [this._rectSize[0], Math.max(0.1, v)]), 0.01, 0.1)}
-        <button class="nf-btn nf-wide" @click=${() => this.rectBySize()}>${this.t("rect_add")}</button>
-      </div>
-      <p class="nf-sub">${this.t("measure_hint")}</p>
-    </section>`;
-  }
-
   private get freeWall(): FreeWall | undefined {
     return this.sel.wall ? (this.floor?.walls ?? []).find((w) => w.id === this.sel.wall) : undefined;
   }
@@ -1932,30 +1900,6 @@ export class NfEditor extends LitElement {
             <g class="nf-vertex" data-wall-end=${`${w.id}:b`}><circle cx=${x1} cy=${y1} r="16" class="nf-hit" /><circle cx=${x1} cy=${y1} r="6" /></g>`
         : nothing}`;
     })}</g>`;
-  }
-
-  private renderFreeWallForm(w: FreeWall) {
-    const admin = this.isAdmin;
-    const length = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
-    const setLength = (v: number) => {
-      const l = Math.max(0.1, v);
-      const k = l / (length || 1);
-      this.updateFreeWall({ b: [round(w.a[0] + (w.b[0] - w.a[0]) * k), round(w.a[1] + (w.b[1] - w.a[1]) * k)] });
-    };
-    return html`<section>
-      <div class="nf-h3row"><h3>${this.t("free_wall")}</h3>${this.fixButton("wall", w.id)}</div>
-      <div class="nf-form">
-        ${this.num(this.t("wall_length"), length, setLength, 0.01, 0.1)}
-        ${this.num(this.t("wall_thickness"), w.thickness ?? this._doc.settings.wall_interior, (v) => this.updateFreeWall({ thickness: Math.min(1, Math.max(0.02, v)) }), 0.01, 0.02)}
-        ${this.num(this.t("wall_height"), w.height ?? this.floor?.height ?? 2.5, (v) => this.updateFreeWall({ height: v >= (this.floor?.height ?? 2.5) - 0.005 ? null : Math.max(0.05, v) }), 0.05, 0.05)}
-      </div>
-      ${admin
-        ? html`<div class="nf-actions">
-            <button class="nf-btn nf-danger" @click=${() => this.deleteFreeWall()}>${this.t("delete")}</button>
-          </div>`
-        : nothing}
-      <p class="nf-sub">${this.t("free_wall_hint")}</p>
-    </section>`;
   }
 
   private get outdoorArea(): OutdoorArea | undefined {
@@ -3090,76 +3034,6 @@ export class NfEditor extends LitElement {
     })}</g>`;
   }
 
-  private renderOutdoorForm(a: OutdoorArea) {
-    const admin = this.isAdmin;
-    const rect = isAxisRect(a.points);
-    const b = bounds(a.points);
-    const setRect = (field: "x" | "z" | "w" | "d", v: number) => {
-      let { x0, z0, x1, z1 } = b;
-      if (field === "x") [x0, x1] = [v, v + (x1 - x0)];
-      if (field === "z") [z0, z1] = [v, v + (z1 - z0)];
-      if (field === "w") x1 = x0 + Math.max(0.1, v);
-      if (field === "d") z1 = z0 + Math.max(0.1, v);
-      this.updateOutdoor({ points: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(([x, z]) => [round(x), round(z)] as Vec2) });
-    };
-    return html`<section>
-      <div class="nf-h3row"><h3>${this.t("outdoor")}</h3>${this.fixButton("outdoor", a.id)}</div>
-      <div class="nf-form">
-        <label class="nf-field nf-wide"
-          >${this.t("outdoor_type")}
-          <select ?disabled=${!admin} @change=${(e: Event) => this.updateOutdoor({ type: (e.target as HTMLSelectElement).value as OutdoorType })}>
-            ${OUTDOOR_TYPES.map((t) => html`<option value=${t} ?selected=${t === a.type}>${this.t(`out_${t}` as I18nKey)}</option>`)}
-          </select></label
-        >
-        ${rect
-          ? html`${this.num(this.t("x"), b.x0, (v) => setRect("x", v))} ${this.num(this.t("z"), b.z0, (v) => setRect("z", v))}
-            ${this.num(this.t("width"), b.x1 - b.x0, (v) => setRect("w", v), 0.01, 0.1)} ${this.num(this.t("depth"), b.z1 - b.z0, (v) => setRect("d", v), 0.01, 0.1)}`
-          : nothing}
-        ${outdoorStanding(a.type)
-          ? this.num(this.t("outdoor_height"), a.height ?? OUTDOOR_TOP[a.type], (v) => this.updateOutdoor({ height: Math.min(6, Math.max(0.1, round(v))) }), 0.05, 0.1)
-          : nothing}
-        ${this.num(this.t("outdoor_offset"), a.offset ?? 0, (v) => this.updateOutdoor({ offset: Math.min(10, Math.max(-10, round(v))) || null }), 0.05)}
-        ${a.type !== "pool"
-          ? html`${this.num(this.t("outdoor_slope"), a.slope ?? 0, (v) => this.updateOutdoor({ slope: Math.min(20, Math.max(0, round(v))) || null }), 0.05, 0)}
-              <label class="nf-field"
-                >${this.t("outdoor_slope_dir")}
-                <select ?disabled=${!admin} @change=${(e: Event) => this.updateOutdoor({ slope_dir: (e.target as HTMLSelectElement).value as SlopeDir })}>
-                  ${SLOPE_DIRS.map((d) => html`<option value=${d} ?selected=${d === (a.slope_dir ?? "x")}>${this.t(`slope_${d.replace("-", "n")}` as I18nKey)}</option>`)}
-                </select></label
-              >`
-          : nothing}
-        <label class="nf-check nf-wide" title=${this.t("outdoor_outline_hint")}
-          ><input type="checkbox" .checked=${a.outline !== false} ?disabled=${!admin} @change=${(ev: Event) => this.updateOutdoor({ outline: (ev.target as HTMLInputElement).checked ? undefined : false })} />
-          ${this.t("outdoor_outline")}</label
-        >
-        ${a.type === "fence" || a.type === "pergola"
-          ? html`<label class="nf-check nf-wide" title=${this.t("outdoor_open_hint")}
-              ><input type="checkbox" .checked=${!!a.open} ?disabled=${!admin} @change=${(ev: Event) => this.updateOutdoor({ open: (ev.target as HTMLInputElement).checked || undefined })} />
-              ${this.t("outdoor_open")}</label
-            >`
-          : nothing}
-        ${a.type === "pergola"
-          ? html`<label class="nf-check nf-wide"
-              ><input type="checkbox" .checked=${!!a.bracing} ?disabled=${!admin} @change=${(ev: Event) => this.updateOutdoor({ bracing: (ev.target as HTMLInputElement).checked || undefined })} />
-              ${this.t("outdoor_bracing")}</label
-            >`
-          : nothing}
-        <label class="nf-check nf-wide" title=${this.t("outdoor_cut_hint")}
-          ><input type="checkbox" .checked=${!!a.cut} ?disabled=${!admin} @change=${(ev: Event) => this.updateOutdoor({ cut: (ev.target as HTMLInputElement).checked || undefined })} />
-          ${this.t("outdoor_cut")}</label
-        >
-      </div>
-      ${a.slope ? html`<p class="nf-sub">${this.t("outdoor_slope_hint")}</p>` : nothing}
-      <p class="nf-sub">${this.t("outdoor_hint")}</p>
-      ${admin
-        ? html`<div class="nf-actions">
-            <button class="nf-btn" @click=${() => this.duplicateOutdoor()}>${this.t("duplicate")}</button>
-            <button class="nf-btn nf-danger" @click=${() => this.deleteOutdoor()}>${this.t("delete")}</button>
-          </div>`
-        : nothing}
-    </section>`;
-  }
-
   private renderRooms(floor: Floor) {
     return svg`
       <g>${floor.rooms.map((r) => {
@@ -3538,9 +3412,9 @@ export class NfEditor extends LitElement {
             : this.device
               ? renderDeviceForm(this.host, this.device, this.deviceActions())
               : this.outdoorArea
-                ? this.renderOutdoorForm(this.outdoorArea)
+                ? renderOutdoorForm(this.host, this.outdoorArea, this.outdoorActions())
                 : this.freeWall
-                  ? this.renderFreeWallForm(this.freeWall)
+                  ? renderFreeWallForm(this.host, this.freeWall, this.freeWallActions())
                   : null;
     if (item) {
       return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("room", this.sel.room)}>‹ ${this.t(room ? "back_to_room" : "back_to_floor", { room: room?.name ?? "" })}</button>
@@ -3554,11 +3428,11 @@ export class NfEditor extends LitElement {
       ${admin ? nothing : html`<p class="nf-note">${this.t("read_only")}</p>`}
       ${renderFloors(this.host, this.side, this.floorActions(), floor, this._floorId)}
       ${this._tool === "measure" && floor
-        ? this.renderMeasureForm()
+        ? renderMeasureForm(this.host, this.measureState(), this.measureActions())
         : this.freeWall
-        ? this.renderFreeWallForm(this.freeWall)
+        ? renderFreeWallForm(this.host, this.freeWall, this.freeWallActions())
         : this.outdoorArea
-        ? this.renderOutdoorForm(this.outdoorArea)
+        ? renderOutdoorForm(this.host, this.outdoorArea, this.outdoorActions())
         : this.opening
         ? renderOpeningForm(this.host, this.opening, this.openingActions())
         : this.furnitureItem

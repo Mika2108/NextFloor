@@ -152,3 +152,12 @@ test("an opening slides along its wall only: across it nothing changes, and it s
   assert.equal(applied(nudge(floor, { kind: "opening", id: "o" }, -10, 0), floor).openings[0].offset, 0.5);
   assert.equal(nudge(floor, { kind: "opening", id: "gone" }, 1, 0), NOTHING_TO_MOVE);
 });
+
+import { outdoorRectangleAfter } from "./items.ts";
+
+test("an outdoor area's rectangle follows typed values and never gets thinner than 10 cm", () => {
+  const area = newOutdoorArea([[0, 0], [4, 0], [4, 2], [0, 2]]);
+  assert.deepEqual(outdoorRectangleAfter(area, "x", 1), [[1, 0], [5, 0], [5, 2], [1, 2]]);
+  assert.deepEqual(outdoorRectangleAfter(area, "w", 6), [[0, 0], [6, 0], [6, 2], [0, 2]]);
+  assert.deepEqual(outdoorRectangleAfter(area, "d", 0), [[0, 0], [4, 0], [4, 0.1], [0, 0.1]]);
+});

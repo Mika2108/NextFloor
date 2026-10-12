@@ -3,6 +3,7 @@
 import { autoPlace } from "../../../devices.ts";
 import { openingHost } from "../../../geometry/walls.ts";
 import {
+  bounds,
   centroid,
   FURNITURE_SIZE,
   isLamp,
@@ -174,4 +175,15 @@ export function edgeOf(opening: Opening, floor: Floor): [Vec2, Vec2] | null {
   const host = openingHost(opening, floor.rooms, floor.walls ?? []);
   if (!host) return null;
   return [host.room.points[host.edge], host.room.points[(host.edge + 1) % host.room.points.length]];
+}
+
+/** The outline of an outdoor area as a rectangle after its left, top, width or depth was typed. Sizes never get below 10 cm. */
+export function outdoorRectangleAfter(area: OutdoorArea, field: "x" | "z" | "w" | "d", value: number): Vec2[] {
+  const box = bounds(area.points);
+  let { x0, z0, x1, z1 } = box;
+  if (field === "x") [x0, x1] = [value, value + (x1 - x0)];
+  else if (field === "z") [z0, z1] = [value, value + (z1 - z0)];
+  else if (field === "w") x1 = x0 + Math.max(0.1, value);
+  else z1 = z0 + Math.max(0.1, value);
+  return [[x0, z0], [x1, z0], [x1, z1], [x0, z1]].map(([x, z]) => [thousandths(x), thousandths(z)] as Vec2);
 }

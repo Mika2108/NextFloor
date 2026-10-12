@@ -1,0 +1,71 @@
+// The edge lines of the walls and openings: base line, cut line, top line (following a roof), corner verticals, and the
+// jambs, sills and lintels of openings on both wall faces.
+
+import type { Wall } from "../../geometry/walls.ts";
+import type { Floor, Vec2 } from "../../model.ts";
+import { ALWAYS, CUT_OFFSET, EDGE_BASE, EDGE_CUT, EDGE_SOFT, EDGE_TOP, LOWER_OFFSET, type LineBuffer } from "../geo.ts";
+import type { Outline } from "./outline.ts";
+import { subtractSpans } from "./outline.ts";
+import { wallHeight, type roofLimits } from "./placement.ts";
+import type { Span } from "./types.ts";
+
+/** Jambs, sill and lintel edges of an opening on both wall faces, split at the cut height. */
+function pushOpeningLines(lines: LineBuffer, sp: Span, cut: number): void {
+  const { info } = sp;
+  const bucket = info.bucket;
+  const at = (s: number, n: number, y: number) => [info.start[0] + info.axis[0] * (s - sp.s0) + info.toRoom[0] * n, y, info.start[1] + info.axis[1] * (s - sp.s0) + info.toRoom[1] * n];
+  const foldAt = (y: number) => (y > cut + 1e-6 ? bucket : ALWAYS);
+  const bottom = Math.max(sp.sill, 0.004);
+  for (const n of [info.faceRoom, -info.faceOut]) {
+    for (const s of [sp.s0, sp.s1]) lines.segSplit(at(s, n, bottom), at(s, n, sp.top), EDGE_SOFT, cut, bucket);
+    lines.seg(at(sp.s0, n, sp.top), at(sp.s1, n, sp.top), EDGE_SOFT, foldAt(sp.top));
+    if (sp.sill > 0.01) lines.seg(at(sp.s0, n, sp.sill), at(sp.s1, n, sp.sill), EDGE_SOFT, foldAt(sp.sill));
+  }
+  // edges across the wall thickness (the reveals), and the cut section of the jambs
+  for (const s of [sp.s0, sp.s1]) {
+    lines.seg(at(s, info.faceRoom, sp.top), at(s, -info.faceOut, sp.top), EDGE_SOFT, foldAt(sp.top));
+    if (sp.sill > 0.01) lines.seg(at(s, info.faceRoom, sp.sill), at(s, -info.faceOut, sp.sill), EDGE_SOFT, foldAt(sp.sill));
+    if (sp.sill < cut && sp.top > cut) lines.seg(at(s, info.faceRoom, cut), at(s, -info.faceOut, cut), EDGE_CUT, CUT_OFFSET + bucket);
+  }
+}
+
+export function pushEdgeLines(
+  lines: LineBuffer,
+  floor: Floor,
+  outline: Outline,
+  wallBucket: Map<Wall, number>,
+  spans: Map<Wall, Span[]>,
+  limits: ReturnType<typeof roofLimits>,
+  hasRoof: boolean,
+): void {
+  const { topAt } = limits;
+  const cut = Math.min(floor.cut_height, floor.height);
+  const spansOf = (wall: Wall, keep: (sp: Span) => boolean) => (spans.get(wall) ?? []).filter(keep);
+  for (const edge of outline.edges) {
+    const bucket = wallBucket.get(edge.wall)!;
+    // the base line along the floor: not across doorways
+    for (const [p, q] of subtractSpans(edge, spansOf(edge.wall, (sp) => sp.sill <= 0.005))) lines.seg([p[0], 0.004, p[1]], [q[0], 0.004, q[1]], EDGE_BASE);
+    // the cut line: not where an opening crosses the cut height
+    for (const [p, q] of subtractSpans(edge, spansOf(edge.wall, (sp) => sp.sill < cut && sp.top > cut))) lines.seg([p[0], cut, p[1]], [q[0], cut, q[1]], EDGE_CUT, CUT_OFFSET + bucket);
+    // the top line: not where an opening reaches the top; a wall below the cut height keeps its top line; under a roof it follows the slope in short steps
+    const H = wallHeight(edge.wall, floor.height);
+    for (const [p, q] of subtractSpans(edge, spansOf(edge.wall, (sp) => sp.top >= H - 0.021))) {
+      if (!hasRoof) {
+        lines.seg([p[0], H, p[1]], [q[0], H, q[1]], EDGE_TOP, H <= cut + 1e-6 ? LOWER_OFFSET + bucket : bucket);
+        continue;
+      }
+      const steps = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 0.3));
+      const at = (i: number): Vec2 => [p[0] + ((q[0] - p[0]) * i) / steps, p[1] + ((q[1] - p[1]) * i) / steps];
+      for (let i = 0; i < steps; i++) {
+        const [a, c] = [at(i), at(i + 1)];
+        const [ya, yc] = [topAt(a[0], a[1], H), topAt(c[0], c[1], H)];
+        lines.seg([a[0], ya, a[1]], [c[0], yc, c[1]], EDGE_TOP, Math.max(ya, yc) <= cut + 1e-6 ? LOWER_OFFSET + bucket : bucket);
+      }
+    }
+  }
+  for (const corner of outline.corners) {
+    const height = topAt(corner.p[0], corner.p[1], wallHeight(corner.wall, floor.height));
+    lines.segSplit([corner.p[0], 0.004, corner.p[1]], [corner.p[0], height, corner.p[1]], EDGE_SOFT, Math.min(cut, height), wallBucket.get(corner.wall)!);
+  }
+  for (const list of spans.values()) for (const sp of list) pushOpeningLines(lines, sp, cut);
+}

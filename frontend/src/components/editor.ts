@@ -1,15 +1,13 @@
 // 2D editor: floors, rooms (rectangles and free shapes), snapping, undo, background template.
 
-import { css, html, LitElement, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
+import { html, LitElement, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import { fetchImage, listHistory, restoreSnapshot, storeImage, takeSnapshot, type Snapshot } from "../api.ts";
-import { download, exportFile, parseExport } from "../transfer.ts";
+import { fetchImage, storeImage } from "../api.ts";
 import { areaEntities, autoPlace, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, openingEntities, otherAreaEntities, roomClimateSensors, unassignedEntities, windowPosition, type ClimateKey } from "../devices.ts";
 import { furnitureSymbol } from "./furniture2d.ts";
 import { closeGaps, suggestedThickness } from "../geometry/gaps.ts";
 import { keepInRoom, snapToWall } from "../geometry/snap.ts";
 import { holeInRoom } from "../geometry/holes.ts";
-import { weatherEntity } from "../weather.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { cameraMotionSensors, detectionKind } from "../markers.ts";
 import { deviceSensors, energySummary, suggestGridSpot, proposeEnergySensors, type EnergyPrefs } from "../energy.ts";
@@ -17,9 +15,10 @@ import { isStatusSensor, robotRoomSensor, TOGGLE_KINDS } from "../devices.ts";
 import { sectionFloor, dormerParent, effectiveDormer, proposeDormer, sectionGeometry, floorOutline, polygonBox, headroomLines, ridgeHeight, sectionCutsBelow, roofSectionsFromRooms, sectionFrame, wallTopUnder } from "../roof-sections.ts";
 import { bestFace, clampField, faceAt, faceCompass, fieldFace, fieldModules, GROUND, moveField, pointOnFace, proposeField, proposeGroundField, proposeWindow, proposeWallField, roofFaces, rowCounts, turnGroundField, fieldCenter, wallFaces, windowAsField, windowCorners, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
-import { storedImageIds } from "../transfer.ts";
-import { type Background, OUTDOOR_TOP, sidelightLayout, DEFAULT_WEATHER_EFFECTS, WEATHER_EFFECTS,
-  normalizeBuilding,
+import {
+  type Background,
+  OUTDOOR_TOP,
+  sidelightLayout,
   furnitureFootprint,
   type FreeWall,
 } from "../model.ts";
@@ -42,10 +41,6 @@ import {
   LAMP_MODEL,
   isAxisRect,
   OUTDOOR_TYPES,
-  BUTTON_ACTIONS,
-  type ButtonAction,
-  type CustomButton,
-  type MediaPreset,
   outdoorStanding,
   SLOPE_DIRS,
   type SlopeDir,
@@ -78,7 +73,6 @@ import {
   MARKER_SHOWS,
   type OutdoorArea,
   type OutdoorType,
-  type RoofType,
   type Placement,
   type Opening,
   type OpeningType,
@@ -91,9 +85,15 @@ import {
   type OpeningStyle,
 } from "../model.ts";
 import { controls, tokens } from "../styles.ts";
+import { renderFavorites, renderPresence, renderStartView } from "./editor/forms/house.ts";
+import { BackupService } from "./editor/backup.ts";
+import { renderBackup } from "./editor/forms/backup.ts";
+import { renderSettings, type SettingsActions } from "./editor/forms/settings.ts";
+import type { EditorHost } from "./editor/host.ts";
+import { EditHistory } from "./editor/history.ts";
+import { editorStyles } from "./editor/styles.ts";
 import "./entity-picker.ts";
 import type { HassArea, HassFloor, HomeAssistant } from "../types.ts";
-import { fetchBackup, restoreBackup, type BackupFile } from "../api.ts";
 import { load3d } from "../load3d.ts";
 import type { WallMode } from "../viewer/viewer3d.ts";
 import { furnitureName } from "../furniture-names.ts";
@@ -138,7 +138,6 @@ interface Guides {
 /** Drags that change the document live (restored when cancelled, recorded in the history when done). */
 const EDIT_DRAGS = new Set(["vertex", "room", "device", "opening", "furniture", "rotate", "resize", "outdoor", "roofmove", "roofcorner", "roofvertex", "outvertex", "solarmove", "solarturn", "bgmove", "bgscale", "bgrotate"]);
 
-const HISTORY = 100;
 const SNAP_PX = 10;
 const round = (v: number) => Math.round(v * 1000) / 1000;
 
@@ -167,7 +166,6 @@ export class NfEditor extends LitElement {
     _doc3d: { state: true },
     _split: { state: true },
     _splitRatio: { state: true },
-    _backupBusy: { state: true },
     _wall3d: { state: true },
     _sidePinned: { state: true },
     _sideOpen: { state: true },
@@ -188,7 +186,6 @@ export class NfEditor extends LitElement {
     _libOpen: { state: true },
     _expanded: { state: true },
     _notice: { state: true },
-    _history: { state: true },
     _spots: { state: true },
     _outdoorId: { state: true },
     _wallId: { state: true },
@@ -227,7 +224,6 @@ export class NfEditor extends LitElement {
   private declare _split: boolean;
   /** Share of the width the plan takes next to the 3D pane (0.2 … 0.8). */
   private declare _splitRatio: number;
-  private declare _backupBusy: boolean;
   /** Walls in the 3D pane: full height ("auto") or cut at the cut height (shows wall units and shelves). */
   private declare _wall3d: WallMode;
   /** Sidebar beside the 3D pane: pinned open always, or folded to a strip while nothing is selected. */
@@ -260,7 +256,6 @@ export class NfEditor extends LitElement {
   /** Short confirmation shown after an action (e.g. closed gaps). */
   private declare _notice: string | null;
   /** Restore points, loaded when the backup section is opened. */
-  private declare _history: Snapshot[] | null;
   /** Open "place spots" form of the selected room. */
   private declare _outdoorId: string | null;
   /** Selected free-standing wall. */
@@ -310,8 +305,16 @@ export class NfEditor extends LitElement {
   private declare _canUndo: boolean;
   private declare _canRedo: boolean;
 
-  private past: string[] = [];
-  private future: string[] = [];
+  private readonly history = new EditHistory<Building>(100);
+  /** What the form modules in editor/forms see of this editor. */
+  private readonly host: EditorHost = this.makeHost();
+  private readonly backup: BackupService = this.makeBackup();
+  private readonly settingsActions: SettingsActions = {
+    useRoofSections: () => {
+      this.useRoofSections();
+      this._tool = "roof";
+    },
+  };
   private drag: Drag | null = null;
   private pointers = new Map<number, [number, number]>();
   private pinch: { dist: number; mid: [number, number] } | null = null;
@@ -345,7 +348,6 @@ export class NfEditor extends LitElement {
     }
     this._expanded = new Set();
     this._notice = null;
-    this._history = null;
     this._spots = null;
     this._outdoorId = null;
     this._wallId = null;
@@ -374,7 +376,6 @@ export class NfEditor extends LitElement {
     } catch {
       /* no storage */
     }
-    this._backupBusy = false;
     this._wall3d = "cut";
     this._doc3d = this._doc;
     this._sideOpen = false;
@@ -402,6 +403,49 @@ export class NfEditor extends LitElement {
 
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
     return translate(this.hass, key, vars);
+  }
+
+  private makeBackup(): BackupService {
+    const editor = this;
+    return new BackupService({
+      get hass() {
+        return editor.hass;
+      },
+      get doc() {
+        return editor._doc;
+      },
+      t: (key, vars) => editor.t(key, vars),
+      adopt: (building) => {
+        editor.setDoc(building);
+        editor._floorId = building.floors[0]?.id ?? null;
+        editor.selectItem("room", null);
+        editor.fit();
+      },
+      say: (text) => (editor._notice = text),
+      refresh: () => editor.requestUpdate(),
+      packsChanged: () => editor.dispatchEvent(new CustomEvent("packs-changed", { bubbles: true, composed: true })),
+    });
+  }
+
+  private makeHost(): EditorHost {
+    const editor = this;
+    return {
+      get hass() {
+        return editor.hass;
+      },
+      get doc() {
+        return editor._doc;
+      },
+      get floor() {
+        return editor.floor;
+      },
+      get admin() {
+        return editor.isAdmin;
+      },
+      t: (key, vars) => editor.t(key, vars),
+      change: (mutate) => editor.change(mutate),
+      replace: (next) => editor.setDoc(next),
+    };
   }
 
   // ------------------------------------------------------------------ lifecycle
@@ -767,14 +811,9 @@ export class NfEditor extends LitElement {
 
   /** Replace the document; `base` (the state before the change) goes into the undo history. */
   private setDoc(next: Building, base: Building | null = this._doc): void {
-    if (base) {
-      this.past.push(JSON.stringify(base));
-      if (this.past.length > HISTORY) this.past.shift();
-      this.future = [];
-    }
+    if (base) this.history.record(base);
     this._doc = next;
-    this._canUndo = this.past.length > 0;
-    this._canRedo = this.future.length > 0;
+    this.syncHistoryButtons();
     this.dispatchEvent(new CustomEvent("building-changed", { detail: { building: next }, bubbles: true, composed: true }));
   }
 
@@ -787,18 +826,19 @@ export class NfEditor extends LitElement {
     this.setDoc(next, history ? base : null);
   }
 
+  private syncHistoryButtons(): void {
+    this._canUndo = this.history.canUndo;
+    this._canRedo = this.history.canRedo;
+  }
+
   private undo(): void {
-    const prev = this.past.pop();
-    if (!prev) return;
-    this.future.push(JSON.stringify(this._doc));
-    this.restore(JSON.parse(prev));
+    const before = this.history.undo(this._doc);
+    if (before) this.restore(before);
   }
 
   private redo(): void {
-    const next = this.future.pop();
-    if (!next) return;
-    this.past.push(JSON.stringify(this._doc));
-    this.restore(JSON.parse(next));
+    const after = this.history.redo(this._doc);
+    if (after) this.restore(after);
   }
 
   private restore(doc: Building): void {
@@ -806,8 +846,7 @@ export class NfEditor extends LitElement {
     if (!doc.floors.some((f) => f.id === this._floorId)) this._floorId = doc.floors[0]?.id ?? null;
     if (!this.floor?.rooms.some((r) => r.id === this._roomId)) this._roomId = null;
     this._vertex = null;
-    this._canUndo = this.past.length > 0;
-    this._canRedo = this.future.length > 0;
+    this.syncHistoryButtons();
     this.dispatchEvent(new CustomEvent("building-changed", { detail: { building: doc }, bubbles: true, composed: true }));
   }
 
@@ -1735,11 +1774,8 @@ export class NfEditor extends LitElement {
   }
 
   private pushHistory(base: Building): void {
-    this.past.push(JSON.stringify(base));
-    if (this.past.length > HISTORY) this.past.shift();
-    this.future = [];
-    this._canUndo = true;
-    this._canRedo = false;
+    this.history.record(base);
+    this.syncHistoryButtons();
   }
 
   private restoreLive(base: Building): void {
@@ -4958,11 +4994,11 @@ export class NfEditor extends LitElement {
             : floor
               ? this.renderRoomList(floor)
               : nothing}
-      ${admin ? this.renderStartView() : nothing} ${admin ? this.renderFavorites() : nothing}
+      ${admin ? renderStartView(this.host, () => this.paneView()) : nothing} ${admin ? renderFavorites(this.host) : nothing}
       ${this.renderHelpLinks()}
-      ${admin && SHOW_PRESENCE ? this.renderPresenceSettings() : nothing}
-      ${floor && admin ? this.renderBackgroundForm(floor) : nothing} ${admin ? this.renderSettings() : nothing}
-      ${admin ? this.renderBackup() : nothing}
+      ${admin && SHOW_PRESENCE ? renderPresence(this.host) : nothing}
+      ${floor && admin ? this.renderBackgroundForm(floor) : nothing} ${admin ? renderSettings(this.host, this.settingsActions) : nothing}
+      ${admin ? renderBackup(this.host, this.backup) : nothing}
     `;
   }
 
@@ -5616,139 +5652,6 @@ export class NfEditor extends LitElement {
     )}`;
   }
 
-  /** Favourites of the house: scenes, scripts and switches in the central menu (star) of the 3D view (#145). */
-  private renderFavorites() {
-    const list = this._doc.settings.favorites ?? [];
-    const domains = ["scene", "script", "automation", "button", "input_button", "switch", "input_boolean", "light", "fan", "cover", "lock"];
-    const options = this.entityOptions((id) => domains.includes(id.split(".")[0]) && !list.includes(id));
-    const set = (next: string[]) => this.change((d) => (d.settings.favorites = next.length ? next : undefined));
-    const move = (i: number, by: number) => {
-      const next = [...list];
-      const [x] = next.splice(i, 1);
-      next.splice(Math.max(0, Math.min(next.length, i + by)), 0, x);
-      set(next);
-    };
-    return html`<details class="nf-section">
-      <summary>${this.t("favorites")}${list.length ? html` <span class="nf-lib-count">${list.length}</span>` : nothing}</summary>
-      <p class="nf-sub">${this.t("favorites_hint")}</p>
-      ${list.map(
-        (id, i) => html`<div class="nf-row nf-dev-row">
-          <span class="nf-dev-name"><span>${entityName(this.hass, id)}</span></span>
-          <button class="nf-pin" title=${this.t("move_up")} ?disabled=${i === 0} @click=${() => move(i, -1)}>↑</button>
-          <button class="nf-pin" title=${this.t("move_down")} ?disabled=${i === list.length - 1} @click=${() => move(i, 1)}>↓</button>
-          <button class="nf-pin" title=${this.t("delete")} @click=${() => set(list.filter((x) => x !== id))}>✕</button>
-        </div>`,
-      )}
-      ${list.length < 40
-        ? html`<div class="nf-form">
-            ${this.entitySelect(this.t("favorites_add"), null, undefined, options, (v) => {
-              if (v && v !== "none" && !list.includes(v)) set([...list, v]);
-            })}
-          </div>`
-        : nothing}
-      ${this.renderOwnButtons()} ${this.renderMediaPresets()}
-    </details>`;
-  }
-
-  /** Klang: stations and playlists to start on a speaker from its quick menu. */
-  private renderMediaPresets() {
-    const list = this._doc.settings.media_presets ?? [];
-    const set = (next: MediaPreset[]) => this.change((d) => (d.settings.media_presets = next.length ? next : undefined));
-    const upd = (i: number, patch: Partial<MediaPreset>) => set(list.map((p, j) => (j === i ? { ...p, ...patch } : p)));
-    return html`<h4>${this.t("presets")}</h4>
-      <p class="nf-sub">${this.t("presets_hint")}</p>
-      <datalist id="nf-preset-types">
-        ${["music", "url", "playlist", "SPOTIFY", "AMAZON_MUSIC", "TUNEIN", "APPLE_MUSIC"].map((t) => html`<option value=${t}></option>`)}
-      </datalist>
-      ${list.map(
-        (p, i) => html`<div class="nf-form nf-own-button">
-          <label class="nf-field"
-            >${this.t("own_button_label")}
-            <input type="text" maxlength="60" .value=${p.label} @change=${(e: Event) => upd(i, { label: (e.target as HTMLInputElement).value.trim() || "Radio" })}
-          /></label>
-          <label class="nf-field" title=${this.t("preset_type_hint")}
-            >${this.t("preset_type")}
-            <input type="text" list="nf-preset-types" .value=${p.type} @change=${(e: Event) => upd(i, { type: (e.target as HTMLInputElement).value.trim() || "music" })}
-          /></label>
-          <label class="nf-field nf-wide" title=${this.t("preset_content_hint")}
-            >${this.t("preset_content")}
-            <input type="text" .value=${p.content} placeholder="https://… · spotify:playlist:… · Rock Antenne" @change=${(e: Event) => upd(i, { content: (e.target as HTMLInputElement).value.trim() })}
-          /></label>
-          <div class="nf-actions nf-wide">
-            <button class="nf-btn nf-danger" @click=${() => set(list.filter((_, j) => j !== i))}>${this.t("delete")}</button>
-          </div>
-        </div>`,
-      )}
-      ${list.length < 30
-        ? html`<div class="nf-actions">
-            <button class="nf-btn" @click=${() => set([...list, { id: uid("preset"), label: "Radio", type: "music", content: "" }])}>+ ${this.t("preset_add")}</button>
-          </div>`
-        : nothing}`;
-  }
-
-  /** Own buttons of the central menu (D143): label, icon, action, target and data. */
-  private renderOwnButtons() {
-    const list = this._doc.settings.buttons ?? [];
-    const set = (next: CustomButton[]) => this.change((d) => (d.settings.buttons = next.length ? next : undefined));
-    const upd = (i: number, patch: Partial<CustomButton>) => set(list.map((b, j) => (j === i ? { ...b, ...patch } : b)));
-    const placeholder: Record<ButtonAction, string> = { navigate: "/lovelace/rollos", more_info: "cover.wohnzimmer", service: "script.turn_on", fire_dom_event: "" };
-    return html`<h4>${this.t("own_buttons")}</h4>
-      <p class="nf-sub">${this.t("own_buttons_hint")}</p>
-      ${list.map(
-        (b, i) => html`<div class="nf-form nf-own-button">
-          <label class="nf-field"
-            >${this.t("own_button_label")}
-            <input type="text" maxlength="60" .value=${b.label} @change=${(e: Event) => upd(i, { label: (e.target as HTMLInputElement).value.trim() || this.t("own_button_new") })}
-          /></label>
-          <label class="nf-field"
-            >${this.t("own_button_action")}
-            <select @change=${(e: Event) => upd(i, { action: (e.target as HTMLSelectElement).value as ButtonAction })}>
-              ${BUTTON_ACTIONS.map((a) => html`<option value=${a} ?selected=${a === b.action}>${this.t(`own_action_${a}` as I18nKey)}</option>`)}
-            </select></label
-          >
-          ${this.iconInput(b.icon ?? null, (v) => upd(i, { icon: v }))}
-          ${b.action !== "fire_dom_event"
-            ? html`<label class="nf-field nf-wide"
-                >${this.t(`own_target_${b.action}` as I18nKey)}
-                <input type="text" .value=${b.target ?? ""} placeholder=${placeholder[b.action]} @change=${(e: Event) => upd(i, { target: (e.target as HTMLInputElement).value.trim() || null })}
-              /></label>`
-            : nothing}
-          ${b.action === "service" || b.action === "fire_dom_event"
-            ? html`<label class="nf-field nf-wide" title=${this.t("own_data_hint")}
-                >${this.t("own_data")}
-                <textarea
-                  rows="4"
-                  spellcheck="false"
-                  placeholder=${b.action === "fire_dom_event" ? '{"browser_mod": {"service": "browser_mod.popup", "data": {"title": "Rollos", "content": {"type": "custom:my-cover-card"}}}}' : '{"entity_id": "script.party"}'}
-                  .value=${b.data ? JSON.stringify(b.data, null, 1) : ""}
-                  @change=${(e: Event) => {
-                    (e.target as HTMLTextAreaElement).setCustomValidity("");
-                    const raw = (e.target as HTMLTextAreaElement).value.trim();
-                    if (!raw) return upd(i, { data: null });
-                    try {
-                      const v = JSON.parse(raw);
-                      if (v && typeof v === "object" && !Array.isArray(v)) upd(i, { data: v });
-                    } catch {
-                      (e.target as HTMLTextAreaElement).setCustomValidity(this.t("own_data_bad"));
-                      (e.target as HTMLTextAreaElement).reportValidity();
-                    }
-                  }}
-                ></textarea></label
-              >`
-            : nothing}
-          <div class="nf-actions nf-wide">
-            <button class="nf-btn" ?disabled=${i === 0} @click=${() => set([...list.slice(0, i - 1), b, list[i - 1], ...list.slice(i + 1)])}>↑</button>
-            <button class="nf-btn nf-danger" @click=${() => set(list.filter((_, j) => j !== i))}>${this.t("delete")}</button>
-          </div>
-        </div>`,
-      )}
-      ${list.length < 20
-        ? html`<div class="nf-actions">
-            <button class="nf-btn" @click=${() => set([...list, { id: uid("btn"), label: this.t("own_button_new"), action: "navigate", target: null }])}>+ ${this.t("own_button_add")}</button>
-          </div>`
-        : nothing}`;
-  }
-
   /** The camera of the editor's 3D pane as it stands right now, rounded for the plan (null: no pane). */
   private paneView(): StartView | null {
     const pane = this.renderRoot.querySelector("nf-view3d") as (HTMLElement & { currentView(): StartView | null }) | null;
@@ -5776,67 +5679,6 @@ export class NfEditor extends LitElement {
       return;
     }
     this.updateRoom({ start_view: v });
-  }
-
-  /** The camera the house opens with: the editor's 3D pane as it stands right now, or the default. */
-  private renderStartView() {
-    const set = this._doc.settings.start_view ?? null;
-    const remember = () => {
-      const v = this.paneView();
-      if (!v) return;
-      this.change((d) => (d.settings.start_view = v));
-    };
-    return html`<details class="nf-section">
-      <summary>${this.t("start_view")}</summary>
-      <p class="nf-sub">${this.t("start_view_hint")}</p>
-      <div class="nf-actions">
-        <button class="nf-btn nf-primary" @click=${remember}>${this.t("start_view_set")}</button>
-        ${set ? html`<button class="nf-btn" @click=${() => this.change((d) => (d.settings.start_view = null))}>${this.t("start_view_reset")}</button>` : nothing}
-      </div>
-      ${set
-        ? html`<p class="nf-sub">${this.t("start_view_saved")}</p>
-            <p class="nf-sub">${this.t("start_view_card")}</p>
-            <code class="nf-code"
-              >start_view: { theta: ${set.theta}, phi: ${set.phi}, radius: ${set.radius}${set.target ? `, target: { x: ${set.target.x}, y: ${set.target.y}, z: ${set.target.z} }` : ""} }</code
-            >`
-        : nothing}
-    </details>`;
-  }
-
-  private renderPresenceSettings() {
-    const persons = Object.keys(this.hass?.states ?? {})
-      .filter((id) => id.startsWith("person."))
-      .sort();
-    const sensors = (person: string) => {
-      // likely room sensors of this person first (ESPresense / Bermuda name them after the device)
-      const slug = person.slice("person.".length);
-      const all = this.entityOptions((id) => numberish(id));
-      const likely = (id: string) => id.includes(slug) && /(area|room|raum|bermuda|espresense)/.test(id);
-      return [...all.filter((o) => likely(o.id)), ...all.filter((o) => !likely(o.id))];
-    };
-    const set = (person: string, sensor: string | null) => {
-      const next = structuredClone(this._doc);
-      next.presence = next.presence.filter((p) => p.person !== person);
-      if (sensor && sensor !== "none") next.presence.push({ person, sensor });
-      this.setDoc(next);
-    };
-    return html`<details class="nf-section">
-      <summary>${this.t("presence")}</summary>
-      <div class="nf-form">
-        ${persons.length
-          ? persons.map((id) =>
-              this.entitySelect(
-                `${entityName(this.hass, id)} · ${this.t("presence_sensor")}`,
-                this._doc.presence.find((p) => p.person === id)?.sensor ?? null,
-                undefined,
-                sensors(id),
-                (v) => set(id, v),
-              ),
-            )
-          : html`<p class="nf-sub nf-wide">${this.t("no_persons")}</p>`}
-      </div>
-      <p class="nf-sub">${this.t("presence_hint")}</p>
-    </details>`;
   }
 
   /** "State from": an entity lights the item's top (two light its halves) – any furniture, a bed with occupancy mats too (#116). */
@@ -6523,1694 +6365,7 @@ export class NfEditor extends LitElement {
     </details>`;
   }
 
-  private async loadHistory(): Promise<void> {
-    if (!this.hass) return;
-    try {
-      this._history = await listHistory(this.hass);
-    } catch {
-      this._history = [];
-    }
-  }
-
-  private async restoreFromHistory(snap: Snapshot): Promise<void> {
-    if (!this.hass || !confirm(this.t("backup_restore_confirm", { time: this.snapshotTime(snap) }))) return;
-    await restoreSnapshot(this.hass, snap.id);
-    this._notice = this.t("backup_restored");
-    await this.loadHistory();
-  }
-
-  /** Everything in one file: the plan, every stored picture and the packs. */
-  private async exportBackup(): Promise<void> {
-    if (!this.hass) return;
-    this._backupBusy = true;
-    try {
-      const base = await fetchBackup(this.hass);
-      const images: Record<string, string> = {};
-      for (const id of storedImageIds(base.building)) {
-        try {
-          images[id] = await fetchImage(this.hass, id);
-        } catch {
-          /* a missing picture is left out */
-        }
-      }
-      const day = new Date().toISOString().slice(0, 10);
-      download(`nextfloor-${this.t("export_name_full")}-${day}.json`, JSON.stringify({ ...base, exported_at: new Date().toISOString(), images }));
-    } catch (err) {
-      alert(this.t("backup_import_error", { error: String((err as { message?: string })?.message ?? err) }));
-    } finally {
-      this._backupBusy = false;
-    }
-  }
-
-  private async importBackup(e: Event): Promise<void> {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = "";
-    if (!file || !this.hass) return;
-    let data: BackupFile;
-    try {
-      data = JSON.parse(await file.text()) as BackupFile;
-    } catch {
-      alert(this.t("import_error_not_json"));
-      return;
-    }
-    if (data?.format !== "nextfloor-backup" || !data.building) {
-      alert(this.t("backup_full_not_backup"));
-      return;
-    }
-    if (!confirm(this.t("backup_full_confirm"))) return;
-    this._backupBusy = true;
-    try {
-      const res = await restoreBackup(this.hass, data.building, data.packs ?? []);
-      let pictures = 0;
-      for (const [id, picture] of Object.entries(data.images ?? {})) {
-        try {
-          await storeImage(this.hass, id, picture);
-          pictures++;
-        } catch {
-          /* an unreadable picture is skipped */
-        }
-      }
-      this.setDoc(normalizeBuilding(res.building));
-      this._floorId = res.building.floors[0]?.id ?? null;
-      this.selectItem("room", null);
-      this.fit();
-      this.dispatchEvent(new CustomEvent("packs-changed", { bubbles: true, composed: true }));
-      const skipped = res.skipped.length ? ` ${this.t("backup_full_skipped", { packs: res.skipped.map((s) => s.id).join(", ") })}` : "";
-      this._notice = this.t("backup_full_restored", { packs: res.packs, pictures }) + skipped;
-    } catch (err) {
-      const { code, message } = (err ?? {}) as { code?: string; message?: string };
-      alert(this.t("backup_import_error", { error: message ?? code ?? String(err) }));
-    } finally {
-      this._backupBusy = false;
-    }
-  }
-
-  private exportPlan(shareable: boolean): void {
-    const day = new Date().toISOString().slice(0, 10);
-    download(`nextfloor-${this.t(shareable ? "export_name_template" : "export_name_backup")}-${day}.json`, JSON.stringify(exportFile(this._doc, shareable), null, 2));
-  }
-
-  private async importPlan(e: Event): Promise<void> {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = "";
-    if (!file || !this.hass) return;
-    let building: Building;
-    try {
-      building = parseExport(await file.text());
-    } catch (err) {
-      const code = (err as Error).message;
-      alert(code === "not_json" ? this.t("import_error_not_json") : code === "not_plan" ? this.t("import_error_not_plan") : this.t("backup_import_error", { error: code }));
-      return;
-    }
-    if (!confirm(this.t("backup_import_confirm"))) return;
-    // the current plan stays available as a restore point
-    await takeSnapshot(this.hass).catch(() => undefined);
-    this.setDoc(building);
-    this._floorId = building.floors[0]?.id ?? null;
-    this.selectItem("room", null);
-    this.fit();
-    this._notice = this.t("backup_imported");
-  }
-
-  private snapshotTime(snap: Snapshot): string {
-    return new Date(snap.saved_at * 1000).toLocaleString(this.hass?.language, { dateStyle: "short", timeStyle: "short" });
-  }
-
-  private renderBackup() {
-    return html`<details
-      class="nf-section"
-      @toggle=${(e: Event) => {
-        if ((e.target as HTMLDetailsElement).open) void this.loadHistory();
-      }}
-    >
-      <summary>${this.t("backup")}</summary>
-      <h4 class="nf-lib-head">${this.t("backup_history")}</h4>
-      ${this._history === null
-        ? html`<p class="nf-sub">${this.t("loading")}</p>`
-        : this._history.length
-          ? html`<div class="nf-room-list">
-              ${this._history.map(
-                (h) => html`<div class="nf-row nf-dev-row">
-                  <span>${this.snapshotTime(h)} <span class="nf-muted">· ${this.t("backup_summary", { rooms: h.rooms, furniture: h.furniture })}</span></span>
-                  <button class="nf-link" @click=${() => this.restoreFromHistory(h)}>${this.t("backup_restore")}</button>
-                </div>`,
-              )}
-            </div>`
-          : html`<p class="nf-sub">${this.t("backup_none")}</p>`}
-      <h4 class="nf-lib-head">${this.t("backup_file")}</h4>
-      <div class="nf-actions">
-        <button class="nf-btn" @click=${() => this.exportPlan(false)}>${this.t("backup_export")}</button>
-        <button class="nf-btn" title=${this.t("backup_export_share_hint")} @click=${() => this.exportPlan(true)}>${this.t("backup_export_share")}</button>
-        <label class="nf-btn nf-upload"
-          >${this.t("backup_import")}<input type="file" accept="application/json,.json" @change=${this.importPlan}
-        /></label>
-      </div>
-      <p class="nf-sub">${this.t("backup_hint")}</p>
-      <h4 class="nf-lib-head">${this.t("backup_full")}</h4>
-      <div class="nf-actions">
-        <button class="nf-btn" ?disabled=${this._backupBusy} @click=${() => this.exportBackup()}>${this._backupBusy ? "…" : this.t("backup_full_export")}</button>
-        <label class="nf-btn nf-upload"
-          >${this.t("backup_full_import")}<input type="file" accept="application/json,.json" @change=${this.importBackup}
-        /></label>
-      </div>
-      <p class="nf-sub">${this.t("backup_full_hint")}</p>
-    </details>`;
-  }
-
-  private renderSettings() {
-    const s = this._doc.settings;
-    const set = (patch: Partial<Building["settings"]>) => {
-      const next = structuredClone(this._doc);
-      Object.assign(next.settings, patch);
-      this.setDoc(next);
-    };
-    return html`<details class="nf-section">
-      <summary>${this.t("settings")}</summary>
-      <div class="nf-form">
-        ${this.num(this.t("wall_exterior"), s.wall_exterior, (v) => set({ wall_exterior: Math.min(1, Math.max(0.02, v)) }), 0.01, 0.02)}
-        ${this.num(this.t("wall_interior"), s.wall_interior, (v) => set({ wall_interior: Math.min(1, Math.max(0.02, v)) }), 0.01, 0.02)}
-        ${this.num(this.t("grid"), s.grid, (v) => set({ grid: Math.min(1, Math.max(0.01, v)) }), 0.01, 0.01)}
-        ${this.num(this.t("north"), s.north, (v) => set({ north: ((Math.round(v) % 360) + 360) % 360 }), 1)}
-        <label class="nf-field nf-wide"
-          >${this.t("roof")}
-          <select
-            @change=${(e: Event) => {
-              const type = (e.target as HTMLSelectElement).value as RoofType;
-              // roof sections: propose them from the rooms and open the roof tool
-              if (type === "custom") {
-                this.useRoofSections();
-                this._tool = "roof";
-              } else set({ roof: { ...s.roof, type } });
-            }}
-          >
-            ${(["none", "flat", "gable", "custom"] as const).map((t) => html`<option value=${t} ?selected=${t === s.roof.type}>${this.t(`roof_${t}`)}</option>`)}
-          </select></label
-        >
-        ${s.roof.type === "gable"
-          ? html`<label class="nf-field nf-wide"
-              >${this.t("roof_ridge")}
-              <select @change=${(e: Event) => set({ roof: { ...s.roof, ridge: (e.target as HTMLSelectElement).value === "short" ? "short" : null } })}>
-                <option value="long" ?selected=${s.roof.ridge !== "short"}>${this.t("roof_ridge_long")}</option>
-                <option value="short" ?selected=${s.roof.ridge === "short"}>${this.t("roof_ridge_short")}</option>
-              </select></label
-            >`
-          : nothing}
-        ${s.roof.type === "gable" ? this.num(this.t("roof_pitch"), s.roof.pitch, (v) => set({ roof: { ...s.roof, pitch: Math.min(60, Math.max(5, v)) } }), 1, 5) : nothing}
-        ${s.roof.type !== "none" ? this.num(this.t("roof_overhang"), s.roof.overhang, (v) => set({ roof: { ...s.roof, overhang: Math.min(2, Math.max(0, v)) } }), 0.05, 0) : nothing}
-        ${this.hass
-          ? this.entitySelect(this.t("weather_entity"), s.weather_entity ?? null, weatherEntity(this.hass, null), this.entityOptions((id) => id.startsWith("weather.")), (v) => set({ weather_entity: v }))
-          : nothing}
-        <div class="nf-sub nf-wide">${this.t("weather_effects")}</div>
-        ${WEATHER_EFFECTS.map((effect) => {
-          const current = s.weather_effects ?? DEFAULT_WEATHER_EFFECTS;
-          return html`<label class="nf-check"
-            ><input
-              type="checkbox"
-              .checked=${current.includes(effect)}
-              @change=${(ev: Event) => {
-                const checked = (ev.target as HTMLInputElement).checked;
-                set({ weather_effects: checked ? [...new Set([...current, effect])] : current.filter((x) => x !== effect) });
-              }}
-            />
-            ${this.t(`weather_effect_${effect}` as I18nKey)}</label
-          >`;
-        })}
-        <label class="nf-check nf-wide"
-          ><input type="checkbox" .checked=${s.rain_warning !== false} @change=${(ev: Event) => set({ rain_warning: (ev.target as HTMLInputElement).checked })} />
-          ${this.t("rain_warning")}</label
-        >
-        <label class="nf-check nf-wide" title=${this.t("sun_patches_hint")}
-          ><input type="checkbox" .checked=${s.sun_patches !== false} @change=${(ev: Event) => set({ sun_patches: (ev.target as HTMLInputElement).checked })} />
-          ${this.t("sun_patches")}</label
-        >
-      </div>
-      <p class="nf-sub">${this.t("north_hint")} ${this.t("weather_entity_hint")}</p>
-    </details>`;
-  }
-
-  static styles = [
-    tokens,
-    controls,
-    css`
-      :host {
-        display: block;
-        height: 100%;
-      }
-      .nf-editor {
-        position: relative;
-        display: grid;
-        grid-template-columns: 1fr 320px;
-        height: 100%;
-        min-height: 0;
-      }
-      .nf-editor:has(> .nf-side-strip) {
-        grid-template-columns: 1fr 52px;
-      }
-      .nf-side-strip {
-        padding: 10px 6px;
-        gap: 8px;
-        align-items: center;
-      }
-      .nf-strip-btn {
-        width: 40px;
-        height: 40px;
-        border: 1px solid var(--nf-line);
-        border-radius: 12px;
-        background: var(--nf-chrome);
-        color: var(--nf-text);
-        font-size: 18px;
-        cursor: pointer;
-      }
-      .nf-strip-hot {
-        border-color: var(--nf-accent);
-        color: var(--nf-accent);
-      }
-      .nf-side-overlay {
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        width: min(340px, 60%);
-        z-index: 6;
-        box-shadow: -12px 0 32px rgba(0, 0, 0, 0.45);
-      }
-      .nf-pin-row {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-      }
-      .nf-3d-size {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        color: var(--nf-muted);
-        font-size: 12px;
-      }
-      .nf-3d-size input {
-        width: 58px;
-        padding: 4px 6px;
-        font: inherit;
-        color: var(--nf-text);
-        background: var(--nf-chrome-solid);
-        border: 1px solid var(--nf-line);
-        border-radius: 8px;
-      }
-      .nf-3d-select {
-        font: inherit;
-        color: var(--nf-text);
-        background: var(--nf-chrome-solid);
-        border: 1px solid var(--nf-line);
-        border-radius: 999px;
-        padding: 4px 10px;
-      }
-      .nf-editor.nf-narrow {
-        grid-template-columns: 1fr;
-        grid-template-rows: minmax(360px, 62vh) auto;
-        height: auto;
-      }
-      .nf-main {
-        display: grid;
-        grid-template-rows: auto 1fr;
-        min-height: 0;
-        min-width: 0;
-      }
-      .nf-toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-        padding: 10px 12px;
-      }
-      .nf-warn {
-        color: var(--nf-warm);
-        font-size: 12.5px;
-      }
-      .nf-picture-group {
-        display: grid;
-        gap: 6px;
-        margin: 6px 0 10px;
-        padding: 8px;
-        border: 1px solid var(--nf-line);
-        border-radius: 10px;
-      }
-      .nf-picture-group > select {
-        min-width: 0;
-      }
-      .nf-picture-row {
-        display: grid;
-        grid-template-columns: 1fr auto auto;
-        gap: 6px;
-        align-items: center;
-        padding: 6px;
-        border-radius: 8px;
-        background: color-mix(in srgb, var(--nf-line) 40%, transparent);
-      }
-      .nf-picture-row input[type="url"] {
-        grid-column: 1 / -1;
-        min-width: 0;
-      }
-      .nf-picture-row > .nf-sub,
-      .nf-picture-row > .nf-picture-camera {
-        grid-column: 1 / -1;
-      }
-      .nf-picture-row.nf-rule-hit {
-        outline: 1px solid var(--nf-accent);
-      }
-      .nf-rule-now {
-        grid-column: 1 / -1;
-      }
-      .nf-rule-hit {
-        color: var(--nf-accent);
-      }
-      .nf-picture-reuse {
-        grid-column: 1 / -1;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-      }
-      .nf-picture-reuse-btn {
-        padding: 2px;
-        border: 1px solid var(--nf-line);
-        border-radius: 6px;
-        background: var(--nf-chrome-solid);
-        cursor: pointer;
-      }
-      .nf-picture-reuse-btn img {
-        display: block;
-        height: 28px;
-        max-width: 60px;
-        object-fit: contain;
-      }
-      .nf-picture-reuse-btn:hover {
-        border-color: var(--nf-accent);
-      }
-      .nf-picture-thumb {
-        max-height: 60px;
-        max-width: 100%;
-        border-radius: 6px;
-        justify-self: start;
-      }
-      .nf-picture-pick {
-        justify-self: start;
-      }
-      .nf-parking-row {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-        margin: 4px 0;
-      }
-      .nf-parking-row input,
-      .nf-parking-row select {
-        flex: 1;
-        min-width: 0;
-      }
-      .nf-stage-pair {
-        display: flex;
-        min-height: 0;
-        min-width: 0;
-      }
-      .nf-stage-pair > .nf-canvas-wrap {
-        flex: 1 1 var(--nf-split, 55%);
-        min-width: 0;
-      }
-      .nf-split > .nf-canvas-wrap {
-        flex: 0 0 var(--nf-split, 55%);
-      }
-      .nf-split-handle {
-        flex: 0 0 8px;
-        cursor: col-resize;
-        background: var(--nf-line);
-        touch-action: none;
-      }
-      .nf-split-handle:hover {
-        background: var(--nf-accent);
-      }
-      .nf-editor-3d {
-        position: relative;
-        flex: 1 1 0;
-        min-width: 240px;
-        min-height: 0;
-        border-left: 1px solid var(--nf-line);
-        container-type: size;
-        container-name: nf;
-      }
-      .nf-editor-3d nf-view3d {
-        display: block;
-        height: 100%;
-      }
-      .nf-3d-walls {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 3;
-      }
-      .nf-3d-bar {
-        position: absolute;
-        left: 50%;
-        bottom: 12px;
-        transform: translateX(-50%);
-        z-index: 3;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        max-width: calc(100% - 24px);
-        padding: 6px 8px 6px 14px;
-        border-radius: 999px;
-        background: var(--nf-chrome);
-        box-shadow: var(--nf-shadow);
-        font-size: 13px;
-      }
-      .nf-danger-chip {
-        color: var(--nf-danger, #ff6b7a);
-      }
-      .nf-narrow .nf-stage-pair.nf-split {
-        flex-direction: column;
-      }
-      .nf-narrow .nf-split > .nf-canvas-wrap {
-        flex: 1 1 auto;
-      }
-      .nf-narrow .nf-editor-3d {
-        flex: 0 0 42%;
-        min-width: 0;
-        border-left: none;
-        border-top: 1px solid var(--nf-line);
-      }
-      .nf-canvas-wrap {
-        position: relative;
-        min-height: 0;
-        overflow: hidden;
-        background: radial-gradient(ellipse at 50% 35%, var(--nf-bg2), var(--nf-bg) 75%);
-      }
-      svg.nf-plan {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        touch-action: none;
-        user-select: none;
-        -webkit-user-select: none;
-        cursor: default;
-      }
-      svg.nf-tool-rect,
-      svg.nf-tool-polygon {
-        cursor: crosshair;
-      }
-      .nf-grid-minor {
-        stroke: color-mix(in srgb, var(--nf-accent) 5%, transparent);
-        stroke-width: 1;
-      }
-      .nf-grid-major {
-        stroke: color-mix(in srgb, var(--nf-soft) 16%, transparent);
-        stroke-width: 1;
-      }
-      .nf-origin {
-        fill: color-mix(in srgb, var(--nf-soft) 50%, transparent);
-      }
-      .nf-ghost {
-        fill: none;
-        stroke: rgba(138, 155, 184, 0.35);
-        stroke-dasharray: 4 4;
-      }
-      .nf-wall {
-        fill: #1b2a47;
-      }
-      .nf-wall-ext {
-        fill: #22345a;
-      }
-      .nf-room {
-        fill: color-mix(in srgb, var(--nf-accent) 5%, transparent);
-        stroke: color-mix(in srgb, var(--nf-accent) 75%, transparent);
-        stroke-width: 1.5;
-        stroke-linejoin: round;
-        cursor: pointer;
-      }
-      .nf-room:hover {
-        fill: color-mix(in srgb, var(--nf-accent) 9%, transparent);
-      }
-      .nf-room-sel {
-        fill: color-mix(in srgb, var(--nf-accent) 14%, transparent);
-        stroke: var(--nf-accent);
-        stroke-width: 2.5;
-      }
-      .nf-room-name {
-        fill: var(--nf-text);
-        font: 600 13px var(--nf-title-font);
-        text-anchor: middle;
-      }
-      .nf-room-area {
-        fill: var(--nf-muted);
-        font: 500 11.5px var(--nf-font);
-        text-anchor: middle;
-        font-variant-numeric: tabular-nums;
-      }
-      .nf-dim {
-        fill: var(--nf-accent);
-        font: 600 11.5px var(--nf-font);
-        text-anchor: middle;
-        font-variant-numeric: tabular-nums;
-        paint-order: stroke;
-        stroke: var(--nf-bg);
-        stroke-width: 3px;
-      }
-      .nf-vertex circle:not(.nf-hit) {
-        fill: var(--nf-bg);
-        stroke: var(--nf-accent);
-        stroke-width: 2;
-      }
-      .nf-vertex-sel circle:not(.nf-hit) {
-        fill: var(--nf-accent);
-      }
-      .nf-vertex,
-      .nf-mid {
-        cursor: grab;
-      }
-      .nf-hit {
-        fill: transparent;
-      }
-      .nf-mid circle:not(.nf-hit) {
-        fill: color-mix(in srgb, var(--nf-soft) 35%, transparent);
-        stroke: var(--nf-soft);
-      }
-      .nf-mid path {
-        stroke: var(--nf-text);
-        stroke-width: 1.5;
-      }
-      .nf-draft {
-        fill: rgba(255, 181, 71, 0.08);
-        stroke: var(--nf-warm);
-        stroke-width: 2;
-        stroke-dasharray: 6 4;
-      }
-      polyline.nf-draft {
-        fill: none;
-      }
-      .nf-draft-pt {
-        fill: var(--nf-warm);
-      }
-      .nf-draft-first {
-        fill: transparent;
-        stroke: var(--nf-warm);
-        stroke-width: 2;
-      }
-      .nf-cursor {
-        fill: var(--nf-warm);
-      }
-      .nf-guide {
-        stroke: rgba(255, 95, 210, 0.55);
-        stroke-dasharray: 3 5;
-      }
-      .nf-snap {
-        fill: none;
-        stroke: #ff5fd2;
-        stroke-width: 2;
-      }
-      .nf-hint {
-        position: absolute;
-        left: 12px;
-        right: 12px;
-        bottom: 8px;
-        margin: 0;
-        font-size: 12px;
-        color: var(--nf-muted);
-        pointer-events: none;
-      }
-      .nf-side {
-        border-left: 1px solid var(--nf-line);
-        background: var(--nf-chrome-solid);
-        overflow-y: auto;
-        padding: 12px 14px 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-        min-height: 0;
-      }
-      .nf-narrow .nf-side {
-        border-left: none;
-        border-top: 1px solid var(--nf-line);
-      }
-      h3,
-      summary {
-        margin: 0 0 8px;
-        font-size: 11.5px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--nf-muted);
-        font-weight: 600;
-      }
-      summary {
-        cursor: pointer;
-        margin: 0;
-      }
-      details[open] > summary {
-        margin-bottom: 8px;
-      }
-      .nf-floor-list,
-      .nf-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-      .nf-floor-list .nf-chip {
-        box-shadow: none;
-        border: 1px solid var(--nf-line);
-      }
-      .nf-form {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-top: 10px;
-      }
-      .nf-wide {
-        grid-column: 1 / -1;
-      }
-      .nf-room-list {
-        display: grid;
-        gap: 2px;
-      }
-      .nf-row {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        font: inherit;
-        color: var(--nf-text);
-        background: none;
-        border: none;
-        border-bottom: 1px solid var(--nf-line);
-        padding: 9px 2px;
-        cursor: pointer;
-        text-align: left;
-      }
-      .nf-row:hover {
-        color: var(--nf-accent);
-      }
-      .nf-check {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        color: var(--nf-muted);
-      }
-      .nf-check input {
-        accent-color: var(--nf-accent);
-      }
-      .nf-meter rect {
-        fill: #2a2a10;
-        stroke: #ffc633;
-        stroke-width: 1.5;
-      }
-      .nf-meter path {
-        fill: #ffc633;
-      }
-      .nf-packages {
-        display: grid;
-        gap: 6px;
-        margin-top: 10px;
-      }
-      .nf-packages .nf-btn {
-        display: grid;
-        text-align: left;
-        gap: 2px;
-      }
-      .nf-packages .nf-btn span {
-        font-weight: 400;
-        font-size: 12px;
-        color: var(--nf-muted);
-      }
-      .nf-arrows {
-        display: grid;
-        grid-template-columns: repeat(3, 52px);
-        grid-template-areas: ". up ." "left . right" ". down .";
-        gap: 6px;
-        justify-content: center;
-      }
-      .nf-arrows .nf-btn {
-        font-size: 20px;
-        padding: 6px 0;
-      }
-      .nf-arrow-up {
-        grid-area: up;
-      }
-      .nf-arrow-left {
-        grid-area: left;
-      }
-      .nf-arrow-right {
-        grid-area: right;
-      }
-      .nf-arrow-down {
-        grid-area: down;
-      }
-      .nf-measure-list {
-        margin: 8px 0;
-        padding-left: 22px;
-        color: var(--nf-muted);
-        font-size: 13px;
-        font-variant-numeric: tabular-nums;
-      }
-      .nf-library {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-        gap: 6px;
-        margin-top: 8px;
-      }
-      .nf-library .nf-btn {
-        font-weight: 500;
-        font-size: 13px;
-      }
-      /* the background picture while it is edited: a dashed frame and a corner handle */
-      .nf-bg-frame {
-        fill: none;
-        stroke: var(--nf-accent);
-        stroke-width: 1.5;
-        stroke-dasharray: 6 4;
-        pointer-events: none;
-      }
-      .nf-bg-handle {
-        fill: var(--nf-accent);
-        stroke: #041018;
-        stroke-width: 2;
-        cursor: nwse-resize;
-      }
-      .nf-furn-body {
-        fill: color-mix(in srgb, var(--nf-soft) 10%, transparent);
-        stroke: color-mix(in srgb, var(--nf-soft) 55%, transparent);
-        stroke-width: 1.2;
-        vector-effect: non-scaling-stroke;
-        cursor: grab;
-      }
-      .nf-furn-sym * {
-        fill: none;
-        stroke: rgba(150, 175, 255, 0.55);
-        stroke-width: 1;
-        vector-effect: non-scaling-stroke;
-        pointer-events: none;
-      }
-      .nf-furn-sym .nf-sym-fill {
-        fill: color-mix(in srgb, var(--nf-soft) 28%, transparent);
-      }
-      .nf-furn-sym .nf-sym-strong {
-        stroke: var(--nf-accent);
-        stroke-width: 2;
-      }
-      .nf-out polygon {
-        fill: color-mix(in srgb, var(--nf-soft) 6%, transparent);
-        stroke: color-mix(in srgb, var(--nf-soft) 40%, transparent);
-        stroke-width: 1;
-        stroke-dasharray: 4 3;
-        cursor: grab;
-      }
-      .nf-out-lawn polygon,
-      .nf-out-bed polygon,
-      .nf-out-wild polygon,
-      .nf-out-hedge polygon {
-        fill: rgba(61, 224, 160, 0.1);
-        stroke: rgba(61, 224, 160, 0.5);
-      }
-      .nf-out-pool polygon {
-        fill: color-mix(in srgb, var(--nf-accent) 18%, transparent);
-        stroke: var(--nf-accent);
-      }
-      .nf-out-terrace polygon {
-        fill: rgba(150, 130, 255, 0.12);
-      }
-      .nf-free-wall {
-        cursor: grab;
-      }
-      .nf-vertex-no {
-        fill: var(--nf-accent);
-        font-size: 11px;
-        font-weight: 700;
-        pointer-events: none;
-      }
-      .nf-edge-box {
-        margin: 12px 0;
-        padding: 10px 12px;
-        border: 1px solid color-mix(in srgb, var(--nf-accent) 45%, transparent);
-        border-radius: 12px;
-        background: color-mix(in srgb, var(--nf-accent) 6%, transparent);
-      }
-      .nf-edge-box h4 {
-        margin: 0 0 4px;
-        color: var(--nf-accent);
-        font-size: 13px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
-      /* a wall row: name and length, the height, then the buttons (full height, no wall, cut) in one line;
-         a split point gets a line of its own below */
-      .nf-edge-height {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: end;
-        padding: 4px 6px;
-        margin: 0 -6px;
-        border-radius: 8px;
-      }
-      .nf-edge-height > span:first-child {
-        flex: 1 1 84px;
-        min-width: 84px;
-      }
-      .nf-edge-height > .nf-field {
-        flex: 1 1 90px;
-        min-width: 0;
-      }
-      .nf-edge-height > .nf-muted {
-        flex: 1 1 90px;
-        align-self: center;
-      }
-      .nf-edge-height > .nf-btn {
-        flex: 0 0 auto;
-        white-space: nowrap;
-        padding-left: 10px;
-        padding-right: 10px;
-      }
-      .nf-edge-height > .nf-split-row {
-        flex: 1 1 100%;
-        display: flex;
-        gap: 6px;
-        align-items: end;
-      }
-      .nf-edge-height > .nf-split-row > .nf-field {
-        flex: 1;
-      }
-      .nf-edge-on {
-        background: color-mix(in srgb, var(--nf-accent) 14%, transparent);
-      }
-      .nf-edge-low b {
-        color: var(--nf-accent);
-      }
-      .nf-wall-low {
-        opacity: 0.55;
-      }
-      .nf-dev-source {
-        display: flex;
-        margin: 8px 0;
-      }
-      .nf-dev-source button {
-        flex: 1 1 0;
-        min-width: 0;
-        padding: 6px 4px;
-        font-size: 12px;
-        line-height: 1.2;
-        white-space: normal;
-        text-align: center;
-        border-radius: 10px;
-      }
-      .nf-place-all {
-        margin: 10px 0 0;
-      }
-      .nf-roof-sec polygon {
-        fill: color-mix(in srgb, #ffb547 10%, transparent);
-        stroke: #ffb547;
-        stroke-width: 2;
-        stroke-dasharray: 8 6;
-        cursor: move;
-      }
-      .nf-roof-sel polygon {
-        fill: color-mix(in srgb, var(--nf-accent) 14%, transparent);
-        stroke: var(--nf-accent);
-        stroke-dasharray: none;
-      }
-      /* solar modules: dark blue panes with a light frame, so they do not look like a selected room */
-      .nf-roofwin polygon {
-        fill: color-mix(in srgb, #2b6b8f 70%, transparent);
-        stroke: #e3e9f5;
-        stroke-width: 2;
-        cursor: move;
-      }
-      .nf-roofwin-sel polygon {
-        stroke: #ffd75a;
-      }
-      .nf-tool-energy .nf-roof-layer {
-        opacity: 0.45;
-      }
-      .nf-tool-energy .nf-energy-item {
-        pointer-events: auto;
-      }
-      .nf-swatches {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding-top: 4px;
-      }
-      .nf-swatch {
-        width: 30px;
-        height: 30px;
-        padding: 0;
-        border-radius: 50%;
-        border: 2px solid var(--nf-line);
-        background: var(--sw);
-        cursor: pointer;
-      }
-      .nf-swatch[aria-checked="true"] {
-        border-color: var(--nf-text);
-        outline: 2px solid var(--nf-accent);
-        outline-offset: 2px;
-      }
-      .nf-energy-marker {
-        cursor: move;
-      }
-      .nf-checklist .nf-chk {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        width: 100%;
-        margin: 2px 0;
-        padding: 6px 8px;
-        border: 0;
-        border-radius: 8px;
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        text-align: left;
-        text-decoration: none;
-        cursor: pointer;
-      }
-      .nf-checklist .nf-chk:hover {
-        background: rgba(127, 127, 127, 0.12);
-      }
-      .nf-checklist .nf-chk span {
-        width: 18px;
-        text-align: center;
-        font-weight: 700;
-      }
-      .nf-chk-ok span {
-        color: #59ff8c;
-      }
-      .nf-chk-todo span {
-        color: #ffc633;
-      }
-      .nf-chk-opt {
-        opacity: 0.75;
-      }
-      .nf-teaser-on {
-        border-color: rgba(89, 255, 140, 0.5);
-      }
-      .nf-teaser {
-        margin-top: 12px;
-        padding: 12px;
-        border-radius: 14px;
-        border: 1px solid color-mix(in srgb, #ffd75a 45%, transparent);
-        background: linear-gradient(160deg, color-mix(in srgb, #ffd75a 10%, transparent), transparent 60%);
-      }
-      .nf-teaser-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-      .nf-teaser-soon {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: var(--nf-chrome-solid);
-        background: #ffd75a;
-        border-radius: 999px;
-        padding: 2px 8px;
-        white-space: nowrap;
-      }
-      .nf-teaser img {
-        display: block;
-        width: 100%;
-        border-radius: 10px;
-        border: 1px solid color-mix(in srgb, var(--nf-accent) 40%, transparent);
-      }
-      .nf-teaser ul {
-        margin: 8px 0 4px;
-        padding-left: 18px;
-        font-size: 13px;
-      }
-      /* the roof and energy tools say what can be moved there (everything else is locked) */
-      .nf-tool-note {
-        position: absolute;
-        top: 8px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 2;
-        max-width: calc(100% - 24px);
-        padding: 5px 12px;
-        border-radius: 999px;
-        background: color-mix(in srgb, var(--nf-chrome-solid) 85%, transparent);
-        border: 1px solid color-mix(in srgb, #ffd75a 60%, transparent);
-        color: #ffe7a3;
-        font-size: 12px;
-        text-align: center;
-        pointer-events: none;
-      }
-      .nf-energy-marker circle {
-        fill: color-mix(in srgb, var(--nf-chrome-solid) 80%, transparent);
-        stroke: #ffd75a;
-        stroke-width: 2;
-      }
-      .nf-energy-marker-sel circle {
-        stroke: var(--nf-accent);
-        stroke-width: 3;
-        fill: color-mix(in srgb, var(--nf-accent) 25%, var(--nf-chrome-solid));
-      }
-      .nf-energy-marker text {
-        text-anchor: middle;
-        pointer-events: none;
-      }
-      .nf-energy-icon {
-        font-size: 17px;
-      }
-      .nf-energy-name {
-        font-size: 11px;
-        font-weight: 700;
-        fill: #ffd75a;
-        paint-order: stroke;
-        stroke: rgba(0, 0, 0, 0.65);
-        stroke-width: 3px;
-      }
-      .nf-solar polygon {
-        fill: color-mix(in srgb, #1b3a8f 75%, transparent);
-        stroke: #9fb8ff;
-        stroke-width: 1.5;
-        cursor: move;
-      }
-      .nf-solar-sel polygon {
-        fill: color-mix(in srgb, #1b3a8f 80%, transparent);
-        stroke: #ffd75a;
-        stroke-width: 2;
-      }
-      .nf-solar polygon.nf-solar-off {
-        fill: transparent;
-        stroke-dasharray: 4 4;
-        stroke-width: 1.5;
-      }
-      .nf-solar-pick polygon {
-        cursor: pointer;
-      }
-      .nf-roof-ridge line {
-        stroke: #ffb547;
-        stroke-width: 2.5;
-        pointer-events: none;
-      }
-      .nf-roof-sel .nf-roof-ridge line {
-        stroke: var(--nf-accent);
-      }
-      .nf-roof-sec text {
-        fill: #ffd28a;
-        font-size: 12px;
-        font-weight: 700;
-        text-anchor: middle;
-        paint-order: stroke;
-        stroke: rgba(0, 0, 0, 0.6);
-        stroke-width: 3px;
-        pointer-events: none;
-      }
-      .nf-tool-energy .nf-room,
-      .nf-tool-energy [data-furniture],
-      .nf-tool-energy [data-device],
-      .nf-tool-energy [data-opening],
-      .nf-tool-energy [data-free-wall],
-      .nf-tool-energy [data-outdoor],
-      .nf-tool-energy .nf-roof-layer,
-      .nf-tool-roof .nf-room,
-      .nf-tool-roof [data-furniture],
-      .nf-tool-roof [data-device],
-      .nf-tool-roof [data-opening],
-      .nf-tool-roof [data-free-wall],
-      .nf-tool-roof [data-outdoor] {
-        pointer-events: none;
-      }
-      .nf-dev-area {
-        margin: 10px 0 2px;
-        color: var(--nf-muted);
-        font-size: 12px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
-      .nf-h3row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-      }
-      .nf-h3row h3 {
-        margin-bottom: 0;
-      }
-      .nf-fix {
-        min-height: 30px;
-        padding: 4px 10px;
-        font-size: 13px;
-      }
-      .nf-fix[aria-pressed="true"] {
-        border-color: var(--nf-accent);
-        color: var(--nf-accent);
-      }
-      .nf-lock {
-        font-size: 13px;
-        text-anchor: middle;
-        pointer-events: none;
-      }
-      .nf-hint-fixed {
-        color: var(--nf-accent);
-      }
-      .nf-ctx {
-        position: absolute;
-        z-index: 5;
-        display: flex;
-        flex-direction: column;
-        min-width: 170px;
-        padding: 4px;
-        border: 1px solid var(--nf-line);
-        border-radius: 10px;
-        background: var(--nf-panel, #111a2e);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      }
-      .nf-ctx button {
-        padding: 8px 12px;
-        border: none;
-        border-radius: 7px;
-        background: none;
-        color: inherit;
-        font: inherit;
-        text-align: left;
-        cursor: pointer;
-      }
-      .nf-ctx button:hover:not(:disabled) {
-        background: color-mix(in srgb, var(--nf-accent) 16%, transparent);
-      }
-      .nf-ctx button:disabled {
-        opacity: 0.45;
-        cursor: default;
-      }
-      .nf-ctx-danger {
-        color: var(--nf-danger, #ff6b7a) !important;
-      }
-      .nf-edge-hi {
-        stroke: var(--nf-accent);
-        stroke-width: 6;
-        stroke-linecap: round;
-        filter: drop-shadow(0 0 6px var(--nf-accent));
-      }
-      .nf-free-wall .nf-hit {
-        stroke: transparent;
-        stroke-width: 18;
-      }
-      .nf-free-wall-line {
-        stroke: transparent;
-        stroke-width: 1;
-      }
-      .nf-free-wall-sel .nf-free-wall-line {
-        stroke: var(--nf-accent);
-        stroke-width: 2;
-        stroke-dasharray: 6 4;
-      }
-      .nf-draft-wall {
-        stroke-width: 4;
-      }
-      .nf-open-passage {
-        stroke-dasharray: 4 4;
-      }
-      .nf-out-sel polygon {
-        stroke: var(--nf-accent);
-        stroke-width: 2;
-        stroke-dasharray: none;
-      }
-      .nf-out text {
-        fill: var(--nf-muted);
-        font-size: 11px;
-        text-anchor: middle;
-        pointer-events: none;
-      }
-      .nf-furn-lit .nf-furn-body {
-        fill: rgba(255, 181, 71, 0.35);
-        stroke: var(--nf-warm);
-      }
-      .nf-rotate {
-        cursor: grab;
-      }
-      .nf-preview {
-        position: fixed;
-        z-index: 20;
-        width: 180px;
-        padding: 8px 8px 10px;
-        border-radius: 16px;
-        background: var(--nf-bg2);
-        box-shadow: var(--nf-shadow), 0 0 0 1px var(--nf-line);
-        text-align: center;
-        pointer-events: none;
-        animation: nf-pop 120ms ease-out;
-      }
-      @keyframes nf-pop {
-        from {
-          opacity: 0;
-          transform: translateX(8px);
-        }
-      }
-      .nf-preview img,
-      .nf-preview-wait {
-        display: block;
-        width: 164px;
-        height: 164px;
-      }
-      .nf-preview-wait {
-        margin: 0 auto;
-        border-radius: 12px;
-        background: rgba(127, 127, 127, 0.1);
-      }
-      .nf-preview b {
-        display: block;
-        margin-top: 2px;
-        font-size: 13px;
-        color: #e8eeff;
-      }
-      .nf-lib-badge {
-        margin-left: 4px;
-        color: var(--nf-accent);
-        vertical-align: -2px;
-      }
-      .nf-ext-teaser {
-        display: grid;
-        gap: 6px;
-        margin: 12px 0;
-        padding: 12px;
-        border: 1px solid var(--nf-accent);
-        border-radius: 12px;
-        background: linear-gradient(135deg, color-mix(in srgb, var(--nf-accent) 8%, transparent), color-mix(in srgb, var(--nf-soft) 8%, transparent));
-      }
-      .nf-pin {
-        border: 0;
-        background: none;
-        padding: 2px 6px;
-        font-size: 17px;
-        line-height: 1;
-        color: var(--nf-muted);
-        cursor: pointer;
-      }
-      .nf-pin-on {
-        color: var(--nf-warm);
-      }
-      .nf-back {
-        margin-bottom: 12px;
-      }
-      .nf-presets {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 10px;
-      }
-      .nf-resize {
-        cursor: nwse-resize;
-      }
-      .nf-resize rect {
-        fill: var(--nf-accent);
-        stroke: var(--nf-chrome-solid);
-        stroke-width: 1.5;
-      }
-      .nf-code {
-        display: block;
-        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
-        padding: 6px 8px;
-        border-radius: 8px;
-        background: rgba(127, 127, 127, 0.12);
-        user-select: all;
-        word-break: break-all;
-      }
-      .nf-shift {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-wrap: wrap;
-      }
-      .nf-shift input {
-        width: 5.5em;
-      }
-      .nf-headroom {
-        stroke: rgba(255, 214, 90, 0.55);
-        stroke-width: 1;
-        stroke-dasharray: 6 4;
-        pointer-events: none;
-      }
-      .nf-headroom-label {
-        font-size: 10px;
-        fill: rgba(255, 214, 90, 0.75);
-        text-anchor: middle;
-        pointer-events: none;
-      }
-      .nf-split-mark {
-        stroke: color-mix(in srgb, var(--nf-accent) 90%, transparent);
-        stroke-width: 2;
-        pointer-events: none;
-      }
-      .nf-floor-menu {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        margin: 8px 0;
-        padding: 10px;
-        border-radius: 12px;
-        background: rgba(127, 127, 127, 0.1);
-        max-width: 100%;
-        box-sizing: border-box;
-      }
-      .nf-icon-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .nf-icon-row input {
-        flex: 1;
-        min-width: 0;
-      }
-      .nf-icon-row ha-icon {
-        --mdc-icon-size: 22px;
-        color: var(--nf-accent);
-      }
-      .nf-floor-menu .nf-btn {
-        text-align: left;
-        width: 100%;
-        min-width: 0;
-        white-space: normal;
-        overflow-wrap: anywhere;
-      }
-      .nf-rotate line {
-        stroke: var(--nf-accent);
-        stroke-dasharray: 3 3;
-      }
-      .nf-rotate circle:not(.nf-hit) {
-        fill: var(--nf-chrome-solid);
-        stroke: var(--nf-accent);
-        stroke-width: 2;
-      }
-      .nf-rotate path {
-        fill: none;
-        stroke: var(--nf-accent);
-        stroke-width: 1.5;
-        stroke-linecap: round;
-      }
-      .nf-lib-toggle {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        width: 100%;
-        padding: 6px 0;
-        border: 0;
-        background: none;
-        font: inherit;
-        cursor: pointer;
-        text-align: left;
-      }
-      .nf-lib-toggle:hover {
-        color: var(--nf-text);
-      }
-      .nf-lib-caret {
-        width: 12px;
-        color: var(--nf-accent);
-      }
-      .nf-lib-count {
-        margin-left: auto;
-        font-weight: 500;
-        letter-spacing: 0;
-        text-transform: none;
-        opacity: 0.7;
-      }
-      .nf-lib-head {
-        margin: 10px 0 0;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        color: var(--nf-muted);
-      }
-      .nf-furn-front {
-        stroke: var(--nf-accent);
-        stroke-width: 2.5;
-        vector-effect: non-scaling-stroke;
-        opacity: 0.8;
-        pointer-events: none;
-      }
-      .nf-furn text {
-        fill: var(--nf-muted);
-        font-size: 11px;
-        text-anchor: middle;
-        pointer-events: none;
-      }
-      .nf-furn-sel .nf-furn-body {
-        fill: color-mix(in srgb, var(--nf-accent) 16%, transparent);
-        stroke: var(--nf-accent);
-        stroke-width: 2;
-      }
-      .nf-open {
-        cursor: grab;
-      }
-      .nf-open-gap {
-        fill: var(--nf-chrome-solid);
-        stroke: none;
-      }
-      .nf-open path,
-      .nf-open line {
-        fill: none;
-        stroke-width: 1.6;
-        stroke-linecap: round;
-      }
-      .nf-open-door path {
-        stroke: var(--nf-warm);
-        stroke-dasharray: 3 3;
-      }
-      .nf-open-front path,
-      .nf-open-door line {
-        stroke: var(--nf-warm);
-        stroke-width: 3;
-        stroke-dasharray: none;
-      }
-      .nf-open-door line.nf-open-pane {
-        stroke: var(--nf-accent);
-        stroke-width: 2;
-      }
-      .nf-open-garage line {
-        stroke: var(--nf-warm);
-        stroke-width: 3;
-      }
-      .nf-open-track {
-        stroke: var(--nf-warm);
-        stroke-dasharray: 4 4;
-        opacity: 0.6;
-      }
-      .nf-open-window line {
-        stroke: var(--nf-accent);
-        stroke-width: 2;
-      }
-      .nf-open-sel .nf-open-gap {
-        fill: color-mix(in srgb, var(--nf-accent) 25%, transparent);
-      }
-      .nf-open-sel path,
-      .nf-open-sel line {
-        stroke-width: 2.4;
-      }
-      .nf-bg-rotate {
-        cursor: grab;
-      }
-      .nf-bg-ruler line {
-        stroke: #ffb020;
-        stroke-width: 2.5;
-        stroke-dasharray: 6 4;
-      }
-      .nf-bg-ruler circle {
-        fill: #ffb020;
-        stroke: #1a1000;
-        stroke-width: 1.5;
-      }
-      .nf-own-button {
-        padding: 10px 0;
-        border-top: 1px solid var(--nf-line);
-      }
-      .nf-own-button textarea {
-        font: 12px/1.4 ui-monospace, monospace;
-        width: 100%;
-        box-sizing: border-box;
-        padding: 6px 8px;
-        color: var(--nf-text);
-        background: color-mix(in srgb, var(--nf-text) 4%, transparent);
-        border: 1px solid var(--nf-line);
-        border-radius: 8px;
-      }
-      .nf-search {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background-color: var(--nf-panel, #0d1424);
-        width: 100%;
-        box-sizing: border-box;
-        font: inherit;
-        font-size: 14px;
-        color: var(--nf-text);
-        background: color-mix(in srgb, var(--nf-text) 4%, transparent);
-        border: 1px solid var(--nf-line);
-        border-radius: 8px;
-        padding: 7px 9px;
-        margin: 2px 0 6px;
-      }
-      .nf-more {
-        font: inherit;
-        font-size: 12px;
-        color: var(--nf-muted);
-        background: none;
-        border: none;
-        text-align: left;
-        padding: 2px 26px 8px;
-        cursor: pointer;
-      }
-      .nf-more:hover {
-        color: var(--nf-accent);
-      }
-      .nf-dev-hidden .nf-dev-name {
-        opacity: 0.45;
-        text-decoration: line-through;
-      }
-      .nf-dev-extra {
-        padding-left: 18px;
-        font-size: 13px;
-      }
-      .nf-dev-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin: 0 0 8px;
-        font-weight: 600;
-      }
-      .nf-notice {
-        color: var(--nf-accent);
-      }
-      .nf-device-sel circle:not(.nf-hit) {
-        stroke: var(--nf-accent);
-        stroke-width: 3;
-      }
-      .nf-dev-row {
-        align-items: center;
-        cursor: default;
-      }
-      .nf-dev-row:hover {
-        color: var(--nf-text);
-      }
-      .nf-dev-name {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        min-width: 0;
-        font: inherit;
-        color: inherit;
-        background: none;
-        border: none;
-        padding: 0;
-        text-align: left;
-        cursor: pointer;
-      }
-      .nf-dev-name:disabled {
-        cursor: default;
-      }
-      .nf-dev-name span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .nf-dev-name svg {
-        flex: none;
-      }
-      .nf-link {
-        font: inherit;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--nf-accent);
-        background: none;
-        border: none;
-        padding: 4px 2px;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-      .nf-wide-btn {
-        width: 100%;
-        margin-bottom: 6px;
-      }
-      .nf-device {
-        cursor: grab;
-      }
-      .nf-wedge path,
-      .nf-wedge circle:not(.nf-hit) {
-        fill: color-mix(in srgb, var(--nf-accent) 12%, transparent);
-        stroke: color-mix(in srgb, var(--nf-accent) 45%, transparent);
-        stroke-width: 1;
-        pointer-events: none;
-      }
-      .nf-wedge-sel path,
-      .nf-wedge-sel > circle {
-        fill: color-mix(in srgb, var(--nf-accent) 20%, transparent);
-        stroke: var(--nf-accent);
-      }
-      .nf-wedge .nf-rotate circle {
-        pointer-events: auto;
-      }
-      .nf-device circle:not(.nf-hit) {
-        fill: #111a2e;
-        stroke: var(--nf-soft);
-        stroke-width: 1.5;
-        vector-effect: non-scaling-stroke;
-      }
-      .nf-device path {
-        fill: none;
-        stroke: var(--nf-text);
-        stroke-width: 2.6;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .nf-device-on circle:not(.nf-hit) {
-        fill: var(--nf-warm);
-        stroke: var(--nf-warm);
-      }
-      .nf-device-on path {
-        stroke: #2a1a00;
-      }
-      .nf-muted {
-        color: var(--nf-muted);
-        font-variant-numeric: tabular-nums;
-      }
-      .nf-points {
-        margin: 12px 0;
-      }
-      .nf-point {
-        display: grid;
-        grid-template-columns: 18px 1fr 1fr auto;
-        gap: 6px;
-        align-items: end;
-        padding: 4px 0;
-      }
-      .nf-point-sel .nf-muted {
-        color: var(--nf-accent);
-      }
-      .nf-point .nf-btn {
-        min-height: 34px;
-        padding: 4px 10px;
-      }
-      .nf-upload {
-        position: relative;
-        text-align: center;
-        overflow: hidden;
-      }
-      .nf-upload input {
-        position: absolute;
-        inset: 0;
-        opacity: 0;
-        cursor: pointer;
-      }
-      .nf-sub {
-        margin: 8px 0 0;
-        font-size: 12.5px;
-        color: var(--nf-muted);
-      }
-      .nf-note {
-        margin: 0;
-        font-size: 12.5px;
-        color: var(--nf-warm);
-      }
-    `,
-  ];
+  static styles = [tokens, controls, editorStyles];
 }
 
 if (!customElements.get("nf-editor")) customElements.define("nf-editor", NfEditor);

@@ -39,8 +39,8 @@ export const isPlaceable = (kind: DeviceKind | null): boolean => kind !== null &
 export const isUnavailable = (st: HassEntity | undefined): boolean => !st || st.state === "unavailable" || st.state === "unknown";
 
 /** The entity's name without the area in front of it: "Lounge Ceiling light" in the Lounge reads "Ceiling light". */
-export function entityName(hass: HomeAssistant, entityId: string, areaName?: string): string {
-  const name = (hass.states[entityId]?.attributes.friendly_name as string | undefined) ?? hass.entities?.[entityId]?.name ?? entityId;
+export function entityName(hass: HomeAssistant | undefined, entityId: string, areaName?: string): string {
+  const name = (hass?.states[entityId]?.attributes.friendly_name as string | undefined) ?? hass?.entities?.[entityId]?.name ?? entityId;
   if (!areaName || name.length <= areaName.length + 1) return name;
   if (!name.toLowerCase().startsWith(`${areaName.toLowerCase()} `)) return name;
   const rest = name.slice(areaName.length + 1);

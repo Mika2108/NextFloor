@@ -77,6 +77,7 @@ const shots = [
   { name: "editor-furniture", query: "", width: 1500, height: 950, editor: true, click: "Möbel" },
   { name: "editor-packs", query: "", width: 1500, height: 950, editor: true, editorScript: PACK_SCRIPT, then3d: "Erdgeschoss" },
   { name: "editor-energy", query: "?pv=5400&flows", width: 1500, height: 950, editor: true, click: "Energie" },
+  { name: "editor-sections", query: "", width: 1500, height: 950, editor: true, openDetails: true, scrollSide: true },
   { name: "editor-roof", query: "", width: 1500, height: 950, editor: true, click: "Dach" },
   { name: "extensions", query: "", width: 1280, height: 950, click: "✦ Erweiterungen", wait: 800 },
   // other devices

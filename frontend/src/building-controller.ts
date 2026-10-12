@@ -1,4 +1,5 @@
-// Loads the building, follows changes made elsewhere and saves edits (debounced).
+// The plan's connection to Home Assistant: loads it, follows changes made elsewhere, and saves edits
+// after a short pause. Edits that cannot be saved are kept in the browser so a reload does not lose them.
 
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { fetchBuilding, listPacks, saveBuilding, subscribeBuilding } from "./api.ts";
@@ -8,73 +9,85 @@ import type { HomeAssistant } from "./types.ts";
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
-const SAVE_DELAY = 700;
-/** Edits that could not be saved are kept here, so a reload does not lose them. */
-const DRAFT_KEY = "nextfloor.unsaved";
+/** Quiet time after the last edit before it is sent. */
+const SAVE_DELAY_MS = 700;
+const DRAFT_STORAGE_KEY = "nextfloor.unsaved";
 
-/** Version of this frontend, set by the build (see build.mjs). */
+/** Frontend version, injected by the build (see build.mjs). */
 declare const __NF_VERSION__: string;
 export const FRONTEND_VERSION = typeof __NF_VERSION__ === "string" ? __NF_VERSION__ : "dev";
 
+/** An edit that could not be saved. */
 export interface Draft {
   building: Building;
   savedAt: number;
 }
 
-
-function readDraft(): Draft | null {
+function loadDraft(): Draft | null {
   try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    return raw ? (JSON.parse(raw) as Draft) : null;
+    const stored = localStorage.getItem(DRAFT_STORAGE_KEY);
+    return stored ? (JSON.parse(stored) as Draft) : null;
   } catch {
     return null;
   }
 }
 
-function writeDraft(draft: Draft | null): void {
+function storeDraft(draft: Draft | null): void {
   try {
-    if (draft) localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    else {
-      localStorage.removeItem(DRAFT_KEY);
-    }
+    if (draft) localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    else localStorage.removeItem(DRAFT_STORAGE_KEY);
   } catch {
-    // storage full or unavailable: the edit stays until the page is closed
+    // storage is full or blocked: the edit then lives until the tab closes
   }
+}
+
+const messageOf = (error: unknown): string => (error && typeof error === "object" && "message" in error ? String((error as { message: unknown }).message) : String(error));
+
+/** Compares "1.10.1"-like versions piece by piece: negative when a is older than b, positive when newer. */
+export function compareVersions(a: string, b: string): number {
+  const split = (v: string) => v.split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
+  const [left, right] = [split(a), split(b)];
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const difference = (left[i] ?? 0) - (right[i] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
 }
 
 export class BuildingController implements ReactiveController {
   building: Building | null = null;
   error: string | null = null;
   saveState: SaveState = "idle";
-  /** Why the last save failed (message from the backend). */
+  /** The backend's message when the last save failed. */
   saveError: string | null = null;
-  /** Integration version the backend runs (differs from the frontend until Home Assistant restarts). */
+  /** The version the backend runs. It differs from the frontend's until Home Assistant restarts. */
   backendVersion: string | null = null;
-  /** Unsaved edits from an earlier session, offered for restoring. */
+  /** Unsaved edits of an earlier session that can be restored. */
   draft: Draft | null = null;
   /** Imported furniture packs. */
   packs: FurniturePack[] = [];
 
   private readonly host: ReactiveControllerHost;
   private hass: HomeAssistant | null = null;
-  private revision = -1;
-  private ownRevisions = new Set<number>();
-  private unsubscribe: (() => Promise<void>) | null = null;
-  private saveTimer: ReturnType<typeof setTimeout> | undefined;
-  private pending: Building | null = null;
-  private saving: Promise<void> | null = null;
   private connected = false;
+  private revision = -1;
+  /** Revisions our own saves produced, so their echo over the subscription is ignored. */
+  private readonly ownRevisions = new Set<number>();
+  private stopListening: (() => Promise<void>) | null = null;
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private waiting: Building | null = null;
+  private inFlight: Promise<void> | null = null;
 
   constructor(host: ReactiveControllerHost) {
     this.host = host;
     host.addController(this);
   }
 
-  /** Call whenever the host receives a new hass object. */
+  /** Hand over every new hass object; the first one starts loading. */
   setHass(hass: HomeAssistant): void {
-    const first = this.hass === null;
+    const isFirst = this.hass === null;
     this.hass = hass;
-    if (first && this.connected) void this.start();
+    if (isFirst && this.connected) void this.start();
   }
 
   hostConnected(): void {
@@ -85,42 +98,41 @@ export class BuildingController implements ReactiveController {
   hostDisconnected(): void {
     this.connected = false;
     void this.flush();
-    void this.unsubscribe?.();
-    this.unsubscribe = null;
+    void this.stopListening?.();
+    this.stopListening = null;
   }
 
-  /** Local edit: shown immediately, saved after a short pause. */
+  /** A local edit: visible at once, sent after a short pause. */
   edit(building: Building): void {
     this.building = building;
-    this.pending = building;
-    clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => void this.flush(), SAVE_DELAY);
+    this.waiting = building;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => void this.flush(), SAVE_DELAY_MS);
     this.host.requestUpdate();
   }
 
-  /** This frontend's version, for notices. */
   get frontendVersion(): string {
     return FRONTEND_VERSION;
   }
 
   /**
-   * Which side is behind when the versions differ: "backend" when Home Assistant still runs the old
-   * integration (restart helps), "frontend" when the browser or the companion app still holds an old
-   * bundle (a reload helps, not a restart); null when they match or one is unknown.
+   * Which side is behind when versions differ. "backend": Home Assistant still runs the old integration (a restart
+   * helps). "frontend": the browser or companion app holds an old bundle (a reload helps). Null when they match
+   * or one version is unknown.
    */
   get versionGap(): "backend" | "frontend" | null {
-    if (!this.backendVersion || FRONTEND_VERSION === "dev" || this.backendVersion === FRONTEND_VERSION) return null;
-    return compareVersions(this.backendVersion, FRONTEND_VERSION) > 0 ? "frontend" : "backend";
+    const backend = this.backendVersion;
+    if (!backend || FRONTEND_VERSION === "dev" || backend === FRONTEND_VERSION) return null;
+    return compareVersions(backend, FRONTEND_VERSION) > 0 ? "frontend" : "backend";
   }
 
-  /** The backend runs another version than this frontend: Home Assistant has to restart. */
+  /** Home Assistant has to restart: the backend runs another version, or rejected fields it does not know yet. */
   get needsRestart(): boolean {
-    // an older backend that does not report its version yet rejects the new fields ("extra keys")
     if (this.saveError && /extra keys not allowed/i.test(this.saveError)) return true;
     return !!this.backendVersion && FRONTEND_VERSION !== "dev" && this.backendVersion !== FRONTEND_VERSION;
   }
 
-  /** Take over the unsaved edits of an earlier session (they are saved right away). */
+  /** Takes over the unsaved edits of an earlier session (and saves them). */
   restoreDraft(): void {
     const draft = this.draft;
     this.draft = null;
@@ -129,62 +141,64 @@ export class BuildingController implements ReactiveController {
 
   discardDraft(): void {
     this.draft = null;
-    writeDraft(null);
+    storeDraft(null);
     this.host.requestUpdate();
   }
 
+  /** Sends the pending edit now. */
   async flush(): Promise<void> {
-    clearTimeout(this.saveTimer);
-    if (this.saving) await this.saving;
-    const building = this.pending;
-    if (!building || !this.hass) return;
-    this.pending = null;
+    clearTimeout(this.timer);
+    if (this.inFlight) await this.inFlight;
+    const building = this.waiting;
+    const hass = this.hass;
+    if (!building || !hass) return;
+    this.waiting = null;
     this.saveState = "saving";
     this.host.requestUpdate();
-    this.saving = (async () => {
-      try {
-        const revision = await saveBuilding(this.hass!, building);
-        this.ownRevisions.add(revision);
-        this.revision = revision;
-        this.saveState = this.pending ? "saving" : "saved";
-        this.saveError = null;
-        writeDraft(null);
-      } catch (err) {
-        this.saveState = "error";
-        this.saveError = errorText(err);
-        // keep the edit: after a restart it can be restored and saved
-        writeDraft({ building, savedAt: Date.now() });
-      }
-      this.host.requestUpdate();
-    })();
-    await this.saving;
-    this.saving = null;
+    this.inFlight = this.send(hass, building);
+    await this.inFlight;
+    this.inFlight = null;
+  }
+
+  private async send(hass: HomeAssistant, building: Building): Promise<void> {
+    try {
+      const revision = await saveBuilding(hass, building);
+      this.ownRevisions.add(revision);
+      this.revision = revision;
+      this.saveState = this.waiting ? "saving" : "saved";
+      this.saveError = null;
+      storeDraft(null);
+    } catch (error) {
+      this.saveState = "error";
+      this.saveError = messageOf(error);
+      storeDraft({ building, savedAt: Date.now() }); // after a restart it can be restored and saved
+    }
+    this.host.requestUpdate();
   }
 
   private async start(): Promise<void> {
-    if (!this.hass) return;
+    const hass = this.hass;
+    if (!hass) return;
     await Promise.all([this.reloadPacks(), this.reload()]);
-    if (!this.unsubscribe && this.connected) {
-      try {
-        this.unsubscribe = await subscribeBuilding(this.hass, (revision) => {
-          if (this.ownRevisions.has(revision) || revision === this.revision) return;
-          if (this.pending || this.saving) return; // our own edits win; they are saved next
-          void this.reload();
-        });
-      } catch {
-        // older backend or connection loss: changes from elsewhere show after a reload
-      }
+    if (this.stopListening || !this.connected) return;
+    try {
+      this.stopListening = await subscribeBuilding(hass, (revision) => {
+        const ours = this.ownRevisions.has(revision) || revision === this.revision;
+        const busy = this.waiting !== null || this.inFlight !== null; // our own edits win and are saved next
+        if (!ours && !busy) void this.reload();
+      });
+    } catch {
+      // an older backend or a lost connection: changes from elsewhere show up after a reload
     }
   }
 
-  /** Load the furniture packs again (after an import or removal). */
+  /** Loads the furniture packs again, for example after an import or removal. */
   async reloadPacks(): Promise<void> {
     if (!this.hass) return;
     try {
       this.packs = await listPacks(this.hass);
     } catch {
-      // backend without packs (before a restart): no pack furniture
-      this.packs = [];
+      this.packs = []; // a backend without packs, before its restart
     }
     setPacks(this.packs);
     this.host.requestUpdate();
@@ -193,31 +207,15 @@ export class BuildingController implements ReactiveController {
   private async reload(): Promise<void> {
     if (!this.hass) return;
     try {
-      const res = await fetchBuilding(this.hass);
-      this.building = normalizeBuilding(res.building);
-      this.backendVersion = res.version ?? null;
-      if (this.draft === null && !this.pending) this.draft = readDraft();
-      this.revision = res.revision;
+      const fetched = await fetchBuilding(this.hass);
+      this.building = normalizeBuilding(fetched.building);
+      this.backendVersion = fetched.version ?? null;
+      this.revision = fetched.revision;
       this.error = null;
-    } catch (err) {
-      this.error = errorText(err);
+      if (this.draft === null && !this.waiting) this.draft = loadDraft();
+    } catch (error) {
+      this.error = messageOf(error);
     }
     this.host.requestUpdate();
   }
-}
-
-function errorText(err: unknown): string {
-  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
-  return String(err);
-}
-
-/** Numeric comparison of "1.10.1"-style versions: negative when a < b, positive when a > b. */
-export function compareVersions(a: string, b: string): number {
-  const pa = a.split(/[.-]/).map((x) => Number.parseInt(x, 10) || 0);
-  const pb = b.split(/[.-]/).map((x) => Number.parseInt(x, 10) || 0);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (d) return d;
-  }
-  return 0;
 }

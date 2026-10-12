@@ -2,21 +2,19 @@
 
 import { html, LitElement, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
 import { fetchImage, storeImage } from "../api.ts";
-import { areaEntities, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, otherAreaEntities, roomClimateSensors, unassignedEntities, type ClimateKey } from "../devices.ts";
+import { areaEntities, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, groupByDevice, hasScreen, isPlaceable, isRoomClimateSensor, kindOf, otherAreaEntities, roomClimateSensors, unassignedEntities, type ClimateKey } from "../devices.ts";
 import { furnitureSymbol } from "./furniture2d.ts";
 import { closeGaps, suggestedThickness } from "../geometry/gaps.ts";
 import { keepInRoom, snapToWall } from "../geometry/snap.ts";
-import { holeInRoom } from "../geometry/holes.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { cameraMotionSensors, detectionKind } from "../markers.ts";
-import { isStatusSensor, robotRoomSensor, TOGGLE_KINDS } from "../devices.ts";
+import { TOGGLE_KINDS } from "../devices.ts";
 import { polygonBox } from "../roof-sections.ts";
 import { clampField, faceAt, fieldFace, pointOnFace, roofFaces, turnGroundField, fieldCenter, wallFaces, windowAsField, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
 import {
   OUTDOOR_TOP,
   sidelightLayout,
-  furnitureFootprint,
   type FreeWall,
 } from "../model.ts";
 import { furnishRoom, type PackageId } from "../packages.ts";
@@ -70,8 +68,8 @@ import { renderFavorites, renderPresence, renderStartView } from "./editor/forms
 import { BackupService } from "./editor/backup.ts";
 import { renderBackup } from "./editor/forms/backup.ts";
 import { renderSettings, type SettingsActions } from "./editor/forms/settings.ts";
-import { entityOptions, isBinary as binaryish, isNumeric as numberish, isPowerSensor, type EntityOption } from "./editor/entities.ts";
-import { entityField, iconField, markerField, numberField } from "./editor/fields.ts";
+import { entityOptions, isNumeric as numberish, type EntityOption } from "./editor/entities.ts";
+import { entityField, glowField, iconField, markerField, numberField } from "./editor/fields.ts";
 import { renderEnergyBalance, renderEnergyChecklist, renderEnergyDevices, renderEnergyTeaser, renderHelpLinks, type EnergyActions } from "./editor/forms/energy.ts";
 import { energyMarkersLayer, headroomLayer, roofSectionsLayer, roofWindowsLayer, solarLayer } from "./editor/canvas/roof-layers.ts";
 import type { CanvasContext } from "./editor/canvas/context.ts";
@@ -79,6 +77,7 @@ import { backgroundLayer } from "./editor/canvas/background.ts";
 import { BackgroundTool, readPictureInBrowser } from "./editor/background-tool.ts";
 import { renderBackgroundForm } from "./editor/forms/background.ts";
 import { dragRotation, pictureCentre, pictureLocal } from "./editor/ops/background.ts";
+import { renderFurnitureForm, type FurnitureActions } from "./editor/forms/furniture.ts";
 import { renderOpeningForm, type OpeningActions } from "./editor/forms/opening.ts";
 import { renderRoofPanel } from "./editor/forms/roof.ts";
 import type { RoofPanelDeps } from "./editor/forms/roof-parts.ts";
@@ -104,7 +103,7 @@ import type { HassFloor, HomeAssistant } from "../types.ts";
 import { load3d } from "../load3d.ts";
 import type { WallMode } from "../viewer/viewer3d.ts";
 import { furnitureName } from "../furniture-names.ts";
-import { furnitureSize, isElectric, isPackType, mountBase, packDisplay, packItem, packItemName, packName, packType, setPacks, type FurniturePack } from "../packs.ts";
+import { furnitureSize, isElectric, isPackType, mountBase, packItemName, packName, packType, setPacks, type FurniturePack } from "../packs.ts";
 
 /** Items that can be fixed against moving. */
 type FixKind = "room" | "opening" | "furniture" | "device" | "wall" | "outdoor";
@@ -150,9 +149,6 @@ const round = (v: number) => Math.round(v * 1000) / 1000;
 
 /** Arrow keys as plan directions (x right, z down). */
 const ARROWS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
-
-// furniture without a top to light: no "State from" box
-const NO_STATE_TYPES = new Set(["parking", "stairwell", "rug", "grid_point"]);
 
 export class NfEditor extends LitElement {
   static properties = {
@@ -329,6 +325,19 @@ export class NfEditor extends LitElement {
 
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
     return translate(this.hass, key, vars);
+  }
+
+  private furnitureActions(): FurnitureActions {
+    return {
+      update: (patch) => this.updateFurniture(patch),
+      rotate: (delta) => this.rotateFurniture(delta),
+      duplicate: () => this.duplicateFurniture(),
+      remove: () => this.deleteFurniture(),
+      toDevice: (item) => this.furnitureToDevice(item),
+      toSpot: (item) => this.vehicleToSpot(item),
+      packs: this.packs ?? [],
+      lockButton: this.fixButton("furniture", this.sel.furniture ?? ""),
+    };
   }
 
   private openingActions(): OpeningActions {
@@ -2346,10 +2355,6 @@ export class NfEditor extends LitElement {
     return entityOptions(this.hass, accept);
   }
 
-  private isPowerSensor(id: string): boolean {
-    return isPowerSensor(this.hass, id);
-  }
-
   private num(label: string, value: number, onChange: (v: number) => void, step = 0.01, min?: number) {
     return numberField(this.host, label, value, onChange, step, min);
   }
@@ -2437,18 +2442,9 @@ export class NfEditor extends LitElement {
     const device = this.sel.furniture ? this.floor?.furniture.find((x) => x.id === this.sel.furniture && (ENERGY_DEVICES as readonly string[]).includes(x.type)) : undefined;
     if (device)
       return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("furniture", null)}>‹ ${this.t("tool_energy")}</button>
-        ${this.renderFurnitureForm(device)}`;
+        ${renderFurnitureForm(this.host, device, this.furnitureActions())}`;
     const actions = this.energyActions();
     return html`${renderEnergyChecklist(this.host, actions)}${renderSolarList(this.roofDeps())}${renderEnergyDevices(this.host, actions)}${renderEnergyBalance(this.host, actions)}${renderEnergyTeaser(this.host)}`;
-  }
-
-  /** NextFloor's car: one entity of the car's device is enough, the rest is found beside it (lh/car.ts). */
-  private renderCarForm(f: Furniture) {
-    if (!this.hass) return nothing;
-    const car = f.car ?? {};
-    const options = this.entityOptions((id) => /^(device_tracker|sensor|binary_sensor|lock|climate)\./.test(id));
-    return html`${this.entitySelect(this.t("live_car_device"), car.device ?? null, null, options, (v) => this.updateFurniture({ car: { ...car, device: v } }))}
-      <p class="nf-sub nf-wide">${this.t("live_car_device_hint")}</p>`;
   }
 
   /** The item of a fixable kind on a floor. */
@@ -2691,24 +2687,6 @@ export class NfEditor extends LitElement {
     if (!id || !this.isAdmin || !this.confirmFixedDelete("opening", id)) return;
     this.change((_, floor) => (floor.openings = floor.openings.filter((o) => o.id !== id)));
     this.sel.opening = null;
-  }
-
-  /** How strongly a lamp glows in 3D, in percent (#181): many bright LED strips need not outshine the room. */
-  private glowScaleField(value: number | null | undefined, set: (v: number | null) => void) {
-    return html`<label class="nf-field" title=${this.t("glow_scale_hint")}
-      >${this.t("glow_scale")}
-      <input
-        type="number"
-        min="10"
-        max="150"
-        step="5"
-        .value=${String(Math.round((value ?? 1) * 100))}
-        ?disabled=${!this.isAdmin}
-        @change=${(e: Event) => {
-          const v = Math.min(150, Math.max(10, Number((e.target as HTMLInputElement).value) || 100)) / 100;
-          set(Math.abs(v - 1) < 0.001 ? null : v);
-        }}
-    /></label>`;
   }
 
   /** Furniture that can stand for a placed device of this kind (a speaker for a media player, a lamp for a light …). */
@@ -3600,14 +3578,14 @@ export class NfEditor extends LitElement {
     if (this._tool === "energy") return this.renderEnergyPanel();
     // furnishing: the library and the selected item come first
     if (this._tool === "furniture" && floor && admin) {
-      return html`${this.furnitureItem ? this.renderFurnitureForm(this.furnitureItem) : nothing} ${this.renderFurnitureLibrary()}`;
+      return html`${this.furnitureItem ? renderFurnitureForm(this.host, this.furnitureItem, this.furnitureActions()) : nothing} ${this.renderFurnitureLibrary()}`;
     }
     // a selected item shows only its own form, with a way back to the floor and room
     const item =
       this._tool === "measure"
         ? null
         : this.furnitureItem
-          ? this.renderFurnitureForm(this.furnitureItem)
+          ? renderFurnitureForm(this.host, this.furnitureItem, this.furnitureActions())
           : this.opening
             ? renderOpeningForm(this.host, this.opening, this.openingActions())
             : this.device
@@ -3637,7 +3615,7 @@ export class NfEditor extends LitElement {
         : this.opening
         ? renderOpeningForm(this.host, this.opening, this.openingActions())
         : this.furnitureItem
-          ? this.renderFurnitureForm(this.furnitureItem)
+          ? renderFurnitureForm(this.host, this.furnitureItem, this.furnitureActions())
           : this.device
             ? this.renderDeviceForm(this.device)
           : room
@@ -3660,128 +3638,6 @@ export class NfEditor extends LitElement {
     if (!floor || !host) return false;
     const walls = generateWalls(floor.rooms, { exterior: this._doc.settings.wall_exterior, interior: this._doc.settings.wall_interior }, floor.walls ?? []);
     return locateOpening(walls.walls, o, host)?.wall.exterior ?? false;
-  }
-
-  private renderFurnitureForm(f: Furniture) {
-    const admin = this.isAdmin;
-    return html`<section>
-      <div class="nf-h3row"><h3>${f.name || this.t("furniture")}</h3>${this.fixButton("furniture", f.id)}</div>
-      <div class="nf-form">
-        <label class="nf-field nf-wide"
-          >${this.t("furn_name")}
-          <input type="text" maxlength="60" .value=${f.name ?? ""} ?disabled=${!admin} placeholder=${this.t(`furn_${f.type}` as I18nKey) === `furn_${f.type}` ? "" : this.t(`furn_${f.type}` as I18nKey)} @change=${(e: Event) => this.updateFurniture({ name: (e.target as HTMLInputElement).value.trim() || null })} />
-        </label>
-        ${f.name
-          ? html`<label class="nf-check nf-wide"
-              ><input type="checkbox" .checked=${!!f.show_name} ?disabled=${!admin} @change=${(ev: Event) => this.updateFurniture({ show_name: (ev.target as HTMLInputElement).checked || undefined })} />
-              ${this.t("show_name")}</label
-            >`
-          : nothing}
-        <label class="nf-field nf-wide"
-          >${this.t("furniture_type")}
-          <select ?disabled=${!admin} @change=${(e: Event) => this.updateFurniture({ type: (e.target as HTMLSelectElement).value })}>
-            ${FURNITURE_TYPES.map((t) => html`<option value=${t} ?selected=${t === f.type}>${this.t(`furn_${t}` as I18nKey)}</option>`)}
-            ${(this.packs ?? []).map(
-              (pack) => html`<optgroup label=${packName(pack, (this.hass?.language ?? "de"))}>
-                ${pack.items.map((it) => {
-                  const t = packType(pack.id, it.id);
-                  return html`<option value=${t} ?selected=${t === f.type}>${packItemName(it, this.hass?.language ?? "en")}</option>`;
-                })}
-              </optgroup>`,
-            )}
-            ${f.type.startsWith("pack:") && !(this.packs ?? []).some((p) => f.type.startsWith(`pack:${p.id}:`))
-              ? html`<option value=${f.type} selected>${furnitureName(this.hass, f.type)}</option>`
-              : nothing}
-          </select></label
-        >
-        ${this.num(this.t("x"), f.x, (v) => this.updateFurniture({ x: v }))} ${this.num(this.t("z"), f.z, (v) => this.updateFurniture({ z: v }))}
-        ${this.num(this.t("width"), f.w, (v) => this.updateFurniture({ w: Math.max(0.05, v) }), 0.01, 0.05)}
-        ${this.num(this.t("depth"), f.d, (v) => this.updateFurniture({ d: Math.max(0.05, v) }), 0.01, 0.05)}
-        ${this.num(this.t("height_m"), f.h, (v) => this.updateFurniture({ h: Math.max(0.005, v) }), 0.01, 0)}
-        ${this.num(this.t("rotation"), f.rotation, (v) => this.updateFurniture({ rotation: ((v % 360) + 360) % 360 }), 1)}
-        ${isLamp(f.type)
-          ? nothing
-          : html`<label class="nf-check" title=${this.t("furn_mirror_hint")}
-              ><input type="checkbox" .checked=${!!f.mirror} ?disabled=${!admin} @change=${(ev: Event) => this.updateFurniture({ mirror: (ev.target as HTMLInputElement).checked })} />
-              ${this.t("furn_mirror")}</label
-            >`}
-        ${f.type === "led_strip"
-          ? html`${this.num(this.t("strip_tilt"), f.tilt ?? 0, (v) => this.updateFurniture({ tilt: Math.max(-90, Math.min(90, Math.round(v))) }), 5)}
-              <label class="nf-check" title=${this.t("strip_upright_hint")}
-                ><input type="checkbox" .checked=${!!f.upright} ?disabled=${!admin} @change=${(ev: Event) => this.updateFurniture({ upright: (ev.target as HTMLInputElement).checked })} />
-                ${this.t("strip_upright")}</label
-              >`
-          : nothing}
-        ${canLift(f) && this.floor
-          ? html`${this.num(this.t("mount_height"), f.mount_y ?? mountBase(this.floor, f), (v) => this.updateFurniture({ mount_y: Math.max(0, v) }), 0.01, 0)}
-              ${f.mount_y != null ? html`<button class="nf-btn nf-field-btn" ?disabled=${!admin} @click=${() => this.updateFurniture({ mount_y: null })}>${this.t("height_auto")}</button>` : nothing}`
-          : nothing}
-      </div>
-      ${f.type === "stairs" ? html`<p class="nf-sub">${this.t("stairs_hint")}</p>` : nothing}
-      ${f.type === "stairwell"
-        ? html`<p class="nf-sub">${this.t("stairwell_hint")}</p>
-            ${this.floor && !this.floor.rooms.some((r) => r.points.length >= 3 && holeInRoom(furnitureFootprint(f), r.points))
-              ? html`<p class="nf-sub nf-pack-error">${this.t("stairwell_outside")}</p>`
-              : nothing}`
-        : nothing}
-      ${f.type === "inverter" || f.type === "home_battery"
-        ? html`<div class="nf-form">
-            <label class="nf-field nf-wide"
-              >${this.t("furn_model")}
-              <select ?disabled=${!admin} @change=${(e: Event) => this.updateFurniture({ variant: (e.target as HTMLSelectElement).value || null })}>
-                ${(f.type === "inverter" ? (["", "slim", "hybrid"] as const) : (["", "wall", "cube"] as const)).map(
-                  (v) => html`<option value=${v} ?selected=${(f.variant ?? "") === v}>${this.t(`${f.type === "inverter" ? "inverter" : "battery"}_${v || "std"}` as I18nKey)}</option>`,
-                )}
-              </select></label
-            >
-          </div>`
-        : nothing}
-      ${f.type === "lamp_pendant"
-        ? html`<div class="nf-form">
-            <label class="nf-field nf-wide"
-              >${this.t("pendant_shape")}
-              <select ?disabled=${!admin} @change=${(e: Event) => this.updateFurniture({ variant: (e.target as HTMLSelectElement).value || null })}>
-                ${(["", "globe", "cone", "drum"] as const).map(
-                  (v) => html`<option value=${v} ?selected=${(f.variant ?? "") === v}>${this.t(`pendant_${v || "shade"}` as I18nKey)}</option>`,
-                )}
-              </select></label
-            >
-          </div>`
-        : nothing}
-      ${(() => {
-        // a car's paint: pick one of the colours the pack offers (kept as the furniture's variant)
-        const colors = packItem(f.type === "parking" ? (f.vehicle ?? "") : f.type)?.colors;
-        if (!colors?.length) return nothing;
-        const current = colors.find((c) => c.id === f.variant) ?? colors[0];
-        const label = (c: (typeof colors)[number]) => c.name[this.hass?.language ?? "en"] ?? c.name.en ?? Object.values(c.name)[0];
-        return html`<div class="nf-form">
-          <div class="nf-field nf-wide">
-            <span>${this.t("paint_colour")}: ${label(current)}</span>
-            <div class="nf-swatches" role="radiogroup" aria-label=${this.t("paint_colour")}>
-              ${colors.map(
-                (c, i) => html`<button type="button" class="nf-swatch" role="radio" aria-checked=${c.id === current.id} title=${label(c)} style=${`--sw:${c.hex}`} ?disabled=${!admin} @click=${() => this.updateFurniture({ variant: i === 0 ? null : c.id })}></button>`,
-              )}
-            </div>
-          </div>
-        </div>`;
-      })()}
-      ${isElectric(f.type) ? this.renderFurnitureLinks(f) : !NO_STATE_TYPES.has(f.type) ? html`<div class="nf-form nf-links">${this.renderStateLinks(f)}</div>` : nothing} ${f.type === "parking" ? this.renderParkingForm(f) : nothing}
-      ${f.type.startsWith("pack:nextfloor.fahrzeuge:") && this.isAdmin
-        ? html`<section>
-            <p class="nf-sub">${this.t("vehicle_to_spot_hint")}</p>
-            <div class="nf-actions"><button class="nf-btn nf-primary" @click=${() => this.vehicleToSpot(f)}>🅿 ${this.t("vehicle_to_spot")}</button></div>
-          </section>`
-        : nothing}
-      ${admin
-        ? html`<div class="nf-actions">
-            <button class="nf-btn" @click=${() => this.rotateFurniture(-90)}>${this.t("rotate_left")}</button>
-            <button class="nf-btn" @click=${() => this.rotateFurniture(90)}>${this.t("rotate_right")}</button>
-            ${f.entity && f.entity !== "none" && f.type !== "parking" ? html`<button class="nf-btn" title=${this.t("as_device_hint")} @click=${() => this.furnitureToDevice(f)}>${this.t("as_device")}</button>` : nothing}
-            <button class="nf-btn" @click=${() => this.duplicateFurniture()}>${this.t("duplicate")}</button>
-            <button class="nf-btn nf-danger" @click=${() => this.deleteFurniture()}>${this.t("delete")}</button>
-          </div>`
-        : nothing}
-    </section>`;
   }
 
   /** The camera of the editor's 3D pane as it stands right now, rounded for the plan (null: no pane). */
@@ -3811,206 +3667,6 @@ export class NfEditor extends LitElement {
       return;
     }
     this.updateRoom({ start_view: v });
-  }
-
-  /** "State from": an entity lights the item's top (two light its halves) – any furniture, a bed with occupancy mats too (#116). */
-  private renderStateLinks(f: Furniture) {
-    return html`${this.entitySelect(this.t("furn_state_entity"), f.state_entity ?? null, undefined, this.entityOptions((id) => /^(binary_sensor|switch|input_boolean|light|fan|person|device_tracker|sensor)\./.test(id)), (v) => this.updateFurniture({ state_entity: v === "none" ? null : v }))}
-              ${f.state_entity && f.state_entity !== "none"
-                ? html`${this.entitySelect(this.t("furn_state_entity2"), f.state_entity2 ?? null, undefined, this.entityOptions((id) => /^(binary_sensor|switch|input_boolean|light|fan|person|device_tracker|sensor)\./.test(id)), (v) => this.updateFurniture({ state_entity2: v === "none" ? null : v }))}
-                    ${f.state_entity2 && f.state_entity2 !== "none"
-                      ? html`<label class="nf-field"
-                          >${this.t("furn_state_split")}
-                          <select ?disabled=${!this.isAdmin} @change=${(e: Event) => this.updateFurniture({ state_split: (e.target as HTMLSelectElement).value === "top_bottom" ? "top_bottom" : "left_right" })}>
-                            <option value="left_right" ?selected=${f.state_split !== "top_bottom"}>${this.t("furn_state_left_right")}</option>
-                            <option value="top_bottom" ?selected=${f.state_split === "top_bottom"}>${this.t("furn_state_top_bottom")}</option>
-                          </select></label
-                        >`
-                      : nothing}`
-                : nothing}
-              <p class="nf-sub nf-wide">${this.t("furn_state_hint")}</p>`;
-  }
-
-  private renderFurnitureLinks(f: Furniture) {
-    if (!this.hass) return nothing;
-    const hass = this.hass;
-    // what "automatic" would choose: resolve with this item's own links cleared
-    const autoPick = (key: "entity" | "power") => {
-      const probe = structuredClone(this._doc.floors);
-      for (const fl of probe) for (const x of fl.furniture) if (x.id === f.id) x[key] = null;
-      return furnitureEntities(hass, probe).get(f.id)?.[key] ?? null;
-    };
-    const media = isMediaFurniture(f.type);
-    // a pack item with only a status light (a 3D printer's panel, a wallbox's LED) links like any device:
-    // "Device", with media players, switches and status sensors to choose from
-    const tvLike = media && (!isPackType(f.type) || packDisplay(f.type));
-    const lamp = isLamp(f.type);
-    const entities = this.entityOptions((id) =>
-      lamp
-        ? // a lamp can follow a light or a plain switch (e.g. a relay that switches the ceiling light)
-          /^(light|switch|input_boolean)\./.test(id)
-        : tvLike
-          ? // a media player, or the smart plug an older TV is switched with
-            /^(media_player|switch|input_boolean|light)\./.test(id)
-          : f.type === "radiator"
-            ? id.startsWith("climate.")
-            : f.type === "robot_vacuum"
-              ? id.startsWith("vacuum.")
-              : // or a status sensor (a 3D printer's print status: running, idle, finish …)
-                // (a robot vacuum from a pack, e.g. the one with its dock, follows its vacuum entity; a motorised
-                // curtain its cover, #286)
-                /^(switch|media_player|fan|input_boolean|climate|vacuum|cover)\./.test(id) || isStatusSensor(hass.states[id]),
-    );
-    const power = this.entityOptions((id) => this.isPowerSensor(id));
-    const doorSensors = f.type === "fridge_smart" ? this.entityOptions((id) => id.startsWith("binary_sensor.")) : [];
-    return html`<div class="nf-form nf-links">
-        ${f.type === "grid_point"
-          ? html`<p class="nf-sub nf-wide">${this.t("grid_point_hint")}</p>`
-          : this.entitySelect(this.t(lamp ? "furn_entity_light" : tvLike ? "furn_entity_tv" : f.type === "radiator" ? "furn_entity_climate" : f.type === "robot_vacuum" ? "furn_entity_vacuum" : "furn_entity"), f.entity ?? null, autoPick("entity"), entities, (v) =>
-              this.updateFurniture({ entity: v }),
-            )}
-        ${!lamp && !(ENERGY_DEVICES as readonly string[]).includes(f.type) && !hasScreen(f.type) ? this.renderStateLinks(f) : nothing}
-        ${lamp && f.entity && f.entity !== "none"
-          ? html`${this.entitySelect(this.t("furn_color_entity"), f.color_entity ?? null, undefined, this.entityOptions((id) => id.startsWith("light.") && id !== f.entity), (v) => this.updateFurniture({ color_entity: v === "none" ? null : v }))}
-              <p class="nf-sub nf-wide">${this.t("furn_color_entity_hint")}</p>`
-          : nothing}
-        ${lamp ? this.glowScaleField(f.glow_scale, (v) => this.updateFurniture({ glow_scale: v })) : nothing}
-        ${lamp || f.type === "grid_point"
-          ? nothing
-          : this.entitySelect(
-              this.t(f.type === "meter" ? "energy_grid" : f.type === "inverter" ? "energy_solar_sensor" : f.type === "home_battery" ? "energy_battery_sensor" : "furn_power"),
-              f.power ?? null,
-              autoPick("power"),
-              power,
-              (v) => this.updateFurniture({ power: v }),
-            )}
-
-      </div>
-      ${f.type === "meter"
-        ? html`<div class="nf-form nf-links">
-            ${this.entitySelect(this.t("furn_export"), f.export ?? null, undefined, power, (v) => this.updateFurniture({ export: v === "none" ? null : v }))}
-            <p class="nf-sub nf-wide">${this.t("furn_export_hint")}</p>
-          </div>`
-        : nothing}
-      ${f.type === "inverter" && (this._doc.settings.roof.solar ?? []).length
-        ? (() => {
-            // which strings feed this inverter, so it can be told apart from the others (#213)
-            const strings = (this._doc.settings.roof.strings ?? []).filter((st) => st.inverter === f.id).map((st) => st.name);
-            return html`<p class="nf-sub nf-wide">${strings.length ? this.t("inverter_strings", { names: strings.join(", ") }) : this.t("inverter_strings_none")}</p>`;
-          })()
-        : nothing}
-      ${f.type === "home_battery"
-        ? html`<div class="nf-form nf-links">
-            ${this.entitySelect(
-              this.t("furn_soc"),
-              f.soc ?? null,
-              undefined,
-              this.entityOptions((id) => numberish(id) && (hass.states[id]?.attributes.device_class === "battery" || hass.states[id]?.attributes.unit_of_measurement === "%")),
-              (v) => this.updateFurniture({ soc: v === "none" ? null : v }),
-            )}
-            ${this.entitySelect(this.t("furn_charge"), f.charge ?? null, undefined, power, (v) => this.updateFurniture({ charge: v === "none" ? null : v }))}
-            <p class="nf-sub nf-wide">${this.t("furn_charge_hint")}</p>
-          </div>`
-        : nothing}
-      ${f.type === "wallbox"
-        ? html`<div class="nf-form nf-links">
-            ${this.entitySelect(
-              this.t("furn_wallbox_status"),
-              f.status ?? null,
-              undefined,
-              this.entityOptions((id) => binaryish(id) || numberish(id)),
-              (v) => this.updateFurniture({ status: v === "none" ? null : v }),
-            )}
-          </div>`
-        : nothing}
-      ${!lamp || f.entity
-        ? html`<label class="nf-check nf-wide" title=${this.t("device_confirm_hint")}
-            ><input type="checkbox" .checked=${!!f.confirm} ?disabled=${!this.isAdmin} @change=${(ev: Event) => this.updateFurniture({ confirm: (ev.target as HTMLInputElement).checked })} />
-            ${this.t("device_confirm")}</label
-          >
-          <div class="nf-form">${this.markerSelect(f.marker ?? null, (v) => this.updateFurniture({ marker: v }))}${this.iconInput(f.icon, (v) => this.updateFurniture({ icon: v }))}</div>`
-        : nothing}
-      ${f.type === "robot_vacuum"
-        ? html`<div class="nf-form nf-links">
-            ${this.entitySelect(
-              this.t("furn_robot_room"),
-              f.room_sensor ?? null,
-              robotRoomSensor(hass, furnitureEntities(hass, this._doc.floors).get(f.id)?.entity ?? null, null),
-              this.entityOptions((id) => numberish(id)),
-              (v) => this.updateFurniture({ room_sensor: v }),
-            )}
-          </div>`
-        : nothing}
-      ${f.type === "fridge_smart"
-        ? html`<div class="nf-form nf-links">
-              ${this.entitySelect(this.t("furn_door_left"), f.door_left ?? null, undefined, doorSensors, (v) => this.updateFurniture({ door_left: v }))}
-              ${this.entitySelect(this.t("furn_door_right"), f.door_right ?? null, undefined, doorSensors, (v) => this.updateFurniture({ door_right: v }))}
-            </div>
-            <p class="nf-sub">${this.t("fridge_hint")}</p>`
-        : nothing}
-      <p class="nf-sub">${this.t(lamp ? (f.type === "lamp_pendant" ? "lamp_hint_pendant" : "lamp_hint") : media ? "furn_links_hint_tv" : f.type === "robot_vacuum" ? "robot_hint" : "furn_links_hint")}</p>`;
-  }
-
-  /** Parking spot: presence sensor, the vehicle shown, its size, and an optional vehicle type sensor. */
-  private renderParkingForm(f: Furniture) {
-    const admin = this.isAdmin;
-    const lang = this.hass?.language ?? "en";
-    const vehicles = (this.packs ?? []).flatMap((p) => p.items.filter((it) => it.vehicle).map((it) => ({ id: packType(p.id, it.id), label: `${packItemName(it, lang)} · ${packName(p, lang)}` })));
-    // presence: GPS trackers (a car's own integration, a phone) before the many network trackers of a router (#227)
-    const rank = (id: string) => {
-      if (!id.startsWith("device_tracker.")) return 1;
-      return this.hass?.states[id]?.attributes.source_type === "router" ? 2 : 0;
-    };
-    const presence = this.entityOptions((id) => /^(binary_sensor|device_tracker|input_boolean|switch|sensor)\./.test(id)).sort((a, b) => rank(a.id) - rank(b.id));
-    const typeSensors = this.entityOptions((id) => /^(sensor|input_select|select|input_text)\./.test(id));
-    const typeState = f.type_entity ? this.hass?.states[f.type_entity] : undefined;
-    const options = Array.isArray(typeState?.attributes.options) ? (typeState.attributes.options as string[]) : [];
-    const types = f.types ?? [];
-    const setTypes = (next: { state: string; vehicle: string }[]) => this.updateFurniture({ types: next });
-    const vehicleSelect = (value: string | null, onChange: (v: string | null) => void) =>
-      html`<select ?disabled=${!admin} @change=${(e: Event) => onChange((e.target as HTMLSelectElement).value || null)}>
-        <option value="" ?selected=${!value}>${this.t("parking_vehicle_none")}</option>
-        ${vehicles.map((v) => html`<option value=${v.id} ?selected=${v.id === value}>${v.label}</option>`)}
-      </select>`;
-    // the room's height against the vehicle's: a hint when it would not fit
-    const floor = this.floor;
-    const room = floor?.rooms.find((r) => r.points.length >= 3 && pointInPolygon([f.x, f.z], r.points));
-    const item = f.vehicle ? packItem(f.vehicle) : undefined;
-    const carH = item ? item.size[2] * (f.scale ?? 1) : 0;
-    const tooTall = !!room && !!floor && carH > floor.height + 1e-6;
-    return html`<div class="nf-form nf-links">
-        ${this.entitySelect(this.t("parking_entity"), f.entity ?? null, undefined, presence, (v) => this.updateFurniture({ entity: v === "none" ? null : v }))}
-        <label class="nf-field nf-wide">${this.t("parking_vehicle")} ${vehicleSelect(f.vehicle ?? null, (v) => this.updateFurniture({ vehicle: v }))}</label>
-        ${vehicles.length ? nothing : html`<p class="nf-sub nf-wide">${this.t("parking_no_pack")}</p>`}
-        ${this.num(this.t("parking_scale"), Math.round((f.scale ?? 1) * 100), (v) => this.updateFurniture({ scale: Math.min(150, Math.max(30, v)) / 100 }), 5, 30)}
-        ${this.entitySelect(this.t("parking_type_entity"), f.type_entity ?? null, undefined, typeSensors, (v) => this.updateFurniture({ type_entity: v === "none" ? null : v }))}
-        ${f.type_entity
-          ? html`<div class="nf-wide">
-              <div class="nf-sub">${this.t("parking_types")}</div>
-              ${types.map(
-                (t, i) => html`<div class="nf-parking-row">
-                  <input
-                    type="text"
-                    list="nf-parking-states"
-                    placeholder=${this.t("parking_type_state")}
-                    .value=${t.state}
-                    ?disabled=${!admin}
-                    @change=${(e: Event) => setTypes(types.map((x, j) => (j === i ? { ...x, state: (e.target as HTMLInputElement).value } : x)))}
-                  />
-                  ${vehicleSelect(t.vehicle, (v) => setTypes(types.map((x, j) => (j === i ? { ...x, vehicle: v ?? "" } : x))))}
-                  <button class="nf-btn" ?disabled=${!admin} title=${this.t("delete")} @click=${() => setTypes(types.filter((_, j) => j !== i))}>✕</button>
-                </div>`,
-              )}
-              <datalist id="nf-parking-states">${options.map((o) => html`<option value=${o}></option>`)}</datalist>
-              ${admin
-                ? html`<button class="nf-btn" @click=${() => setTypes([...types, { state: options[types.length] ?? "", vehicle: vehicles[0]?.id ?? "" }])}>${this.t("parking_add_type")}</button>`
-                : nothing}
-            </div>`
-          : nothing}
-      </div>
-      ${tooTall ? html`<p class="nf-sub nf-warn">${this.t("parking_too_tall", { car: formatNumber(this.hass, carH, 2), room: formatNumber(this.hass, floor!.height, 2) })}</p>` : nothing}
-      <p class="nf-sub">${this.t("parking_hint")}</p>
-      ${this.renderCarForm(f)}`;
   }
 
   private toggleLibrary(key: string): void {
@@ -4176,7 +3832,7 @@ export class NfEditor extends LitElement {
                 ${(["ceiling", "floor", "table", "wall"] as const).map((m) => html`<option value=${m} ?selected=${m === mount}>${this.t(`lamp_${m}`)}</option>`)}
               </select></label
             >
-            ${this.glowScaleField(pl.glow_scale, (v) => this.updateDevice({ glow_scale: v }))}`
+            ${glowField(this.host, pl.glow_scale, (v) => this.updateDevice({ glow_scale: v }))}`
           : kind === "camera"
             ? html`<label class="nf-field nf-wide"
                 >${this.t("camera_mount")}

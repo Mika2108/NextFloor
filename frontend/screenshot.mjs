@@ -97,6 +97,7 @@ e.redo(); out.canRedo = e._canRedo;
 window.__smoke = out;` },
   { name: "editor-room", query: "", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; e.selectItem('room', e._doc.floors[0].rooms[0].id); e.side.packages = true;" },
   { name: "editor-opening", query: "", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; const o = e._doc.floors[0].openings.find((x) => x.type === 'window'); e.selectItem('opening', o.id);" },
+  { name: "editor-furn-form", query: "?pv=5400&flows", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; const f = e._doc.floors[0].furniture.find((x) => x.type === 'inverter') || e._doc.floors[0].furniture[0]; e.selectItem('furniture', f.id);" },
   { name: "editor-roof", query: "", width: 1500, height: 950, editor: true, click: "Dach" },
   { name: "extensions", query: "", width: 1280, height: 950, click: "✦ Erweiterungen", wait: 800 },
   // other devices

@@ -124,3 +124,22 @@ export const actions = (...buttons: (TemplateResult | typeof nothing)[]): Templa
 
 /** A help line under a form. */
 export const hint = (text: string, extraClass = ""): TemplateResult => html`<p class="nf-sub ${extraClass}">${text}</p>`;
+
+/** A percentage between 10 and 150 for how strongly a lamp glows. 100 % is stored as "no value of its own". */
+export function glowField(host: EditorHost, value: number | null | undefined, onChange: (v: number | null) => void): TemplateResult {
+  return html`<label class="nf-field" title=${host.t("glow_scale_hint")}
+    >${host.t("glow_scale")}
+    <input
+      type="number"
+      min="10"
+      max="150"
+      step="5"
+      .value=${String(Math.round((value ?? 1) * 100))}
+      ?disabled=${!host.admin}
+      @change=${(e: Event) => {
+        const fraction = Math.min(150, Math.max(10, Number(valueOf(e)) || 100)) / 100;
+        onChange(Math.abs(fraction - 1) < 0.001 ? null : fraction);
+      }}
+    />
+  </label>`;
+}

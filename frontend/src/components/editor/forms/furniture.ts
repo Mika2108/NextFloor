@@ -1,0 +1,145 @@
+// The form of a piece of furniture: its name and kind, size and place, looks (paint, shape), and the entities it is linked to.
+
+import { html, nothing, type TemplateResult } from "lit";
+import { furnitureName } from "../../../furniture-names.ts";
+import { holeInRoom } from "../../../geometry/holes.ts";
+import type { I18nKey } from "../../../i18n.ts";
+import { canLift, FURNITURE_TYPES, furnitureFootprint, isLamp, type Furniture } from "../../../model.ts";
+import { isElectric, mountBase, packItem, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
+import { checkField, hint, numberField, selectField } from "../fields.ts";
+import type { EditorHost } from "../host.ts";
+import { furnitureLinks, stateLinks, type FurnitureLinkActions } from "./furniture-links.ts";
+import { parkingForm } from "./parking.ts";
+
+export interface FurnitureActions extends FurnitureLinkActions {
+  rotate(delta: number): void;
+  duplicate(): void;
+  remove(): void;
+  /** Turns the item back into a plain device pin. */
+  toDevice(item: Furniture): void;
+  /** Turns a vehicle into a parking spot holding it. */
+  toSpot(item: Furniture): void;
+  packs: readonly FurniturePack[];
+  lockButton: TemplateResult | typeof nothing;
+}
+
+/** Furniture without a top to light: no "state from" box. */
+const NO_STATE_TYPES = new Set(["parking", "stairwell", "rug", "grid_point"]);
+
+/** The looks a type can have besides its paint, as the variants it offers and the text of each. */
+const VARIANTS: Record<string, { label: I18nKey; values: readonly string[]; text(value: string): string }> = {
+  inverter: { label: "furn_model", values: ["", "slim", "hybrid"], text: (v) => `inverter_${v || "std"}` },
+  home_battery: { label: "furn_model", values: ["", "wall", "cube"], text: (v) => `battery_${v || "std"}` },
+  lamp_pendant: { label: "pendant_shape", values: ["", "globe", "cone", "drum"], text: (v) => `pendant_${v || "shade"}` },
+};
+
+/** The kind drop-down: the built-in kinds, then those of every pack, and the item's own kind when its pack is gone. */
+function kindField(host: EditorHost, item: Furniture, packs: readonly FurniturePack[], actions: FurnitureActions): TemplateResult {
+  const language = host.hass?.language ?? "en";
+  const known = packs.some((p) => item.type.startsWith(`pack:${p.id}:`));
+  return html`<label class="nf-field nf-wide"
+    >${host.t("furniture_type")}
+    <select ?disabled=${!host.admin} @change=${(e: Event) => actions.update({ type: (e.target as HTMLSelectElement).value })}>
+      ${FURNITURE_TYPES.map((type) => html`<option value=${type} ?selected=${type === item.type}>${host.t(`furn_${type}` as I18nKey)}</option>`)}
+      ${packs.map(
+        (pack) => html`<optgroup label=${packName(pack, host.hass?.language ?? "de")}>
+          ${pack.items.map((it) => html`<option value=${packType(pack.id, it.id)} ?selected=${packType(pack.id, it.id) === item.type}>${packItemName(it, language)}</option>`)}
+        </optgroup>`,
+      )}
+      ${item.type.startsWith("pack:") && !known ? html`<option value=${item.type} selected>${furnitureName(host.hass, item.type)}</option>` : nothing}
+    </select>
+  </label>`;
+}
+
+/** The paint of a vehicle: the colours its pack offers, kept as the variant of the furniture. */
+function paintField(host: EditorHost, item: Furniture, actions: FurnitureActions): TemplateResult | typeof nothing {
+  const colours = packItem(item.type === "parking" ? (item.vehicle ?? "") : item.type)?.colors;
+  if (!colours?.length) return nothing;
+  const language = host.hass?.language ?? "en";
+  const current = colours.find((c) => c.id === item.variant) ?? colours[0];
+  const nameOf = (c: (typeof colours)[number]) => c.name[language] ?? c.name.en ?? Object.values(c.name)[0];
+  return html`<div class="nf-form">
+    <div class="nf-field nf-wide">
+      <span>${host.t("paint_colour")}: ${nameOf(current)}</span>
+      <div class="nf-swatches" role="radiogroup" aria-label=${host.t("paint_colour")}>
+        ${colours.map((c, i) => html`<button type="button" class="nf-swatch" role="radio" aria-checked=${c.id === current.id} title=${nameOf(c)} style=${`--sw:${c.hex}`} ?disabled=${!host.admin} @click=${() => actions.update({ variant: i === 0 ? null : c.id })}></button>`)}
+      </div>
+    </div>
+  </div>`;
+}
+
+/** A form with a drop-down for the shapes of a type, for the types that have some. */
+function variantField(host: EditorHost, item: Furniture, actions: FurnitureActions): TemplateResult | typeof nothing {
+  const variants = VARIANTS[item.type];
+  if (!variants) return nothing;
+  const choices = variants.values.map((v): [string, string] => [v, host.t(variants.text(v) as I18nKey)]);
+  return html`<div class="nf-form">${selectField(host, host.t(variants.label), item.variant ?? "", choices, (v) => actions.update({ variant: v || null }), { wide: true })}</div>`;
+}
+
+/** The name of the item, and whether it is written under its marker. */
+function nameFields(host: EditorHost, item: Furniture, actions: FurnitureActions): TemplateResult {
+  const standard = host.t(`furn_${item.type}` as I18nKey);
+  const placeholder = standard === `furn_${item.type}` ? "" : standard;
+  return html`<label class="nf-field nf-wide"
+      >${host.t("furn_name")}
+      <input type="text" maxlength="60" .value=${item.name ?? ""} ?disabled=${!host.admin} placeholder=${placeholder} @change=${(e: Event) => actions.update({ name: (e.target as HTMLInputElement).value.trim() || null })} />
+    </label>
+    ${item.name ? checkField(host, host.t("show_name"), !!item.show_name, (on) => actions.update({ show_name: on || undefined })) : nothing}`;
+}
+
+/** Size, place and turn, and what depends on the kind: mirror, strip tilt, mount height. */
+function geometryFields(host: EditorHost, item: Furniture, actions: FurnitureActions): TemplateResult {
+  const t = host.t;
+  const set = (patch: Partial<Furniture>) => actions.update(patch);
+  const floor = host.floor;
+  return html`${numberField(host, t("x"), item.x, (v) => set({ x: v }))} ${numberField(host, t("z"), item.z, (v) => set({ z: v }))}
+    ${numberField(host, t("width"), item.w, (v) => set({ w: Math.max(0.05, v) }), 0.01, 0.05)} ${numberField(host, t("depth"), item.d, (v) => set({ d: Math.max(0.05, v) }), 0.01, 0.05)}
+    ${numberField(host, t("height_m"), item.h, (v) => set({ h: Math.max(0.005, v) }), 0.01, 0)}
+    ${numberField(host, t("rotation"), item.rotation, (v) => set({ rotation: ((v % 360) + 360) % 360 }), 1)}
+    ${isLamp(item.type) ? nothing : checkField(host, t("furn_mirror"), !!item.mirror, (mirror) => set({ mirror }), { wide: false, title: t("furn_mirror_hint") })}
+    ${item.type === "led_strip"
+      ? html`${numberField(host, t("strip_tilt"), item.tilt ?? 0, (v) => set({ tilt: Math.max(-90, Math.min(90, Math.round(v))) }), 5)}
+        ${checkField(host, t("strip_upright"), !!item.upright, (upright) => set({ upright }), { wide: false, title: t("strip_upright_hint") })}`
+      : nothing}
+    ${canLift(item) && floor
+      ? html`${numberField(host, t("mount_height"), item.mount_y ?? mountBase(floor, item), (v) => set({ mount_y: Math.max(0, v) }), 0.01, 0)}
+        ${item.mount_y != null ? html`<button class="nf-btn nf-field-btn" ?disabled=${!host.admin} @click=${() => set({ mount_y: null })}>${t("height_auto")}</button>` : nothing}`
+      : nothing}`;
+}
+
+/** Notes under the form for stairs and stairwells, with a warning when a stairwell lies outside every room. */
+function typeNotes(host: EditorHost, item: Furniture): TemplateResult | typeof nothing {
+  if (item.type === "stairs") return hint(host.t("stairs_hint"));
+  if (item.type !== "stairwell") return nothing;
+  const outside = host.floor && !host.floor.rooms.some((r) => r.points.length >= 3 && holeInRoom(furnitureFootprint(item), r.points));
+  return html`${hint(host.t("stairwell_hint"))}${outside ? html`<p class="nf-sub nf-pack-error">${host.t("stairwell_outside")}</p>` : nothing}`;
+}
+
+/** The buttons at the bottom: turn, back to a device pin, copy, delete. */
+function buttons(host: EditorHost, item: Furniture, actions: FurnitureActions): TemplateResult | typeof nothing {
+  if (!host.admin) return nothing;
+  const t = host.t;
+  const linked = !!item.entity && item.entity !== "none" && item.type !== "parking";
+  return html`<div class="nf-actions">
+    <button class="nf-btn" @click=${() => actions.rotate(-90)}>${t("rotate_left")}</button>
+    <button class="nf-btn" @click=${() => actions.rotate(90)}>${t("rotate_right")}</button>
+    ${linked ? html`<button class="nf-btn" title=${t("as_device_hint")} @click=${() => actions.toDevice(item)}>${t("as_device")}</button>` : nothing}
+    <button class="nf-btn" @click=${() => actions.duplicate()}>${t("duplicate")}</button>
+    <button class="nf-btn nf-danger" @click=${() => actions.remove()}>${t("delete")}</button>
+  </div>`;
+}
+
+/** The form of the selected piece of furniture. */
+export function renderFurnitureForm(host: EditorHost, item: Furniture, actions: FurnitureActions): TemplateResult {
+  const links = isElectric(item.type) ? furnitureLinks(host, item, actions) : !NO_STATE_TYPES.has(item.type) ? html`<div class="nf-form nf-links">${stateLinks(host, item, actions)}</div>` : nothing;
+  return html`<section>
+    <div class="nf-h3row"><h3>${item.name || host.t("furniture")}</h3>${actions.lockButton}</div>
+    <div class="nf-form">${nameFields(host, item, actions)} ${kindField(host, item, actions.packs, actions)} ${geometryFields(host, item, actions)}</div>
+    ${typeNotes(host, item)} ${variantField(host, item, actions)} ${paintField(host, item, actions)}
+    ${links} ${item.type === "parking" ? parkingForm(host, item, actions.packs, actions) : nothing}
+    ${item.type.startsWith("pack:nextfloor.fahrzeuge:") && host.admin
+      ? html`<section>${hint(host.t("vehicle_to_spot_hint"))}<div class="nf-actions"><button class="nf-btn nf-primary" @click=${() => actions.toSpot(item)}>🅿 ${host.t("vehicle_to_spot")}</button></div></section>`
+      : nothing}
+    ${buttons(host, item, actions)}
+  </section>`;
+}

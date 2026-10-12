@@ -14,7 +14,6 @@ import { polygonBox } from "../roof-sections.ts";
 import { clampField, faceAt, fieldFace, pointOnFace, roofFaces, turnGroundField, fieldCenter, wallFaces, windowAsField, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
 import {
-  type Background,
   OUTDOOR_TOP,
   sidelightLayout,
   furnitureFootprint,
@@ -86,6 +85,10 @@ import { entityField, iconField, markerField, numberField } from "./editor/field
 import { renderEnergyBalance, renderEnergyChecklist, renderEnergyDevices, renderEnergyTeaser, renderHelpLinks, type EnergyActions } from "./editor/forms/energy.ts";
 import { energyMarkersLayer, headroomLayer, roofSectionsLayer, roofWindowsLayer, solarLayer } from "./editor/canvas/roof-layers.ts";
 import type { CanvasContext } from "./editor/canvas/context.ts";
+import { backgroundLayer } from "./editor/canvas/background.ts";
+import { BackgroundTool, readPictureInBrowser } from "./editor/background-tool.ts";
+import { renderBackgroundForm } from "./editor/forms/background.ts";
+import { dragRotation, pictureCentre, pictureLocal } from "./editor/ops/background.ts";
 import { renderRoofPanel } from "./editor/forms/roof.ts";
 import type { RoofPanelDeps } from "./editor/forms/roof-parts.ts";
 import { renderSolarForm, renderSolarList } from "./editor/forms/solar.ts";
@@ -159,11 +162,6 @@ export class NfEditor extends LitElement {
   static properties = {
     _shiftX: { state: true },
     _shiftAll: { state: true },
-    _bgEdit: { state: true },
-    _bgRuler: { state: true },
-    _bgRulerLen: { state: true },
-    _bgLevel: { state: true },
-    _bgOpen: { state: true },
     _shiftZ: { state: true },
     hass: { attribute: false },
     building: { attribute: false },
@@ -199,7 +197,6 @@ export class NfEditor extends LitElement {
     _guides: { state: true },
     _view: { state: true },
     _size: { state: true },
-    _images: { state: true },
     _canUndo: { state: true },
     _canRedo: { state: true },
   };
@@ -243,15 +240,6 @@ export class NfEditor extends LitElement {
   private declare _shiftX: number;
   /** Shift and turn take every floor with them (roof, outdoor areas, meter included). */
   private declare _shiftAll: boolean;
-  /** The background picture is being moved and scaled in the plan (drag it, pull its corner). */
-  private declare _bgEdit: boolean;
-  /** Scale the background with a ruler (#183): null = off, else the points tapped so far (two = waiting for the length). */
-  private declare _bgRuler: Vec2[] | null;
-  private declare _bgRulerLen: number;
-  /** Straighten the background: two taps along a wall that should run straight (null = off). */
-  private declare _bgLevel: Vec2[] | null;
-  /** The background section is open: the picture has handles like a piece of furniture (move, scale, turn). */
-  private declare _bgOpen: boolean;
   private declare _shiftZ: number;
   /** Open context menu (right-click, long press) at a plan point, for one item. */
   private declare _ctx: { x: number; y: number; kind: FixKind; id: string } | null;
@@ -278,7 +266,6 @@ export class NfEditor extends LitElement {
   private declare _guides: Guides;
   private declare _view: { scale: number; ox: number; oy: number };
   private declare _size: { w: number; h: number };
-  private declare _images: Record<string, { url: string; aspect: number }>;
   private declare _canUndo: boolean;
   private declare _canRedo: boolean;
 
@@ -290,6 +277,8 @@ export class NfEditor extends LitElement {
   private readonly backup: BackupService = this.makeBackup();
   /** The roof tool: its selection and what it adds, changes and removes. */
   private readonly roof: RoofController = this.makeRoof();
+  /** The picture behind the plan, and its calibration. */
+  private readonly bg: BackgroundTool = this.makeBackground();
   private readonly settingsActions: SettingsActions = {
     useRoofSections: () => {
       this.roof.useSections();
@@ -301,7 +290,6 @@ export class NfEditor extends LitElement {
   private pinch: { dist: number; mid: [number, number] } | null = null;
   private fitted = false;
   private resizeObserver?: ResizeObserver;
-  private loadingImages = new Set<string>();
 
   constructor() {
     super();
@@ -327,11 +315,6 @@ export class NfEditor extends LitElement {
     this._spots = null;
     this._shiftX = 0;
     this._shiftAll = false;
-    this._bgEdit = false;
-    this._bgRuler = null;
-    this._bgRulerLen = 0;
-    this._bgLevel = null;
-    this._bgOpen = false;
     this._shiftZ = 0;
     this._floorMenu = false;
     this._openingPreset = "door";
@@ -369,13 +352,24 @@ export class NfEditor extends LitElement {
     this._guides = {};
     this._view = { scale: 50, ox: 40, oy: 40 };
     this._size = { w: 800, h: 600 };
-    this._images = {};
     this._canUndo = false;
     this._canRedo = false;
   }
 
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
     return translate(this.hass, key, vars);
+  }
+
+  private makeBackground(): BackgroundTool {
+    const editor = this;
+    return new BackgroundTool({
+      host: this.host,
+      refresh: () => editor.requestUpdate(),
+      api: { fetchImage, storeImage },
+      readPicture: readPictureInBrowser,
+      useSelectTool: () => (editor._tool = "select"),
+      currentTool: () => editor._tool,
+    });
   }
 
   private makeRoof(): RoofController {
@@ -391,7 +385,7 @@ export class NfEditor extends LitElement {
 
   /** What the layers drawn over the plan need. */
   private canvasContext(): CanvasContext {
-    return { host: this.host, toScreen: (p) => this.toScreen(p), floorId: this._floorId };
+    return { host: this.host, toScreen: (p) => this.toScreen(p), scale: this._view.scale, floorId: this._floorId };
   }
 
   /** What the roof and solar forms need. */
@@ -778,14 +772,12 @@ export class NfEditor extends LitElement {
       // after the 3D half got its new floor (and built the roof): frame it
       setTimeout(() => (this.renderRoot.querySelector("nf-view3d") as (HTMLElement & { resetView(): void }) | null)?.resetView(), 250);
     }
-    const bg = this.floor?.background;
-    if (bg && !this._images[bg.image_id] && !this.loadingImages.has(bg.image_id)) void this.loadImage(bg.image_id);
+    const background = this.floor?.background;
+    if (background) this.bg.ensureLoaded(background.image_id);
     // thumbnails of the selected screen's stored pictures
     if (this.furnitureItem?.pictures) {
       // thumbnails of every stored picture in the plan (they can be reused on other screens)
-      for (const id of this.storedPictures()) {
-        if (!this._images[id] && !this.loadingImages.has(id)) void this.loadImage(id);
-      }
+      for (const id of this.storedPictures()) this.bg.ensureLoaded(id);
     }
   }
 
@@ -1028,27 +1020,24 @@ export class NfEditor extends LitElement {
     }
     const world = this.toWorld(...local);
     const target = e.target as Element;
-    if (this._bgLevel && this.isAdmin && this.floor?.background) {
+    if (this.bg.level && this.isAdmin && this.floor?.background) {
       // straighten: the second tap turns the picture so the tapped wall runs exactly along x or z
-      const pts = [...this._bgLevel, world];
-      if (pts.length < 2) this._bgLevel = pts;
-      else this.applyBgLevel(pts[0], pts[1]);
+      this.bg.tapLevel(world);
       return;
     }
-    if (this.bgHandles() && this.floor.background && target.closest("[data-bg-rotate]")) {
+    if (this.bg.handlesShown && this.floor.background && target.closest("[data-bg-rotate]")) {
       const bg = this.floor.background;
-      const img = this._images[bg.image_id];
-      const h = bg.width * (img?.aspect ?? 1);
-      const c: Vec2 = [bg.x + bg.width / 2, bg.z + h / 2];
+      const img = this.bg.picture(bg.image_id);
+      const c = pictureCentre(bg, img?.aspect ?? 1);
       this.drag = { kind: "bgrotate", base: this._doc, moved: false, start: Math.atan2(world[1] - c[1], world[0] - c[0]), rot: bg.rotation ?? 0 };
       return;
     }
-    if (this._bgRuler && this._bgRuler.length < 2 && this.isAdmin && this.floor?.background) {
+    if (this.bg.ruler && this.bg.ruler.length < 2 && this.isAdmin && this.floor?.background) {
       // the ruler: two taps on a stretch of known length in the picture
-      this._bgRuler = [...this._bgRuler, world];
+      this.bg.tapRuler(world);
       return;
     }
-    if (this.bgHandles() && this.floor.background && !this._bgEdit && (target.closest("[data-bg-handle]") || target.closest("[data-bg]"))) {
+    if (this.bg.handlesShown && this.floor.background && !this.bg.edit && (target.closest("[data-bg-handle]") || target.closest("[data-bg]"))) {
       // the background section is open: the picture moves and scales like furniture
       const bg = this.floor.background;
       this.drag = target.closest("[data-bg-handle]")
@@ -1056,7 +1045,7 @@ export class NfEditor extends LitElement {
         : { kind: "bgmove", start: world, bx: bg.x, bz: bg.z, base: this._doc, moved: false };
       return;
     }
-    if (this._bgEdit && this.isAdmin && this.floor?.background) {
+    if (this.bg.edit && this.isAdmin && this.floor?.background) {
       // the background picture: its corner scales it, its body moves it; anything else ends the editing
       const bg = this.floor.background;
       if (target.closest("[data-bg-handle]")) {
@@ -1067,7 +1056,7 @@ export class NfEditor extends LitElement {
         this.drag = { kind: "bgmove", start: world, bx: bg.x, bz: bg.z, base: this._doc, moved: false };
         return;
       }
-      this._bgEdit = false;
+      this.bg.edit = false;
     }
     if (this._tool === "wall") {
       const start = this.snap(world, undefined, e.altKey);
@@ -1522,15 +1511,11 @@ export class NfEditor extends LitElement {
       case "bgrotate": {
         drag.moved = true;
         const bg = this.floor?.background;
-        const img = bg ? this._images[bg.image_id] : undefined;
+        const img = bg ? this.bg.picture(bg.image_id) : undefined;
         if (!bg || !img) break;
-        const h = bg.width * img.aspect;
-        const c: Vec2 = [bg.x + bg.width / 2, bg.z + h / 2];
-        const now = Math.atan2(world[1] - c[1], world[0] - c[0]);
+        const c = pictureCentre(bg, img.aspect);
         // turn about the middle; Shift snaps to whole 15° steps, otherwise tenths of a degree
-        let rot = drag.rot + ((now - drag.start) * 180) / Math.PI;
-        rot = e.shiftKey ? Math.round(rot / 15) * 15 : Math.round(rot * 10) / 10;
-        rot = ((((rot + 180) % 360) + 360) % 360) - 180;
+        const rot = dragRotation(drag.rot, drag.start, Math.atan2(world[1] - c[1], world[0] - c[0]), e.shiftKey);
         this.change(
           (_, floor) => {
             if (floor.background) floor.background.rotation = rot;
@@ -1543,10 +1528,10 @@ export class NfEditor extends LitElement {
       case "bgscale": {
         drag.moved = true;
         const bg = this.floor?.background;
-        const img = bg ? this._images[bg.image_id] : undefined;
+        const img = bg ? this.bg.picture(bg.image_id) : undefined;
         if (!bg || !img) break;
         // the corner follows the pointer along the picture's own width, whatever its turn
-        const [lx] = this.bgLocal(bg, world, img.aspect);
+        const [lx] = pictureLocal(bg, img.aspect, world);
         const width = Math.max(0.5, round(lx));
         this.change(
           (_, floor) => {
@@ -2802,38 +2787,6 @@ export class NfEditor extends LitElement {
     this.change((_, floor) => Object.assign(floor.rooms.find((r) => r.id === id)!, patch));
   }
 
-  private async loadImage(imageId: string): Promise<void> {
-    this.loadingImages.add(imageId);
-    try {
-      const url = await fetchImage(this.hass, imageId);
-      const img = new Image();
-      img.src = url;
-      await img.decode();
-      this._images = { ...this._images, [imageId]: { url, aspect: img.naturalHeight / img.naturalWidth } };
-    } catch {
-      // image missing (e.g. removed): the background stays empty
-    }
-  }
-
-  private async uploadBackground(e: Event): Promise<void> {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = "";
-    if (!file) return;
-    const bitmap = await createImageBitmap(file);
-    const k = Math.min(1, 2048 / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * k);
-    canvas.height = Math.round(bitmap.height * k);
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const data = canvas.toDataURL("image/jpeg", 0.85);
-    const imageId = uid("img");
-    await storeImage(this.hass, imageId, data);
-    this._images = { ...this._images, [imageId]: { url: data, aspect: canvas.height / canvas.width } };
-    const b = this.floor?.rooms.length ? bounds(this.floor.rooms.flatMap((r) => r.points)) : null;
-    this.updateFloor({ background: { image_id: imageId, x: b ? b.x0 : 0, z: b ? b.z0 : 0, width: b ? Math.max(4, round(b.x1 - b.x0)) : 12, opacity: 0.5 } });
-  }
-
   // ------------------------------------------------------------------ rendering
 
   protected render(): TemplateResult {
@@ -2885,7 +2838,7 @@ export class NfEditor extends LitElement {
               @wheel=${this.onWheel}
               @contextmenu=${this.onContextMenu}
             >
-              ${this.renderBackground(floor)} ${this.renderGrid()} ${this.renderGhost()} ${walls ? this.renderWalls(walls.walls) : nothing}
+              ${backgroundLayer(this.canvasContext(), this.bg, floor)} ${this.renderGrid()} ${this.renderGhost()} ${walls ? this.renderWalls(walls.walls) : nothing}
               ${floor ? this.renderOutdoor(floor) : nothing} ${floor ? this.renderRooms(floor) : nothing} ${floor ? this.renderFurniture(floor) : nothing}
               ${floor ? this.renderFreeWalls(floor) : nothing}
               ${floor && walls ? this.renderOpenings(floor, walls.walls) : nothing} ${floor ? this.renderMeter(floor) : nothing}
@@ -2908,100 +2861,6 @@ export class NfEditor extends LitElement {
         ${this.renderAside(floor)}
       </div>
     `;
-  }
-
-  private renderBackground(floor: Floor | undefined) {
-    const bg = floor?.background;
-    const img = bg ? this._images[bg.image_id] : undefined;
-    if (!bg || !img) return nothing;
-    const [x, y] = this.toScreen([bg.x, bg.z]);
-    const w = bg.width * this._view.scale;
-    const h = w * img.aspect;
-    const rot = bg.rotation ?? 0;
-    const edit = this.bgHandles();
-    // while editing, the picture takes the pointer (drag moves it) and its lower right corner scales it
-    return svg`<g transform="rotate(${rot} ${x + w / 2} ${y + h / 2})">
-      <image href=${img.url} x=${x} y=${y} width=${w} height=${h} opacity=${bg.opacity} preserveAspectRatio="none" pointer-events=${edit ? "auto" : "none"} data-bg="1" style=${edit ? "cursor:move" : ""} />
-      ${edit
-        ? svg`<rect class="nf-bg-frame" x=${x} y=${y} width=${w} height=${h} />
-          <circle class="nf-bg-handle" data-bg-handle="1" cx=${x + w} cy=${y + h} r="9" />
-          <g class="nf-rotate" data-bg-rotate="1">
-            <line x1=${x + w / 2} y1=${y} x2=${x + w / 2} y2=${y - 30} />
-            <circle cx=${x + w / 2} cy=${y - 30} r="16" class="nf-hit" />
-            <circle cx=${x + w / 2} cy=${y - 30} r="8" />
-            <path d="M${x + w / 2 - 4} ${y - 31}a4 4 0 1 1 2 3.5" />
-          </g>`
-        : nothing}
-    </g>${this.renderBgRuler()}`;
-  }
-
-  /** The picture has handles (move, scale, turn) only while "Move and scale" is switched on, with the select tool. */
-  private bgHandles(): boolean {
-    return !!this.floor?.background && this.isAdmin && this._tool === "select" && this._bgEdit;
-  }
-
-  /** The ruler's points and line over the background (#183), or the straighten line. */
-  private renderBgRuler() {
-    const pts = this._bgLevel?.length ? this._bgLevel : this._bgRuler;
-    if (!pts?.length) return nothing;
-    const s = pts.map((p) => this.toScreen(p));
-    return svg`<g class="nf-bg-ruler">
-      ${s.length === 2 ? svg`<line x1=${s[0][0]} y1=${s[0][1]} x2=${s[1][0]} y2=${s[1][1]} />` : nothing}
-      ${s.map(([x, y]) => svg`<circle cx=${x} cy=${y} r="6" />`)}
-    </g>`;
-  }
-
-  /** Turn the background about the first tap so the tapped line runs exactly along x or z (whichever is nearer). */
-  private applyBgLevel(p: Vec2, q: Vec2): void {
-    const bg = this.floor?.background;
-    const img = bg ? this._images[bg.image_id] : undefined;
-    this._bgLevel = null;
-    if (!bg || !img || Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.05) return;
-    const a = Math.atan2(q[1] - p[1], q[0] - p[0]);
-    const delta = Math.round(a / (Math.PI / 2)) * (Math.PI / 2) - a;
-    if (Math.abs(delta) < 1e-4) return;
-    // turning about p moves the picture's middle along: c' = p + R(delta) (c − p)
-    const h = bg.width * img.aspect;
-    const c: Vec2 = [bg.x + bg.width / 2, bg.z + h / 2];
-    const dx = c[0] - p[0];
-    const dz = c[1] - p[1];
-    const c2: Vec2 = [p[0] + dx * Math.cos(delta) - dz * Math.sin(delta), p[1] + dx * Math.sin(delta) + dz * Math.cos(delta)];
-    let rot = (bg.rotation ?? 0) + (delta * 180) / Math.PI;
-    rot = Math.round((((((rot + 180) % 360) + 360) % 360) - 180) * 100) / 100;
-    this.updateFloor({ background: { ...bg, rotation: rot, x: round(c2[0] - bg.width / 2), z: round(c2[1] - h / 2) } });
-  }
-
-  /** Scale the background about the ruler's first point so the measured stretch gets its real length (#183). */
-  private applyBgRuler(real: number): void {
-    const floor = this.floor;
-    const bg = floor?.background;
-    const pts = this._bgRuler;
-    const img = bg ? this._images[bg.image_id] : undefined;
-    if (!bg || !img || !pts || pts.length < 2 || !(real > 0)) return;
-    const measured = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
-    if (measured < 1e-4) return;
-    const k = real / measured;
-    // scaling about p keeps the turn: the centre moves to p + k (c − p), the size grows by k
-    const h = bg.width * img.aspect;
-    const c: Vec2 = [bg.x + bg.width / 2, bg.z + h / 2];
-    const p = pts[0];
-    const c2: Vec2 = [p[0] + k * (c[0] - p[0]), p[1] + k * (c[1] - p[1])];
-    const w2 = bg.width * k;
-    const h2 = h * k;
-    this.updateFloor({ background: { ...bg, width: round(w2), x: round(c2[0] - w2 / 2), z: round(c2[1] - h2 / 2) } });
-    this._bgRuler = null;
-    this._bgRulerLen = 0;
-  }
-
-  /** The picture's own frame: a plan point measured from its top left corner, along its (turned) sides, in metres. */
-  private bgLocal(bg: Background, world: Vec2, aspect: number): Vec2 {
-    const h = bg.width * aspect;
-    const cx = bg.x + bg.width / 2;
-    const cz = bg.z + h / 2;
-    const a = (-(bg.rotation ?? 0) * Math.PI) / 180;
-    const dx = world[0] - cx;
-    const dz = world[1] - cz;
-    return [cx + dx * Math.cos(a) - dz * Math.sin(a) - bg.x, cz + dx * Math.sin(a) + dz * Math.cos(a) - bg.z];
   }
 
   private renderGrid() {
@@ -3862,7 +3721,7 @@ export class NfEditor extends LitElement {
       ${admin ? renderStartView(this.host, () => this.paneView()) : nothing} ${admin ? renderFavorites(this.host) : nothing}
       ${renderHelpLinks(this.host)}
       ${admin && SHOW_PRESENCE ? renderPresence(this.host) : nothing}
-      ${floor && admin ? this.renderBackgroundForm(floor) : nothing} ${admin ? renderSettings(this.host, this.settingsActions) : nothing}
+      ${floor && admin ? renderBackgroundForm(this.host, this.bg, floor) : nothing} ${admin ? renderSettings(this.host, this.settingsActions) : nothing}
       ${admin ? renderBackup(this.host, this.backup) : nothing}
     `;
   }
@@ -4995,70 +4854,6 @@ export class NfEditor extends LitElement {
         ${field("temperature", this.t("climate_temperature"))} ${field("humidity", this.t("climate_humidity"))} ${field("co2", this.t("climate_co2"))}
       </div>
       <p class="nf-sub">${this.t("climate_hint")}</p>
-    </details>`;
-  }
-
-  private renderBackgroundForm(floor: Floor) {
-    const bg = floor.background;
-    return html`<details class="nf-section" ?open=${this._bgOpen} @toggle=${(e: Event) => (this._bgOpen = (e.target as HTMLDetailsElement).open)}>
-      <summary>${this.t("background")}</summary>
-      <div class="nf-form">
-        <label class="nf-btn nf-wide nf-upload"
-          >${this.t("background_upload")}<input type="file" accept="image/png,image/jpeg,image/webp" @change=${this.uploadBackground}
-        /></label>
-        ${bg
-          ? html`${this.num(this.t("x"), bg.x, (v) => this.updateFloor({ background: { ...bg, x: v } }))}
-              ${this.num(this.t("z"), bg.z, (v) => this.updateFloor({ background: { ...bg, z: v } }))}
-              ${this.num(this.t("background_width"), bg.width, (v) => this.updateFloor({ background: { ...bg, width: Math.max(0.1, v) } }), 0.01, 0.1)}
-              ${this.num(this.t("background_rotation"), bg.rotation ?? 0, (v) => this.updateFloor({ background: { ...bg, rotation: Math.round(v * 10) / 10 } }), 0.5)}
-              ${this.isAdmin
-                ? html`<button
-                      class="nf-btn nf-wide ${this._bgEdit ? "nf-primary" : ""}"
-                      aria-pressed=${this._bgEdit}
-                      @click=${() => {
-                        this._bgEdit = !this._bgEdit;
-                        // the handles need the select tool
-                        if (this._bgEdit) this._tool = "select";
-                      }}
-                    >
-                      ${this.t(this._bgEdit ? "background_edit_done" : "background_edit")}
-                    </button>
-                    <p class="nf-sub nf-wide">${this.t(this._bgEdit ? "background_handles_hint" : "background_fixed_hint")}</p>
-                  <button class="nf-btn nf-wide ${this._bgLevel ? "nf-primary" : ""}" aria-pressed=${!!this._bgLevel} @click=${() => {
-                    this._bgLevel = this._bgLevel ? null : [];
-                    this._bgRuler = null;
-                    this._bgEdit = false;
-                  }}>📐 ${this.t(this._bgLevel ? "bg_level_cancel" : "bg_level")}</button>
-                  ${this._bgLevel ? html`<p class="nf-sub nf-wide">${this.t(this._bgLevel.length ? "bg_level_second" : "bg_level_first")}</p>` : nothing}
-                  <button class="nf-btn nf-wide ${this._bgRuler ? "nf-primary" : ""}" aria-pressed=${!!this._bgRuler} @click=${() => {
-                    this._bgRuler = this._bgRuler ? null : [];
-                    this._bgLevel = null;
-                    this._bgEdit = false;
-                  }}>📏 ${this.t(this._bgRuler ? "bg_ruler_cancel" : "bg_ruler")}</button>
-                  ${this._bgRuler
-                    ? this._bgRuler.length < 2
-                      ? html`<p class="nf-sub nf-wide">${this.t(this._bgRuler.length ? "bg_ruler_second" : "bg_ruler_first")}</p>`
-                      : html`<p class="nf-sub nf-wide">${this.t("bg_ruler_length_hint", { m: formatNumber(this.hass, Math.hypot(this._bgRuler[1][0] - this._bgRuler[0][0], this._bgRuler[1][1] - this._bgRuler[0][1]), 2) })}</p>
-                          <label class="nf-field"
-                            >${this.t("bg_ruler_length")}
-                            <input type="number" min="0.01" step="0.01" .value=${this._bgRulerLen ? String(this._bgRulerLen) : ""} @input=${(e: Event) => (this._bgRulerLen = Number((e.target as HTMLInputElement).value.replace(",", ".")) || 0)} @keydown=${(e: KeyboardEvent) => e.key === "Enter" && this.applyBgRuler(this._bgRulerLen)}
-                          /></label>
-                          <button class="nf-btn nf-primary" ?disabled=${!(this._bgRulerLen > 0)} @click=${() => this.applyBgRuler(this._bgRulerLen)}>${this.t("bg_ruler_apply")}</button>`
-                    : nothing}`
-                : nothing}
-              <label class="nf-field"
-                >${this.t("background_opacity")}
-                <input
-                  type="range"
-                  min="0.05"
-                  max="1"
-                  step="0.05"
-                  .value=${String(bg.opacity)}
-                  @change=${(e: Event) => this.updateFloor({ background: { ...bg, opacity: parseFloat((e.target as HTMLInputElement).value) } })}
-              /></label>
-              <button class="nf-btn nf-danger nf-wide" @click=${() => this.updateFloor({ background: null })}>${this.t("background_remove")}</button>`
-          : nothing}
-      </div>
     </details>`;
   }
 

@@ -1,0 +1,114 @@
+// What the panel remembers per device: a wall tablet wants other view settings than a desktop. Each preference is a small codec
+// (storage name, fallback, how to read and write it), so loading and saving are the same few lines for all of them.
+
+import type { MarkerMode } from "../components/view3d.ts";
+import type { HeatMode } from "../heatmap.ts";
+import { THEMES, type Theme } from "../themes.ts";
+import type { FloorStack, Quality } from "../viewer/viewer3d.ts";
+
+export interface DevicePrefs {
+  explode: boolean;
+  keepRoof: boolean;
+  quality: Quality;
+  stats: boolean;
+  markers: MarkerMode;
+  heat: HeatMode;
+  theme: Theme;
+  /** "#rrggbb", or null for the stock accent. */
+  accent: string | null;
+  floorStack: FloorStack;
+  roomNames: boolean;
+  trail: boolean;
+  clean: boolean;
+  navWrap: boolean;
+  weather: boolean;
+}
+
+interface Codec<T> {
+  /** The key in the browser's storage (below the "nextfloor." prefix). */
+  name: string;
+  fallback: T;
+  read(raw: string): T;
+  write(value: T): string;
+}
+
+/** A yes/no switch stored as "1" and "0". What is on by default only turns off on an explicit "0". */
+const flag = (name: string, fallback: boolean): Codec<boolean> => ({
+  name,
+  fallback,
+  read: (raw) => (fallback ? raw !== "0" : raw === "1"),
+  write: (value) => (value ? "1" : "0"),
+});
+
+/** One of a fixed list of words; anything else counts as unset. */
+const word = <T extends string>(name: string, allowed: readonly T[], fallback: T): Codec<T> => ({
+  name,
+  fallback,
+  read: (raw) => allowed.find((w) => w === raw) ?? fallback,
+  write: (value) => value,
+});
+
+const CODECS: { [K in keyof DevicePrefs]: Codec<DevicePrefs[K]> } = {
+  explode: flag("explode", true),
+  keepRoof: flag("roof", false),
+  quality: word("quality", ["auto", "low", "high"], "auto"),
+  stats: flag("stats", false),
+  markers: word("markers", ["none", "important", "all"], "important"),
+  heat: word("heat", ["none", "temperature", "humidity", "co2", "values"], "none"),
+  theme: word("theme", THEMES, "neon"),
+  accent: { name: "accent", fallback: null, read: (raw) => (/^#[0-9a-f]{6}$/i.test(raw) ? raw : null), write: (value) => value ?? "" },
+  floorStack: word("floor_stack", ["dim", "stacked", "single"], "dim"),
+  roomNames: flag("room_names", true),
+  trail: flag("trail", false),
+  clean: flag("clean", false),
+  navWrap: flag("nav_wrap", false),
+  weather: flag("weather", true),
+};
+
+export type PrefsStorage = Pick<Storage, "getItem" | "setItem">;
+
+/** The browser's local storage, or null where it is not available (private mode, blocked site data). */
+export function browserStorage(): PrefsStorage | null {
+  try {
+    return localStorage;
+  } catch {
+    return null;
+  }
+}
+
+export class PrefStore {
+  private readonly storage: PrefsStorage | null;
+
+  constructor(storage: PrefsStorage | null) {
+    this.storage = storage;
+  }
+
+  private raw(name: string): string | null {
+    try {
+      return this.storage?.getItem(`nextfloor.${name}`) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** All preferences. `?nf_stats` in the page's URL switches the performance display on whatever was stored. */
+  load(search = ""): DevicePrefs {
+    const prefs = {} as Record<string, unknown>;
+    for (const key of Object.keys(CODECS) as (keyof DevicePrefs)[]) {
+      const codec = CODECS[key] as Codec<unknown>;
+      const raw = this.raw(codec.name);
+      prefs[key] = raw === null ? codec.fallback : codec.read(raw);
+    }
+    if (new URLSearchParams(search).has("nf_stats")) prefs.stats = true;
+    return prefs as unknown as DevicePrefs;
+  }
+
+  save<K extends keyof DevicePrefs>(key: K, value: DevicePrefs[K]): void {
+    const codec = CODECS[key] as Codec<DevicePrefs[K]>;
+    try {
+      this.storage?.setItem(`nextfloor.${codec.name}`, codec.write(value));
+    } catch {
+      // storage unavailable: the choice just is not remembered
+    }
+  }
+}

@@ -1036,15 +1036,6 @@ export const editorStyles = css`
     color: var(--nf-accent);
     vertical-align: -2px;
   }
-  .nf-ext-teaser {
-    display: grid;
-    gap: 6px;
-    margin: 12px 0;
-    padding: 12px;
-    border: 1px solid var(--nf-accent);
-    border-radius: 12px;
-    background: linear-gradient(135deg, color-mix(in srgb, var(--nf-accent) 8%, transparent), color-mix(in srgb, var(--nf-soft) 8%, transparent));
-  }
   .nf-pin {
     border: 0;
     background: none;

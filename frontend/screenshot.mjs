@@ -112,6 +112,12 @@ window.__smoke = out;` },
   { name: "tablet", query: "", width: 1180, height: 820, click: "Tablet" },
 ];
 
+// SHOWCASE=pack%3Aa_wohnzimmer:7 → showcase pages 1..7 of that set (sc-1 … sc-7), for looking over a whole pack
+if (process.env.SHOWCASE) {
+  const [set, pages] = process.env.SHOWCASE.split(":");
+  for (let n = 1; n <= Number(pages); n++) shots.push({ name: `sc-${n}`, dev: true, query: `?showcase&lang=en&set=${set}&page=${n}`, width: 1400, height: 800 });
+}
+
 const errors = [];
 const only = process.env.SHOTS?.split(",");
 for (const shot of shots.filter((s) => (only ? only.includes(s.name) : !s.dev))) {

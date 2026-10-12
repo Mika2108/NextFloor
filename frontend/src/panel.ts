@@ -292,7 +292,6 @@ export class NextFloorPanel extends LitElement {
         .narrow=${this.narrow}
         .packs=${this.data.packs}
         @packs-changed=${() => void this.data.reloadPacks()}
-        @open-extensions=${() => this.setMode("extensions")}
         @building-changed=${(e: CustomEvent<{ building: Building }>) => this.data.edit(e.detail.building)}
       ></nf-editor>`,
     );
@@ -423,8 +422,7 @@ export class NextFloorPanel extends LitElement {
           .quality=${p.quality}
           ?showStats=${p.stats}
           @room-tap=${this.onRoomTap}
-          @open-extensions=${() => this.setMode("extensions")}
-          @floor-tap=${(e: CustomEvent<{ floorId: string | null }>) => this.openFloor(e.detail.floorId)}
+            @floor-tap=${(e: CustomEvent<{ floorId: string | null }>) => this.openFloor(e.detail.floorId)}
           @back=${() => this.back()}
         ></nf-view3d>
         ${room

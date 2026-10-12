@@ -339,7 +339,6 @@ export class NfEditor extends LitElement {
   private libraryActions(): LibraryActions {
     return {
       add: (type) => this.addFurniture(type),
-      openExtensions: () => this.dispatchEvent(new CustomEvent("open-extensions", { bubbles: true, composed: true })),
       packs: this.packs ?? [],
     };
   }

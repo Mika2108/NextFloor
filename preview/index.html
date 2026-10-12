@@ -16,6 +16,7 @@
   <body>
     <nextfloor-panel></nextfloor-panel>
     <script src="./basic-types.js"></script>
+    <script src="./pack-ids.js"></script>
     <script type="module">
       // Mock of the Home Assistant frontend object with invented demo data.
       import { DEMO_AREAS, DEMO_BUILDING, DEMO_FLOORS, DEMO_PACK, DEMO_ENTITIES, DEMO_STATES, DEMO_PICTURES } from "./demo-data.js";
@@ -70,10 +71,10 @@ const params = new URLSearchParams(location.search);
         const sets = [
           ...window.BASIC_TYPES.map((g) => ({ id: `basic:${g.id}`, label: `${names(g.name)}`, items: g.items.map((i) => ({ type: i.type, size: i.size, name: names(i.name) })) })),
         ];
-        for (const key of ["bad", "energie", "fahrzeuge", "ikea", "fitness", "garten", "kino", "kueche", "schlafen", "technik", "wohnen", "treppen", "ausbau", "werkstatt"]) {
+        for (const id of window.PACK_IDS) {
           try {
-            const pack = await (await fetch(`../custom_components/nextfloor/packs/nextfloor.${key}.json`)).json();
-            sets.push({ id: `pack:${key}`, label: names({ en: pack.name, de: pack.name }), items: pack.items.map((i) => ({ type: `pack:${pack.id}:${i.id}`, size: i.size, name: names(i.name) })) });
+            const pack = await (await fetch(`../custom_components/nextfloor/packs/${id}.json`)).json();
+            sets.push({ id: `pack:${id.replace("nextfloor.", "")}`, label: names({ en: pack.name, de: pack.name }), items: pack.items.map((i) => ({ type: `pack:${pack.id}:${i.id}`, size: i.size, name: names(i.name) })) });
           } catch {}
         }
         const current = sets.find((x) => x.id === params.get("set")) ?? sets[0];
@@ -137,16 +138,15 @@ const params = new URLSearchParams(location.search);
       const history = [{ id: "s0", revision: 0, saved_at: Date.now() / 1000 - 3600, building: structuredClone(building) }];
 
       // furniture packs: the invented demo pack and the packs that come with NextFloor
-      const BUILTIN = ["bad", "energie", "fahrzeuge", "ikea", "fitness", "garten", "kino", "kueche", "schlafen", "technik", "wohnen", "treppen", "ausbau", "werkstatt"];
       let importedPacks = null;
       // one shared load: parallel callers must not see the list half filled
       let packsLoad = null;
       function previewPacks() {
         packsLoad ??= (async () => {
           const list = [DEMO_PACK];
-          for (const name of BUILTIN) {
+          for (const id of window.PACK_IDS) {
             try {
-              const res = await fetch(`../custom_components/nextfloor/packs/nextfloor.${name}.json`);
+              const res = await fetch(`../custom_components/nextfloor/packs/${id}.json`);
               if (res.ok) list.push({ builtin: true, ...(await res.json()) });
             } catch {
               // served without the packs: the demo pack alone

@@ -2,6 +2,16 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## 0.8.0 (unreleased, on `dev`)
+
+### Added
+
+- **Wohnzimmer pack (70) and Schlafzimmer pack (41)**, built from scratch: sofas, corner sofas, armchairs, tables, shelving, wall units, lamps and decor; beds, wardrobes, nightstands, dressers and baby furniture. More area packs follow.
+
+### Changed
+
+- **Extensions tab:** it now only holds the upload of your own 3D models and the project links. The feature list and the furniture pack list are gone, and so is the hint box in the furniture library.
+
 ## 0.7.0
 
 ### Added

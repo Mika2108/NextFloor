@@ -107,7 +107,6 @@ function sectionsOf(host: EditorHost, packs: readonly FurniturePack[]): LibraryS
 
 export interface LibraryActions {
   add(type: string): void;
-  openExtensions(): void;
   packs: readonly FurniturePack[];
 }
 
@@ -160,12 +159,7 @@ export function renderLibrary(host: EditorHost, state: LibraryState, roomName: s
       />
       ${query && !anyMatch(sections, query) ? html`<p class="nf-sub">${t("furniture_search_none")}</p>` : nothing}
       ${sections.map((s) => sectionBlock(host, state, s, actions))}
-    </section>
-    <div class="nf-ext-teaser">
-      <b>${t("ext_teaser_title")}</b>
-      <span class="nf-sub">${t("ext_teaser_text")}</span>
-      <button class="nf-btn nf-primary" @click=${() => actions.openExtensions()}>${t("ext_open")}</button>
-    </div>`;
+    </section>`;
 }
 
 /** The small picture shown beside a library button while the pointer rests on it. */

@@ -2,7 +2,6 @@
 
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 import {
-  carWatched,
   type CarState,
   roomClimateValue,
   areaEntities,
@@ -16,7 +15,10 @@ import {
   openingState,
   TOGGLE_KINDS,
   type FurnitureLinks,
-  type OpeningEntities, confirmEntities, fridgeDoors, hasScreen,
+  type OpeningEntities,
+  confirmEntities,
+  fridgeDoors,
+  hasScreen,
   fromCelsius,
   tempUnit,
   robotRoom,
@@ -26,9 +28,11 @@ import {
   favoriteCall,
   runButton,
 } from "../devices.ts";
-import { alertColor, alertEntities, alertSources, alertText, findAlerts, type Alert, type AlertSources } from "../alerts.ts";
+import { liveScreens, readSun, roofWindowStates, skyLightness } from "./view3d/live-inputs.ts";
+import { watchedEntities } from "./view3d/watch-list.ts";
+import { alertColor, alertSources, alertText, findAlerts, type Alert, type AlertSources } from "../alerts.ts";
 import { iconPath, iconSvg, mdiIcon } from "../icons.ts";
-import { deviceSensors, energySummary, findConsumers, powerSensorFor, readPower, type Consumer, type EnergySummary } from "../energy.ts";
+import { deviceSensors, energySummary, findConsumers, readPower, type Consumer, type EnergySummary } from "../energy.ts";
 import { type CustomButton, type EntityRef } from "../model.ts";
 
 import { STAGE, type Theme } from "../themes.ts";
@@ -36,20 +40,20 @@ import { HEAT_SCALES, heatColor, heatGradient, roomValues, type HeatMode } from 
 import { furnitureName } from "../furniture-names.ts";
 import { formatNumber, translate, type I18nKey } from "../i18n.ts";
 import { getPacks, mountBase, packItem, packsVersion } from "../packs.ts";
-import { parkedVehicle, parkedVehicles, parkingEntities, vehicleFurniture } from "../parking.ts";
+import { parkedVehicle, parkedVehicles, vehicleFurniture } from "../parking.ts";
 import { weatherEntity } from "../weather.ts";
 import { chosenEffects, readSkyWeather } from "../live/sky-weather.ts";
 import { energyPicture, houseHub, type EnergyPicture } from "../live/energy-flow.ts";
 import { renderLhCards, liveCardStyles, unstackLhCards, type LiveCard } from "../live/cards.ts";
 import { readCar, type CarInfo } from "../live/car.ts";
-import { appColor as liveAppColor, mediaNow, multiroom, type MediaNow } from "../live/media.ts";
+import { mediaNow, multiroom, type MediaNow } from "../live/media.ts";
 import { cameraSpots, cameraUrls, DETECT_ICON, detections, motionSensors, motionTrail, viewFromCamera, type TrailSpot } from "../live/cameras.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { searchIndex, searchItems, type SearchItem } from "../search.ts";
 import { coverPositionable, lightAbilities } from "./quick-menu.ts";
 import "./quick-menu.ts";
 import { load3d } from "../load3d.ts";
-import { scaleGlow, buildMarkers, cameraMotionSensors, openMoreInfo, placedEntities, stateText, toggleEntity } from "../markers.ts";
+import { scaleGlow, buildMarkers, openMoreInfo, stateText, toggleEntity } from "../markers.ts";
 import { furnitureFootprint, isLamp, LAMP_MODEL, outdoorGround, pointInPolygon, surfaceHeight, type Building, type Furniture, type StartView } from "../model.ts";
 import { floorCounts, floorInfoText, personsInRooms } from "../presence.ts";
 import { controls, tokens } from "../styles.ts";
@@ -550,32 +554,17 @@ export class NfView3d extends LitElement {
       this.furnitureLinks = furnitureEntities(hass, b.floors);
       this.linkedRegistry = hass.entities;
       this.findIndex = null;
-      const links = [...this.openingLinks.values()].flatMap((e) => [e.cover, e.contact, e.tilt, e.contact2 ?? null, e.tilt2 ?? null, e.position ?? null, e.tiltAngle ?? null]);
-      const placed = placedEntities(b);
-      const cameraSensors = placed.filter((id) => kindOf(id) === "camera").flatMap((id) => cameraMotionSensors(hass, id));
-      const power = placed.map((id) => powerSensorFor(hass, id));
-      const e = b.energy;
-      const presence = b.presence.flatMap((p) => [p.person, p.sensor]);
-      const lights = b.floors.flatMap((f) => f.rooms.flatMap((r) => areaEntities(hass, r.area_id).filter((id) => kindOf(id) === "light")));
-      const furniture = [...this.furnitureLinks.values()].flatMap((l) => [l.entity, l.power]);
-      const states = b.floors.flatMap((f) => f.furniture.flatMap((m) => [m.state_entity ?? null, m.state_entity2 ?? null, m.color_entity ?? null]));
-      const doors = b.floors.flatMap((f) => f.furniture.flatMap((m) => [m.door_left ?? null, m.door_right ?? null, m.soc ?? null, m.status ?? null, m.charge ?? null, m.export ?? null]));
-      const roofWindowIds = (b.settings.roof?.windows ?? []).flatMap((w) => [w.cover, w.contact, w.tilt]).filter((x): x is string => !!x && x !== "none");
-      // the solar fields' and strings' sensors feed the roof cables
-      const solarIds = [...(b.settings.roof?.solar ?? []).map((f) => f.entity), ...(b.settings.roof?.strings ?? []).map((s) => s.entity)].filter((x): x is string => !!x && x !== "none");
-      const robotRooms = b.floors.flatMap((f) => f.furniture.filter((m) => m.type === "robot_vacuum").map((m) => robotRoomSensor(hass, this.furnitureLinks.get(m.id)?.entity ?? null, m.room_sensor)));
-      const pictureRules = b.floors.flatMap((f) => f.furniture.flatMap((m) => (m.pictures ?? []).flatMap((r) => [r.entity, ...(r.image.startsWith("camera:") ? [r.image.slice(7)] : [])])));
-      const heat =
-        this.heatMode === "none" && !this.roomLabels
-          ? []
-          : b.floors.flatMap((f) => f.rooms.flatMap((r) => areaEntities(hass, r.area_id).filter((id) => id.startsWith("sensor."))));
       this.alertSrc = this.alerts ? alertSources(hass, b, this.weatherEntityId) : null;
-      const warn = this.alertSrc ? alertEntities(this.alertSrc) : [];
-      const parking = [...parkingEntities(b.floors), ...carWatched(hass, b.floors)];
-      const motion = this.trail ? motionSensors(hass, b).map((s) => s.entity) : [];
-      const weather = weatherEntity(hass, this.weatherEntityId ?? b.settings.weather_entity);
-      const all = [...placed, ...cameraSensors, ...links, ...power, ...furniture, ...states, ...doors, ...robotRooms, ...roofWindowIds, ...solarIds, ...pictureRules, e.grid, e.solar, e.battery, e.battery_soc, e.consumption, e.tariff, ...presence, ...lights, ...heat, ...warn, ...parking, ...motion, weather, "sun.sun"];
-      this.watched = [...new Set(all.filter((id): id is string => !!id))];
+      this.watched = watchedEntities({
+        hass,
+        building: b,
+        openingLinks: this.openingLinks,
+        furnitureLinks: this.furnitureLinks,
+        needsRoomSensors: this.heatMode !== "none" || this.roomLabels,
+        alertSources: this.alertSrc,
+        trail: this.trail,
+        weatherEntityId: this.weatherEntityId,
+      });
       force = true;
     }
     const changed = force || this.watched.some((id) => this.shownStates.get(id) !== hass.states[id]);
@@ -628,20 +617,7 @@ export class NfView3d extends LitElement {
     v.setFridgeDoors(fridgeDoors(hass, b.floors));
     v.setRobots(this.robotInfos(hass, b));
     // roof windows: sash and blind follow their contact and cover like windows do
-    const roofWindows = new Map<string, { open: number; tilt: number; cover: number }>();
-    for (const w of b.settings.roof?.windows ?? []) {
-      const ref = (e: string | null | undefined) => (e && e !== "none" ? e : null);
-      const s = openingState(hass, { cover: ref(w.cover), contact: ref(w.contact), tilt: ref(w.tilt) }, "window");
-      // a window motor: its position (0–100) opens the sash that far; a plain open/closed state fully
-      const motor = ref(w.window) ? hass.states[ref(w.window)!] : undefined;
-      let open = s.open;
-      if (motor && !isUnavailable(motor)) {
-        const pos = motor.attributes.current_position;
-        open = typeof pos === "number" ? Math.min(1, Math.max(0, pos / 100)) : motor.state === "open" || motor.state === "opening" ? 1 : 0;
-      }
-      roofWindows.set(w.id, { open, tilt: s.tilt, cover: s.cover ?? 0 });
-    }
-    v.setRoofWindows(roofWindows);
+    v.setRoofWindows(roofWindowStates(hass, b));
     v.setParked(parkedVehicles(hass, b));
     const types = new Map(b.floors.flatMap((f) => f.openings.map((o) => [o.id, o.type] as const)));
     const openingStates = new Map([...this.openingLinks!].map(([id, e]) => [id, openingState(hass, e, types.get(id))]));
@@ -675,57 +651,24 @@ export class NfView3d extends LitElement {
     );
     this.syncLhCards(v, b, livePic, liveCars, playing);
     // TV screens: a TV or monitor linked to a media player that runs shows what runs
-    const screens: Parameters<NextFloorViewer["setLiveScreens"]>[0] = [];
-    if (!this.dimmed) {
-      for (const floor of b.floors) {
-        for (const f of floor.furniture) {
-          if (!hasScreen(f.type)) continue;
-          // the screen's player: linked to it, else a player placed right beside it (an Apple TV next to the TV)
-          let e = this.furnitureLinks?.get(f.id)?.entity ?? null;
-          if (!e?.startsWith("media_player.")) {
-            e =
-              floor.placements
-                .filter((pl) => pl.entity_id.startsWith("media_player.") && Math.hypot(pl.x - f.x, pl.z - f.z) < Math.max(2, f.w))
-                .sort((p, q) => Math.hypot(p.x - f.x, p.z - f.z) - Math.hypot(q.x - f.x, q.z - f.z))[0]?.entity_id ?? null;
-          }
-          const st = e ? hass.states[e] : undefined;
-          if (!st || !["playing", "paused"].includes(st.state)) continue;
-          const a = st.attributes as Record<string, unknown>;
-          const str = (k: string) => (typeof a[k] === "string" ? (a[k] as string) : "");
-          const app = str("app_name") || str("source") || null;
-          screens.push({
-            id: f.id,
-            furnitureId: f.id,
-            floorId: floor.id,
-            color: liveAppColor(app),
-            title: str("media_title") || str("media_channel") || app || "",
-            subtitle: str("media_artist") || str("media_series_title") || str("media_album_name"),
-            app,
-            picture: str("entity_picture") || null,
-            playing: st.state === "playing",
-          });
-        }
-      }
-    }
-    v.setLiveScreens(screens);
+    v.setLiveScreens(this.dimmed ? [] : liveScreens(hass, b, this.furnitureLinks));
     const persons = SHOW_PRESENCE ? personsInRooms(hass, b) : [];
     v.setPersons(persons);
     const counts = floorCounts(hass, b, this.openingLinks!, persons);
     v.setFloorInfo(new Map([...counts].map(([id, c]) => [id, floorInfoText(hass, c)])));
     // daylight: sun through the windows and a lighter sky
-    const sun = hass.states["sun.sun"]?.attributes;
-    const elevation = typeof sun?.elevation === "number" ? sun.elevation : null;
-    v.setSun(elevation !== null && typeof sun?.azimuth === "number" ? { elevation, azimuth: sun.azimuth } : null);
+    const sunNow = readSun(hass);
+    v.setSun(sunNow);
     // the sky over the plot (NextFloor's own weather layer): clouds darken the stage, rain and snow fall along the wind
     const raw = this.weather && !this.dimmed ? readSkyWeather(hass, weatherEntity(hass, this.weatherEntityId ?? b.settings.weather_entity)) : null;
     const weather = raw ? chosenEffects(raw, b.settings.weather_effects) : null;
     this.cloud = weather?.cloud ?? 0;
-    this._sky = (elevation === null ? 0 : Math.min(1, Math.max(0, (elevation + 4) / 16))) * (1 - 0.45 * this.cloud);
+    this._sky = skyLightness(sunNow?.elevation ?? null, this.cloud);
     v.setSky(
       this.weather && !this.dimmed
         ? {
             weather,
-            sun: elevation !== null && typeof sun?.azimuth === "number" ? { elevation, azimuth: sun.azimuth } : null,
+            sun: sunNow,
             north: b.settings.north ?? 0,
             sky: this.skyColor(),
             disc: (b.settings.weather_effects ?? ["sky"]).includes("sky"),

@@ -10,8 +10,8 @@ import { holeInRoom } from "../geometry/holes.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { cameraMotionSensors, detectionKind } from "../markers.ts";
 import { isStatusSensor, robotRoomSensor, TOGGLE_KINDS } from "../devices.ts";
-import { sectionFloor, dormerParent, effectiveDormer, proposeDormer, sectionGeometry, floorOutline, polygonBox, headroomLines, ridgeHeight, sectionCutsBelow, roofSectionsFromRooms, sectionFrame, wallTopUnder } from "../roof-sections.ts";
-import { bestFace, clampField, faceAt, faceCompass, fieldFace, fieldModules, GROUND, moveField, pointOnFace, proposeField, proposeGroundField, proposeWindow, proposeWallField, roofFaces, rowCounts, turnGroundField, fieldCenter, wallFaces, windowAsField, windowCorners, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
+import { polygonBox } from "../roof-sections.ts";
+import { clampField, faceAt, fieldFace, pointOnFace, roofFaces, turnGroundField, fieldCenter, wallFaces, windowAsField, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
 import {
   type Background,
@@ -61,12 +61,7 @@ import {
   type Furniture,
   type FurnitureType,
   type LampMount,
-  type RoofSection,
-  type RoofShape,
   type SolarField,
-  type SolarString,
-  type RoofWindow,
-  ROOF_SHAPES,
   type MarkerShow,
   type OutdoorArea,
   type OutdoorType,
@@ -89,7 +84,13 @@ import { renderSettings, type SettingsActions } from "./editor/forms/settings.ts
 import { entityOptions, isBinary as binaryish, isNumeric as numberish, isPowerSensor, type EntityOption } from "./editor/entities.ts";
 import { entityField, iconField, markerField, numberField } from "./editor/fields.ts";
 import { renderEnergyBalance, renderEnergyChecklist, renderEnergyDevices, renderEnergyTeaser, renderHelpLinks, type EnergyActions } from "./editor/forms/energy.ts";
+import { energyMarkersLayer, headroomLayer, roofSectionsLayer, roofWindowsLayer, solarLayer } from "./editor/canvas/roof-layers.ts";
+import type { CanvasContext } from "./editor/canvas/context.ts";
+import { renderRoofPanel } from "./editor/forms/roof.ts";
+import type { RoofPanelDeps } from "./editor/forms/roof-parts.ts";
+import { renderSolarForm, renderSolarList } from "./editor/forms/solar.ts";
 import type { EditorHost } from "./editor/host.ts";
+import { RoofController } from "./editor/roof-controller.ts";
 import { importEnergyPrefs } from "./editor/ops/energy-import.ts";
 import { newEnergyDevice } from "./editor/ops/energy-devices.ts";
 import { EditHistory } from "./editor/history.ts";
@@ -179,10 +180,6 @@ export class NfEditor extends LitElement {
     _deviceId: { state: true },
     _deviceQuery: { state: true },
     _devSource: { state: true },
-    _roofId: { state: true },
-    _solarId: { state: true },
-    _solarPick: { state: true },
-    _roofWinId: { state: true },
     _energyNote: { state: true },
     _furnQuery: { state: true },
     _libOpen: { state: true },
@@ -240,14 +237,6 @@ export class NfEditor extends LitElement {
   private declare _deviceQuery: string;
   /** Which devices the room form lists: its own area, other areas, or entities without an area. */
   private declare _devSource: "area" | "other" | "none";
-  /** Selected roof section (tool "roof"). */
-  private declare _roofId: string | null;
-  /** Selected solar field (roof tool). */
-  private declare _solarId: string | null;
-  /** Solar field form: taps in the plan switch single modules on and off. */
-  private declare _solarPick: boolean;
-  /** Selected roof window (roof tool). */
-  private declare _roofWinId: string | null;
   /** What the import from the energy dashboard did (shown under its button). */
   private declare _energyNote: string | null;
   /** Furniture library: the search text, and which sections are open (built-in groups and packs). */
@@ -311,9 +300,11 @@ export class NfEditor extends LitElement {
   /** What the form modules in editor/forms see of this editor. */
   private readonly host: EditorHost = this.makeHost();
   private readonly backup: BackupService = this.makeBackup();
+  /** The roof tool: its selection and what it adds, changes and removes. */
+  private readonly roof: RoofController = this.makeRoof();
   private readonly settingsActions: SettingsActions = {
     useRoofSections: () => {
-      this.useRoofSections();
+      this.roof.useSections();
       this._tool = "roof";
     },
   };
@@ -335,10 +326,10 @@ export class NfEditor extends LitElement {
     this._deviceId = null;
     this._deviceQuery = "";
     this._devSource = "area";
-    this._roofId = null;
-    this._solarId = null;
-    this._solarPick = false;
-    this._roofWinId = null;
+    this.roof.sectionId = null;
+    this.roof.solarId = null;
+    this.roof.picking = false;
+    this.roof.windowId = null;
     this._energyNote = null;
     this._furnQuery = "";
     this._libOpen = new Set(["group:lights", "group:living"]);
@@ -405,6 +396,27 @@ export class NfEditor extends LitElement {
 
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
     return translate(this.hass, key, vars);
+  }
+
+  private makeRoof(): RoofController {
+    const editor = this;
+    return new RoofController({
+      host: this.host,
+      floorId: () => editor._floorId,
+      setFloorId: (id) => (editor._floorId = id),
+      confirm: (text) => confirm(text),
+      refresh: () => editor.requestUpdate(),
+    });
+  }
+
+  /** What the layers drawn over the plan need. */
+  private canvasContext(): CanvasContext {
+    return { host: this.host, toScreen: (p) => this.toScreen(p), floorId: this._floorId };
+  }
+
+  /** What the roof and solar forms need. */
+  private roofDeps(): RoofPanelDeps {
+    return { host: this.host, roof: this.roof, floorId: this._floorId, setFloorId: (id) => (this._floorId = id), toggleLockPlan: () => this.toggleLockPlan() };
   }
 
   private makeBackup(): BackupService {
@@ -670,8 +682,8 @@ export class NfEditor extends LitElement {
     if (!best) return false;
     const b = best as { id: string; win: boolean; du: number; ds: number };
     this.grab3d = { id: b.id, win: b.win, du: b.du, ds: b.ds, base: doc, moved: false };
-    if (b.win) this._roofWinId = b.id;
-    else this.selectSolar(b.id);
+    if (b.win) this.roof.windowId = b.id;
+    else this.roof.selectField(b.id);
     return true;
   }
 
@@ -1089,7 +1101,7 @@ export class NfEditor extends LitElement {
       const marker = this._tool === "energy" ? target.closest("[data-energy-device]")?.getAttribute("data-energy-device") : null;
       if (marker) {
         // an energy device by its marker (above solar fields on the roof): selected and moved like furniture
-        this._solarId = null;
+        this.roof.solarId = null;
         this.selectItem("furniture", marker);
         this.drag = this.isAdmin ? { kind: "furniture", id: marker, start: world, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
         return;
@@ -1103,15 +1115,15 @@ export class NfEditor extends LitElement {
       if (solar) {
         const cell = target.closest("[data-cell]")?.getAttribute("data-cell");
         // pick mode on the selected field: a tap switches the module on or off
-        if (this._solarPick && solar === this._solarId && cell && this.isAdmin) {
-          this.toggleSolarCell(cell);
+        if (this.roof.picking && solar === this.roof.solarId && cell && this.isAdmin) {
+          this.roof.toggleCell(cell);
           this.drag = { kind: "pan", last: local };
           return;
         }
         // otherwise: select the field and move it, also onto another roof face
-        if (solar !== this._solarId) this._solarPick = false;
-        this._solarId = solar;
-        this._roofId = null;
+        if (solar !== this.roof.solarId) this.roof.picking = false;
+        this.roof.solarId = solar;
+        this.roof.sectionId = null;
         const field = this._doc.settings.roof.solar?.find((x) => x.id === solar);
         const face = field ? (fieldFace(this._doc, field) ?? undefined) : undefined;
         const hit = face ? this.faceHit(face, world) : null;
@@ -1122,8 +1134,8 @@ export class NfEditor extends LitElement {
       }
       const win = this._tool === "roof" ? target.closest("[data-roofwin]")?.getAttribute("data-roofwin") : null;
       if (win) {
-        this._roofWinId = win;
-        this._roofId = null;
+        this.roof.windowId = win;
+        this.roof.sectionId = null;
         const w = this._doc.settings.roof.windows?.find((x) => x.id === win);
         const face = w ? roofFaces(this._doc).find((f) => f.key === w.face) : undefined;
         const hit = face ? pointOnFace(face, world) : null;
@@ -1131,11 +1143,11 @@ export class NfEditor extends LitElement {
         this.drag = this.isAdmin && !w?.locked ? { kind: "solarmove", id: win, start: world, startScreen: local, base: this._doc, moved: false, grab, win: true } : { kind: "pan", last: local };
         return;
       }
-      if (this._tool === "roof") this._roofWinId = null;
+      if (this._tool === "roof") this.roof.windowId = null;
       const device = this._tool === "energy" ? target.closest(".nf-energy-item")?.getAttribute("data-furniture") : null;
       if (device) {
         // an energy device (inverter, battery, wallbox): selected and moved like furniture
-        this._solarId = null;
+        this.roof.solarId = null;
         this.selectItem("furniture", device);
         this.drag = this.isAdmin ? { kind: "furniture", id: device, start: world, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
         return;
@@ -1143,7 +1155,7 @@ export class NfEditor extends LitElement {
       if (this._tool === "energy") {
         // beside the fields the energy tool only pans the plan
         this.selectItem("furniture", null);
-        this._solarId = null;
+        this.roof.solarId = null;
         this.drag = { kind: "pan", last: local };
         return;
       }
@@ -1154,12 +1166,12 @@ export class NfEditor extends LitElement {
         const [id, cx, cz] = corner.split(":");
         this.drag = { kind: "roofcorner", id, corner: [cx === "1" ? 1 : 0, cz === "1" ? 1 : 0], base: this._doc, moved: false };
       } else if (body) {
-        const fixed = this.roofFixed(this._doc.settings.roof.sections?.find((x) => x.id === body));
-        if (fixed && this._roofId === body) this._fixedHint = true;
-        this._roofId = body;
+        const fixed = this.roof.isFixed(this._doc.settings.roof.sections?.find((x) => x.id === body));
+        if (fixed && this.roof.sectionId === body) this._fixedHint = true;
+        this.roof.sectionId = body;
         this.drag = this.isAdmin && !fixed ? { kind: "roofmove", id: body, start: world, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
       } else if (this.isAdmin) {
-        this._roofId = null;
+        this.roof.sectionId = null;
         const start = this.snap(world, undefined, e.altKey);
         this.drag = { kind: "rect", start, end: start, roof: true };
       } else this.drag = { kind: "pan", last: local };
@@ -1718,7 +1730,7 @@ export class NfEditor extends LitElement {
           const pts: Vec2[] = [lo, [hi[0], lo[1]], hi, [lo[0], hi[1]]];
           if (drag.outdoor) this.addOutdoor(pts);
           else if (drag.hole) this.addHole(lo, hi);
-          else if (drag.roof) this.addRoofSection(lo, hi);
+          else if (drag.roof) this.roof.addSection(lo, hi);
           else this.addRoom(pts);
         }
         this._guides = {};
@@ -2076,8 +2088,8 @@ export class NfEditor extends LitElement {
       else if (this._furnitureId) this.deleteFurniture();
       else if (this._vertex !== null) this.deleteVertex(this._vertex);
       else this.deleteRoom();
-    } else if (e.key.toLowerCase() === "l" && !mod && this._tool === "roof" && this.roofSection && !this._doc.settings.lock_plan) {
-      this.updateRoofSection({ locked: !this.roofSection.locked });
+    } else if (e.key.toLowerCase() === "l" && !mod && this._tool === "roof" && this.roof.section && !this._doc.settings.lock_plan) {
+      this.roof.patchSection({ locked: !this.roof.section.locked });
     } else if (e.key.toLowerCase() === "l" && !mod && (this._furnitureId || this._deviceId)) {
       const s = this.selectedFix!;
       this.toggleFixed(s.kind, s.id);
@@ -2257,715 +2269,10 @@ export class NfEditor extends LitElement {
 
   // ------------------------------------------------------------------ roof sections
 
-  /** A section is fixed by its own lock or by the plan lock. */
-  private roofFixed(sec: RoofSection | undefined): boolean {
-    return !!sec && (!!sec.locked || !!this._doc.settings.lock_plan);
-  }
-
-  /** Floor buttons in the roof tool: the plan below shows that floor's rooms to draw along. */
-  private renderRoofFloors() {
-    const floors = [...this._doc.floors].sort((a, b) => b.elevation - a.elevation);
-    if (floors.length < 2) return nothing;
-    return html`<div class="nf-seg nf-dev-source">
-      ${floors.map((f) => html`<button aria-pressed=${f.id === this._floorId} @click=${() => (this._floorId = f.id)}>${f.name}</button>`)}
-    </div>`;
-  }
-
-  private get roofSection(): RoofSection | undefined {
-    return this._roofId ? this._doc.settings.roof.sections?.find((x) => x.id === this._roofId) : undefined;
-  }
-
-
-
-  /** Switch to a roof of sections; without sections yet, propose them from the rooms. */
-  private useRoofSections(regenerate = false): void {
-    if (!this.isAdmin) return;
-    const has = (this._doc.settings.roof.sections ?? []).length > 0;
-    if (regenerate && has && !confirm(this.t("roof_regen_confirm"))) return;
-    this.change((doc) => {
-      doc.settings.roof.type = "custom";
-      if (regenerate || !has) doc.settings.roof.sections = roofSectionsFromRooms(doc, () => uid("roof"));
-    });
-    this._roofId = null;
-  }
-
-  private addRoofSection(lo: Vec2, hi: Vec2): void {
-    if (!this.isAdmin) return;
-    // eaves on the walls of the rooms below (a garage), whatever floor the plan shows; over no room
-    // (a terrace, a carport) a canopy: a flat pent roof on posts, 2.4 m above the ground floor
-    const walls = wallTopUnder(this._doc, lo[0], lo[1], hi[0], hi[1]);
-    const ground = Math.min(...this._doc.floors.map((f) => f.elevation));
-    const canopy = walls === null;
-    const top = round(walls ?? ground + 2.4);
-    const pitch = canopy ? 6 : this._doc.settings.roof.pitch || 35;
-    const sec: RoofSection = {
-      id: uid("roof"),
-      x0: round(lo[0]),
-      z0: round(lo[1]),
-      x1: round(hi[0]),
-      z1: round(hi[1]),
-      shape: canopy ? "pent" : "gable",
-      axis: hi[0] - lo[0] >= hi[1] - lo[1] ? "x" : "z",
-      eave_a: top,
-      eave_b: top,
-      pitch_a: pitch,
-      pitch_b: pitch,
-      base: top,
-      overhang: canopy ? 0.15 : null,
-      ...(canopy ? { open: true } : {}),
-    };
-    this.change((doc) => {
-      doc.settings.roof.type = "custom";
-      doc.settings.roof.sections = [...(doc.settings.roof.sections ?? []), sec];
-    });
-    this._roofId = sec.id;
-  }
-
-  /** A flat section takes the outline of the floor shown (its rooms at the outer wall faces) as its shape. */
-  private takeRoofOutline(): void {
-    const floor = this.floor;
-    const id = this._roofId;
-    if (!floor || !id || !this.isAdmin) return;
-    const outline = floorOutline(floor.rooms, floor.walls ?? [], this._doc.settings.wall_exterior, this._doc.settings.wall_interior);
-    if (!outline) return;
-    const points = outline.map(([x, z]) => [round(x), round(z)] as Vec2);
-    this.updateRoofSection({ shape: "flat", points, ...polygonBox(points) });
-  }
-
-  /** A dormer on a side of the selected section, in its middle; then the dormer is selected. */
-  private addDormer(side: "a" | "b"): void {
-    const parent = this.roofSection;
-    if (!parent || !this.isAdmin) return;
-    const d = proposeDormer(parent, side, uid("roof"));
-    this.change((doc) => {
-      doc.settings.roof.sections = [...(doc.settings.roof.sections ?? []), d];
-    });
-    this._roofId = d.id;
-  }
-
-  private updateRoofSection(patch: Partial<RoofSection>): void {
-    const id = this._roofId;
-    if (!id || !this.isAdmin) return;
-    this.change((doc) => {
-      const sec = doc.settings.roof.sections?.find((x) => x.id === id);
-      if (sec) Object.assign(sec, patch);
-    });
-  }
-
-  private deleteRoofSection(): void {
-    const id = this._roofId;
-    if (!id || !this.isAdmin) return;
-    this.change((doc) => (doc.settings.roof.sections = (doc.settings.roof.sections ?? []).filter((x) => x.id !== id)));
-    this._roofId = null;
-  }
-
-  private duplicateRoofSection(): void {
-    const sec = this.roofSection;
-    if (!sec || !this.isAdmin) return;
-    const copy = { ...structuredClone(sec), id: uid("roof"), x0: round(sec.x0 + 1), x1: round(sec.x1 + 1), z0: round(sec.z0 + 1), z1: round(sec.z1 + 1) };
-    this.change((doc) => (doc.settings.roof.sections = [...(doc.settings.roof.sections ?? []), copy]));
-    this._roofId = copy.id;
-  }
-
-  /** The sections over the plan: outline, ridge (and hips), a label; the selected one with corner handles. */
-  private renderRoofSections() {
-    const roof = this._doc.settings.roof;
-    const sections = roof.type === "custom" ? (roof.sections ?? []) : [];
-    return svg`<g class="nf-roof-layer">${sections.map((sec, i) => {
-      const sel = sec.id === this._roofId;
-      const fr = sectionFrame(sec);
-      const shape = sec.shape === "flat" && sec.points && sec.points.length >= 3 ? sec.points : null;
-      // a dormer or cross gable shows as deep as it is drawn (its ridge meets the slope there)
-      const parent = dormerParent(sections, sec);
-      const dfr = parent ? sectionFrame(effectiveDormer(parent, sec)) : fr;
-      const pts = (shape ?? [dfr.at(dfr.u0, 0), dfr.at(dfr.u1, 0), dfr.at(dfr.u1, dfr.w), dfr.at(dfr.u0, dfr.w)]).map((p) => this.toScreen(p));
-      const line = (a: Vec2, b: Vec2) => {
-        const [ax, ay] = this.toScreen(a);
-        const [bx, by] = this.toScreen(b);
-        return svg`<line x1=${ax} y1=${ay} x2=${bx} y2=${by} />`;
-      };
-      const geom = sec.shape === "flat" || sec.shape === "parapet" ? null : sectionGeometry(sec, { u0: 0, u1: 0, a: 0, b: 0 });
-      const ridge = geom ? svg`${geom.ridges.map(([p, q]) => line(fr.at(p[0], p[1]), fr.at(q[0], q[1])))}` : nothing;
-      const [cx, cy] = this.toScreen(fr.at((fr.u0 + fr.u1) / 2, fr.w / 2));
-      const label = `${this.roofFixed(sec) ? "🔒 " : ""}${i + 1} · ${sec.dormer ? this.t("roof_dormer") : sec.open ? this.t("roof_open_short") : this.t(`roof_shape_${sec.shape}` as I18nKey)} · ${formatNumber(this.hass, ridgeHeight(sec), 1)} m`;
-      return svg`<g data-roof=${sec.id} class=${`nf-roof-sec${sel ? " nf-roof-sel" : ""}`}>
-          <polygon points=${pts.map((p) => p.join(",")).join(" ")} />
-          <g class="nf-roof-ridge">${ridge}</g>
-          <text x=${cx} y=${cy - 14}>${label}</text>
-        </g>
-        ${sel && this.isAdmin && !this.roofFixed(sec) && shape
-          ? shape.map((p, k) => {
-              const [x, y] = this.toScreen(p);
-              return svg`<g class="nf-vertex" data-roof-vertex=${`${sec.id}:${k}`}><circle cx=${x} cy=${y} r="16" class="nf-hit" /><circle cx=${x} cy=${y} r="6" /></g>`;
-            })
-          : nothing}
-        ${sel && this.isAdmin && !this.roofFixed(sec) && !shape
-          ? ([[0, 0], [1, 0], [1, 1], [0, 1]] as const).map(([kx, kz]) => {
-              const [x, y] = this.toScreen([kx ? Math.max(sec.x0, sec.x1) : Math.min(sec.x0, sec.x1), kz ? Math.max(sec.z0, sec.z1) : Math.min(sec.z0, sec.z1)]);
-              return svg`<g class="nf-vertex" data-roof-corner=${`${sec.id}:${kx}:${kz}`}><circle cx=${x} cy=${y} r="16" class="nf-hit" /><circle cx=${x} cy=${y} r="6" /></g>`;
-            })
-          : nothing}`;
-    })}</g>`;
-  }
-
   /** Where a plan point lies on a face; on a house wall only along it (s = NaN: the height stays). */
   private faceHit(face: RoofFace, p: Vec2): { u: number; s: number } | null {
     if (!face.wall) return pointOnFace(face, p);
     return { u: (p[0] - face.o[0]) * face.eu[0] + (p[1] - face.o[2]) * face.eu[2], s: Number.NaN };
-  }
-
-  /** Solar fields over the plan: every module as a small rectangle; the selected field highlighted. */
-  private renderSolarFields() {
-    const fields = this._doc.settings.roof.solar ?? [];
-    if (!fields.length) return nothing;
-    const faces = roofFaces(this._doc);
-    return svg`<g class="nf-solar-layer">${fields.map((f) => {
-      const face = fieldFace(this._doc, f, faces);
-      if (!face || (face.wall && face.wall.floorId !== this._floorId)) return nothing;
-      const sel = f.id === this._solarId;
-      let handle: unknown = nothing;
-      if (sel && face.unbounded && this.isAdmin && !f.locked) {
-        const [cx, cz] = fieldCenter(face, f);
-        const r = ((f.rotation ?? 0) * Math.PI) / 180;
-        const reach = 0.9 + Math.max(...fieldModules(face, f, true).flatMap((m) => m.corners.map((p) => Math.hypot(p[0] - cx, p[2] - cz)))) * 0.5;
-        const [fx, fy] = this.toScreen([cx, cz]);
-        const [hx, hy] = this.toScreen([cx + Math.sin(r) * reach, cz - Math.cos(r) * reach]);
-        handle = svg`<g class="nf-rotate" data-solar-turn=${f.id}>
-          <line x1=${fx} y1=${fy} x2=${hx} y2=${hy} />
-          <circle cx=${hx} cy=${hy} r="16" class="nf-hit" />
-          <circle cx=${hx} cy=${hy} r="8" />
-          <path d="M${hx - 4} ${hy - 1}a4 4 0 1 1 2 3.5" />
-        </g>`;
-      }
-      // the selected field also shows its switched-off modules (dashed), so they can be switched on again
-      return svg`<g data-solar=${f.id} class=${`nf-solar${sel ? " nf-solar-sel" : ""}${sel && this._solarPick ? " nf-solar-pick" : ""}`}>${fieldModules(face, f, sel).map(
-        (m) => {
-          // on a wall the modules stand upright: in the plan a strip just outside the wall
-          // as deep as the modules stand off the wall (tilted ones further), at least 30 cm to grab
-          const depth = face.wall ? Math.max(0.3, ...m.corners.map((p) => (p[0] - face.o[0]) * face.n[0] + (p[2] - face.o[2]) * face.n[2])) : 0;
-          const pts: Vec2[] = face.wall
-            ? [m.corners[0], m.corners[1]].flatMap((p, i) => {
-                const q: Vec2 = [p[0], p[2]];
-                const o: Vec2 = [p[0] + face.n[0] * depth, p[2] + face.n[2] * depth];
-                return i === 0 ? [q, o] : [o, q];
-              })
-            : m.corners.map((p) => [p[0], p[2]] as Vec2);
-          return svg`<polygon data-cell=${m.cell} class=${m.skipped ? "nf-solar-off" : ""} points=${pts.map((p) => this.toScreen(p).join(",")).join(" ")} />`;
-        },
-      )}</g>${handle}`;
-    })}</g>`;
-  }
-
-  /** Roof windows over the plan (roof tool), the selected one highlighted. */
-  private renderRoofWindows() {
-    const windows = this._doc.settings.roof.windows ?? [];
-    if (!windows.length) return nothing;
-    const faces = new Map(roofFaces(this._doc).map((f) => [f.key, f]));
-    return svg`<g class="nf-roofwin-layer">${windows.map((w) => {
-      const face = faces.get(w.face);
-      const c = face ? windowCorners(face, w) : null;
-      if (!c) return nothing;
-      return svg`<g data-roofwin=${w.id} class=${`nf-roofwin${w.id === this._roofWinId ? " nf-roofwin-sel" : ""}`}><polygon points=${c.map((p) => this.toScreen([p[0], p[2]]).join(",")).join(" ")} /></g>`;
-    })}</g>`;
-  }
-
-  private addRoofWindow(): void {
-    if (!this.isAdmin) return;
-    const faces = roofFaces(this._doc).filter((f) => !f.flat);
-    const face = bestFace(faces, this._doc.settings.north ?? 0) ?? roofFaces(this._doc)[0];
-    if (!face) return;
-    const w = proposeWindow(face, uid("rwin"));
-    this.change((doc) => (doc.settings.roof.windows = [...(doc.settings.roof.windows ?? []), w]));
-    this._roofWinId = w.id;
-    this._roofId = null;
-  }
-
-  private updateRoofWindow(patch: Partial<RoofWindow>): void {
-    const id = this._roofWinId;
-    if (!id || !this.isAdmin) return;
-    this.change((doc) => {
-      const w = doc.settings.roof.windows?.find((x) => x.id === id);
-      if (!w) return;
-      Object.assign(w, patch);
-      const face = roofFaces(doc).find((x) => x.key === w.face);
-      if (face) Object.assign(w, clampField(face, windowAsField(w)));
-    });
-  }
-
-  private deleteRoofWindow(): void {
-    const id = this._roofWinId;
-    if (!id || !this.isAdmin) return;
-    this.change((doc) => (doc.settings.roof.windows = (doc.settings.roof.windows ?? []).filter((x) => x.id !== id)));
-    this._roofWinId = null;
-  }
-
-  private renderRoofWindowList() {
-    const windows = this._doc.settings.roof.windows ?? [];
-    const faces = new Map(roofFaces(this._doc).map((f) => [f.key, f]));
-    return html`<section>
-      <h3>🪟 ${this.t("roof_windows")}</h3>
-      <p class="nf-sub">${this.t(faces.size ? "roof_windows_hint" : "solar_no_roof")}</p>
-      ${windows.length
-        ? html`<div class="nf-room-list">
-            ${windows.map((w, i) => {
-              const face = faces.get(w.face);
-              return html`<div class="nf-row">
-                <button class="nf-dev-name" @click=${() => {
-                  this._roofWinId = w.id;
-                  this._roofId = null;
-                }}>
-                  <span>${this.t("roof_window")} ${i + 1} · ${face ? this.faceLabel(face) : this.t("solar_face_gone")}</span>
-                </button>
-              </div>`;
-            })}
-          </div>`
-        : nothing}
-      <div class="nf-actions"><button class="nf-btn" ?disabled=${!this.isAdmin || !faces.size} @click=${() => this.addRoofWindow()}>+ ${this.t("roof_window")}</button></div>
-    </section>`;
-  }
-
-  private renderRoofWindowForm(w: RoofWindow) {
-    const admin = this.isAdmin;
-    const faces = roofFaces(this._doc);
-    const set = (patch: Partial<RoofWindow>) => this.updateRoofWindow(patch);
-    const index = (this._doc.settings.roof.windows ?? []).findIndex((x) => x.id === w.id) + 1;
-    const covers = this.entityOptions((id) => id.startsWith("cover."));
-    const contacts = this.entityOptions((id) => binaryish(id) || numberish(id));
-    return html`<button class="nf-btn nf-back" @click=${() => (this._roofWinId = null)}>‹ ${this.t("roof_sections")}</button>
-      <section>
-        <div class="nf-h3row">
-          <h3>🪟 ${this.t("roof_window")} ${index}</h3>
-          ${admin
-            ? html`<button class="nf-btn nf-fix" aria-pressed=${!!w.locked} title=${this.t("fix_hint")} @click=${() => set({ locked: !w.locked })}>
-                ${w.locked ? `🔒 ${this.t("unfix")}` : `🔓 ${this.t("fix")}`}
-              </button>`
-            : nothing}
-        </div>
-        <div class="nf-form">
-          <label class="nf-field nf-wide"
-            >${this.t("solar_face")}
-            <select ?disabled=${!admin} @change=${(e: Event) => {
-              const next = faces.find((x) => x.key === (e.target as HTMLSelectElement).value);
-              if (next) set({ ...proposeWindow(next, w.id), w: w.w, h: w.h, cover: w.cover, contact: w.contact, tilt: w.tilt, window: w.window, name: w.name });
-            }}>
-              ${faces.map((x) => html`<option value=${x.key} ?selected=${x.key === w.face}>${this.faceLabel(x)}</option>`)}
-            </select></label
-          >
-          ${this.num(this.t("width"), w.w ?? 0.78, (v) => set({ w: Math.max(0.3, Math.min(4, round(v))) }), 0.01, 0.3)}
-          ${this.num(this.t("height_m"), w.h ?? 1.18, (v) => set({ h: Math.max(0.3, Math.min(4, round(v))) }), 0.01, 0.3)}
-          ${this.num(this.t("solar_u"), w.u, (v) => set({ u: round(v) }), 0.05)}
-          ${this.num(this.t("solar_v"), w.v, (v) => set({ v: round(v) }), 0.05)}
-          ${this.entitySelect(this.t("cover_entity"), w.cover ?? null, undefined, covers, (v) => set({ cover: v === "none" ? null : v }))}
-          ${this.entitySelect(this.t("contact_entity"), w.contact ?? null, undefined, contacts, (v) => set({ contact: v === "none" ? null : v }))}
-          ${this.entitySelect(this.t("roof_window_tilt"), w.tilt ?? null, undefined, contacts, (v) => set({ tilt: v === "none" ? null : v }))}
-          ${this.entitySelect(this.t("roof_window_motor"), w.window ?? null, undefined, covers, (v) => set({ window: v === "none" ? null : v }))}
-          <label class="nf-field nf-wide"
-            >${this.t("roof_window_name")}
-            <input .value=${w.name ?? ""} ?disabled=${!admin} maxlength="64" @change=${(e: Event) => set({ name: (e.target as HTMLInputElement).value.trim() || null })}
-          /></label>
-        </div>
-        <p class="nf-sub">${this.t("roof_window_motor_hint")}</p>
-        <p class="nf-sub">${this.t("roof_window_hint")}</p>
-        ${admin ? html`<div class="nf-actions"><button class="nf-btn nf-danger" @click=${() => this.deleteRoofWindow()}>${this.t("delete")}</button></div>` : nothing}
-      </section>`;
-  }
-
-  /** Energy tool: a round marker with a symbol and its name on every energy device of the floor, above all else. */
-  private renderEnergyMarkers() {
-    const floor = this.floor;
-    if (!floor) return nothing;
-    const icons: Record<string, string> = { inverter: "⚡", home_battery: "🔋", wallbox: "🔌", meter: "📟", grid_point: "🏁" };
-    return svg`<g class="nf-energy-markers">${floor.furniture
-      .filter((m) => (ENERGY_DEVICES as readonly string[]).includes(m.type))
-      .map((m) => {
-        const [x, y] = this.toScreen([m.x, m.z]);
-        const sel = m.id === this._furnitureId;
-        return svg`<g data-energy-device=${m.id} class=${`nf-energy-marker${sel ? " nf-energy-marker-sel" : ""}`}>
-          <circle cx=${x} cy=${y} r="17" />
-          <text x=${x} y=${y + 6} class="nf-energy-icon">${icons[m.type] ?? "⚡"}</text>
-          ${sel ? svg`<text x=${x} y=${y + 32} class="nf-energy-name">${this.t(`furn_${m.type}` as I18nKey)}</text>` : nothing}
-          <title>${this.t(`furn_${m.type}` as I18nKey)}</title>
-        </g>`;
-      })}</g>`;
-  }
-
-  /** "Main roof · south · 35°" or "Section 2 · flat roof". */
-  private faceLabel(face: RoofFace): string {
-    if (face.key === GROUND) return this.t("solar_ground");
-    if (face.wall) {
-      const floor = this._doc.floors.find((x) => x.id === face.wall!.floorId);
-      return `${this.t("solar_wall")} ${floor?.name ?? ""} · ${this.t(`compass_${faceCompass(face, this._doc.settings.north ?? 0)}` as I18nKey)} · ${formatNumber(this.hass, face.lu, 1)} m`;
-    }
-    const sections = this._doc.settings.roof.sections ?? [];
-    const part = face.section ? this.t("solar_section", { n: sections.findIndex((x) => x.id === face.section) + 1 }) : this.t("solar_main");
-    if (face.flat) return `${part} · ${this.t("solar_flat")}`;
-    return `${part} · ${this.t(`compass_${faceCompass(face, this._doc.settings.north ?? 0)}` as I18nKey)} · ${Math.round(face.pitch)}°`;
-  }
-
-  private addSolarField(): void {
-    if (!this.isAdmin) return;
-    const faces = roofFaces(this._doc);
-    const used = new Set((this._doc.settings.roof.solar ?? []).map((f) => f.face));
-    // the sunniest face that has no field yet, else the sunniest one
-    const north = this._doc.settings.north ?? 0;
-    const face = bestFace(faces.filter((f) => !used.has(f.key)), north) ?? bestFace(faces, north);
-    if (!face) return;
-    const field = proposeField(face, uid("pv"));
-    this.change((doc) => (doc.settings.roof.solar = [...(doc.settings.roof.solar ?? []), field]));
-    this._solarId = field.id;
-    this._roofId = null;
-  }
-
-  /** Select a solar field; one on a house wall brings up its floor in the plan. */
-  private selectSolar(id: string): void {
-    this._solarId = id;
-    this._roofId = null;
-    const f = this._doc.settings.roof.solar?.find((x) => x.id === id);
-    if (f?.face.startsWith("wall:")) this._floorId = f.face.split(":")[1];
-  }
-
-  private addWallField(): void {
-    if (!this.isAdmin) return;
-    const floorId = this._floorId ?? this._doc.floors[0]?.id;
-    const field = floorId ? proposeWallField(this._doc, uid("pv"), floorId) : null;
-    if (!field) return;
-    this.change((doc) => (doc.settings.roof.solar = [...(doc.settings.roof.solar ?? []), field]));
-    this._solarId = field.id;
-  }
-
-  private addGroundField(): void {
-    if (!this.isAdmin) return;
-    const field = proposeGroundField(this._doc, uid("pv"));
-    this.change((doc) => (doc.settings.roof.solar = [...(doc.settings.roof.solar ?? []), field]));
-    this._solarId = field.id;
-  }
-
-  private updateSolar(patch: Partial<SolarField>): void {
-    const id = this._solarId;
-    if (!id || !this.isAdmin) return;
-    this.change((doc) => {
-      const f = doc.settings.roof.solar?.find((x) => x.id === id);
-      if (!f) return;
-      Object.assign(f, patch);
-      // a larger field (more rows, landscape …) moves back so that it stays on its face where it can
-      const face = fieldFace(doc, f);
-      if (face) Object.assign(f, clampField(face, f));
-    });
-  }
-
-  /** Put the selected field into a string ("new" makes one), or take it out (null). */
-  private setSolarString(value: string | null): void {
-    const id = this._solarId;
-    if (!id || !this.isAdmin) return;
-    this.change((doc) => {
-      const roof = doc.settings.roof;
-      const f = roof.solar?.find((x) => x.id === id);
-      if (!f) return;
-      if (value === "new") {
-        const strings = roof.strings ?? [];
-        const s: SolarString = { id: uid("str"), name: this.t("solar_string_n", { n: strings.length + 1 }), entity: f.entity ?? null, inverter: null };
-        roof.strings = [...strings, s];
-        f.string = s.id;
-      } else f.string = value;
-      // strings without fields go away
-      const used = new Set((roof.solar ?? []).map((x) => x.string).filter(Boolean));
-      roof.strings = (roof.strings ?? []).filter((x) => used.has(x.id));
-    });
-  }
-
-  private updateSolarString(patch: Partial<SolarString>): void {
-    const field = this._doc.settings.roof.solar?.find((x) => x.id === this._solarId);
-    const sid = field?.string;
-    if (!sid || !this.isAdmin) return;
-    this.change((doc) => {
-      const s = doc.settings.roof.strings?.find((x) => x.id === sid);
-      if (s) Object.assign(s, patch);
-    });
-  }
-
-  private toggleSolarCell(cell: string): void {
-    this.updateSolarField((f) => {
-      const skip = new Set(f.skip ?? []);
-      if (skip.has(cell)) skip.delete(cell);
-      else skip.add(cell);
-      f.skip = skip.size ? [...skip].sort() : null;
-    });
-  }
-
-  private updateSolarField(edit: (f: SolarField) => void): void {
-    const id = this._solarId;
-    if (!id || !this.isAdmin) return;
-    this.change((doc) => {
-      const f = doc.settings.roof.solar?.find((x) => x.id === id);
-      if (f) edit(f);
-    });
-  }
-
-  private deleteSolar(): void {
-    const id = this._solarId;
-    if (!id || !this.isAdmin) return;
-    this.change((doc) => {
-      const roof = doc.settings.roof;
-      roof.solar = (roof.solar ?? []).filter((x) => x.id !== id);
-      const used = new Set(roof.solar.map((x) => x.string).filter(Boolean));
-      roof.strings = (roof.strings ?? []).filter((x) => used.has(x.id));
-    });
-    this._solarId = null;
-  }
-
-  /** The overview of the solar fields, below the roof sections. */
-  private renderSolarList() {
-    const fields = this._doc.settings.roof.solar ?? [];
-    const roofList = roofFaces(this._doc);
-    const faces = new Map(fields.map((f) => [f.id, fieldFace(this._doc, f, roofList)] as const));
-    const admin = this.isAdmin;
-    return html`<section>
-      ${this.renderRoofFloors()}
-      <h3>☀ ${this.t("solar_fields")}</h3>
-      <p class="nf-sub">${this.t(roofList.length ? "solar_hint" : "solar_no_roof")}</p>
-      ${fields.length
-        ? html`<div class="nf-room-list">
-            ${fields.map((f, i) => {
-              const face = faces.get(f.id);
-              const n = face ? fieldModules(face, f).length : 0;
-              return html`<div class="nf-row">
-                <button
-                  class="nf-dev-name"
-                  @click=${() => this.selectSolar(f.id)}
-                >
-                  <span>${f.name || `${this.t("solar_field")} ${i + 1}`} · ${face ? this.faceLabel(face) : this.t("solar_face_gone")} · ${this.t("solar_summary", { n, kwp: formatNumber(this.hass, (n * (f.wp ?? 400)) / 1000, 1) })}</span>
-                </button>
-              </div>`;
-            })}
-          </div>`
-        : nothing}
-      <div class="nf-actions">
-        <button class="nf-btn nf-primary" ?disabled=${!admin || !roofList.length} @click=${() => this.addSolarField()}>+ ${this.t("solar_add")}</button>
-        <button class="nf-btn" ?disabled=${!admin} @click=${() => this.addGroundField()}>+ ${this.t("solar_add_ground")}</button>
-        <button class="nf-btn" ?disabled=${!admin || !this._floorId} @click=${() => this.addWallField()}>+ ${this.t("solar_add_wall")}</button>
-      </div>
-      ${(this._doc.settings.roof.strings ?? []).length
-        ? html`<h4 class="nf-lib-head">${this.t("solar_strings")}</h4>
-            ${(this._doc.settings.roof.strings ?? []).map((st) => {
-              const own = fields.filter((f) => f.string === st.id);
-              const counts = own.map((f) => (faces.get(f.id) ? fieldModules(faces.get(f.id)!, f).length : 0));
-              const n = counts.reduce((a, b) => a + b, 0);
-              const kwp = own.reduce((a, f, k) => a + (counts[k] * (f.wp ?? 400)) / 1000, 0);
-              return html`<p class="nf-sub">🔗 <b>${st.name}</b> · ${this.t("solar_string_sum", { fields: own.length, n, kwp: formatNumber(this.hass, kwp, 1) })}</p>`;
-            })}`
-        : nothing}
-    </section>`;
-  }
-
-  private renderSolarForm(f: SolarField) {
-    const admin = this.isAdmin;
-    const faces = roofFaces(this._doc);
-    const walls = wallFaces(this._doc);
-    const face = fieldFace(this._doc, f, faces);
-    const ground = f.face === GROUND;
-    const n = face ? fieldModules(face, f).length : 0;
-    const counts = rowCounts(f);
-    const total = counts.reduce((a, b) => a + b, 0) - (f.skip?.length ?? 0);
-    const power = this.entityOptions((id) => this.isPowerSensor(id));
-    const set = (patch: Partial<SolarField>) => this.updateSolar(patch);
-    const index = (this._doc.settings.roof.solar ?? []).findIndex((x) => x.id === f.id) + 1;
-    return html`<button class="nf-btn nf-back" @click=${() => (this._solarId = null)}>‹ ${this.t("solar_fields")}</button>
-      <section>
-        ${this.renderRoofFloors()}
-        <div class="nf-h3row">
-          <h3>☀ ${f.name || `${this.t("solar_field")} ${index}`}</h3>
-          ${admin
-            ? html`<button class="nf-btn nf-fix" aria-pressed=${!!f.locked} title=${this.t("fix_hint")} @click=${() => this.updateSolar({ locked: !f.locked })}>
-                ${f.locked ? `🔒 ${this.t("unfix")}` : `🔓 ${this.t("fix")}`}
-              </button>`
-            : nothing}
-        </div>
-        <div class="nf-form">
-          <label class="nf-field nf-wide"
-            >${this.t("solar_name")}
-            <input
-              type="text"
-              ?disabled=${!admin}
-              .value=${f.name ?? ""}
-              placeholder=${this.t("solar_name_hint")}
-              @change=${(e: Event) => set({ name: (e.target as HTMLInputElement).value.trim() || null })}
-          /></label>
-          <label class="nf-field nf-wide"
-            >${this.t("solar_face")}
-            <select
-              ?disabled=${!admin}
-              @change=${(e: Event) => {
-                const key = (e.target as HTMLSelectElement).value;
-                const keep = { portrait: f.portrait, look: f.look, name: f.name, string: f.string, entity: f.entity, module_w: f.module_w, module_h: f.module_h, wp: f.wp };
-                // on another face the field keeps its modules and is laid out anew there (#258)
-                if (key === GROUND) set({ ...proposeGroundField(this._doc, f.id), ...keep, rows: f.rows, cols: f.cols });
-                const next = faces.find((x) => x.key === key);
-                if (next) set(moveField(next, { ...f, ...keep }));
-                const wall = walls.find((x) => x.key === key);
-                if (wall) set(moveField(wall, { ...f, ...keep, rows: 1 }));
-              }}
-            >
-              ${face ? nothing : html`<option selected>${this.t("solar_face_gone")}</option>`}
-              ${faces.map((x) => html`<option value=${x.key} ?selected=${x.key === f.face}>${this.faceLabel(x)}</option>`)}
-              <option value=${GROUND} ?selected=${ground}>${this.t("solar_ground")}</option>
-              ${walls.map((x) => html`<option value=${x.key} ?selected=${x.key === f.face}>${this.faceLabel(x)}</option>`)}
-            </select></label
-          >
-          ${this.num(this.t("solar_rows"), counts.length, (v) => {
-            const rows = Math.max(1, Math.min(40, Math.round(v)));
-            // rows of their own length keep their counts; new rows take the last row's
-            set(f.layout?.length ? { layout: Array.from({ length: rows }, (_, i) => f.layout![i] ?? f.layout![f.layout!.length - 1]), rows } : { rows });
-          }, 1, 1)}
-          <label class="nf-field"
-            >${this.t("solar_cols")}
-            <input
-              type="text"
-              inputmode="numeric"
-              ?disabled=${!admin}
-              .value=${f.layout?.length ? f.layout.join(", ") : String(f.cols)}
-              title=${this.t("solar_cols_hint")}
-              @change=${(e: Event) => {
-                const parts = (e.target as HTMLInputElement).value.split(/[,;\s]+/).map((x) => parseInt(x, 10)).filter((x) => Number.isFinite(x) && x >= 0);
-                if (!parts.length) return;
-                // one number: every row the same; a list: each row its own (4, 4, 3)
-                if (parts.length === 1) set({ cols: Math.max(1, Math.min(60, parts[0])), layout: null, skip: null });
-                else set({ layout: parts.slice(0, 40).map((x) => Math.min(60, x)), rows: Math.min(40, parts.length), cols: Math.max(1, ...parts), skip: null });
-              }}
-          /></label>
-        </div>
-        <p class="nf-sub">
-          ${face && !face.unbounded ? html`${this.t("solar_face_size", { w: formatNumber(this.hass, face.lu, 1), h: formatNumber(this.hass, face.ls, 1) })} · ` : nothing}${this.t("solar_cols_hint")}
-        </p>
-        ${f.layout?.length && new Set(f.layout).size > 1
-          ? html`<div class="nf-seg nf-dev-source">
-              ${(["left", "center", "right"] as const).map((a) => html`<button aria-pressed=${(f.align ?? "left") === a} ?disabled=${!admin} @click=${() => set({ align: a })}>${this.t(`solar_align_${a}` as I18nKey)}</button>`)}
-            </div>`
-          : nothing}
-        <div class="nf-seg nf-dev-source">
-          <button aria-pressed=${f.portrait !== false} ?disabled=${!admin} @click=${() => set({ portrait: true })}>${this.t("solar_portrait")}</button>
-          <button aria-pressed=${f.portrait === false} ?disabled=${!admin} @click=${() => set({ portrait: false })}>${this.t("solar_landscape")}</button>
-        </div>
-        <div class="nf-seg nf-dev-source">
-          <button aria-pressed=${f.look !== "blue"} ?disabled=${!admin} @click=${() => set({ look: "black" })}>${this.t("solar_look_black")}</button>
-          <button aria-pressed=${f.look === "blue"} ?disabled=${!admin} @click=${() => set({ look: "blue" })}>${this.t("solar_look_blue")}</button>
-        </div>
-        <div class="nf-form">
-          ${this.num(this.t("solar_module_w"), f.module_w ?? 1.13, (v) => set({ module_w: Math.max(0.3, Math.min(3, round(v))) }), 0.01, 0.3)}
-          ${this.num(this.t("solar_module_h"), f.module_h ?? 1.72, (v) => set({ module_h: Math.max(0.3, Math.min(3, round(v))) }), 0.01, 0.3)}
-          ${this.num(this.t("solar_wp"), f.wp ?? 400, (v) => set({ wp: Math.max(50, Math.min(1500, Math.round(v))) }), 5, 50)}
-        </div>
-        <div class="nf-actions">
-          <button class="nf-btn" aria-pressed=${this._solarPick} ?disabled=${!admin} @click=${() => (this._solarPick = !this._solarPick)}>${this._solarPick ? "✓ " : ""}${this.t("solar_pick")}</button>
-          ${f.skip?.length ? html`<button class="nf-btn" ?disabled=${!admin} @click=${() => set({ skip: null })}>${this.t("solar_pick_all")}</button>` : nothing}
-        </div>
-        ${this._solarPick ? html`<p class="nf-sub">${this.t("solar_pick_hint")}</p>` : nothing}
-        <div class="nf-form">
-          ${ground
-            ? html`${this.num(this.t("solar_base"), f.base ?? 0, (v) => set({ base: v > 0.001 ? Math.min(60, round(v)) : null }), 0.05, 0)}
-                ${this.num(this.t("solar_rotation"), f.rotation ?? 0, (v) => set(turnGroundField(this._doc, f, v)), 5)}
-                <div class="nf-actions">
-                  <button class="nf-chip" ?disabled=${!admin} @click=${() => set(turnGroundField(this._doc, f, (f.rotation ?? 0) - 15))}>↺ 15°</button>
-                  <button class="nf-chip" ?disabled=${!admin} @click=${() => set(turnGroundField(this._doc, f, (f.rotation ?? 0) + 15))}>↻ 15°</button>
-                </div>`
-            : html`${this.num(this.t("solar_u"), f.u, (v) => set({ u: round(v) }), 0.05)} ${this.num(this.t(face?.wall ? "solar_v_wall" : "solar_v"), f.v, (v) => set({ v: round(v) }), 0.05)}`}
-          ${face?.wall
-            ? html`${this.num(this.t("solar_tilt_wall"), f.tilt ?? 0, (v) => set({ tilt: Math.max(0, Math.min(90, Math.round(v))) }), 5, 0)}
-                <label class="nf-check nf-wide"
-                  ><input type="checkbox" ?disabled=${!admin} .checked=${!!f.flip} @change=${(e: Event) => set({ flip: (e.target as HTMLInputElement).checked })} />
-                  ${this.t("solar_flip_wall")}</label
-                >`
-            : nothing}
-          ${face?.flat
-            ? html`${this.num(this.t("solar_tilt"), f.tilt ?? 15, (v) => set({ tilt: Math.max(0, Math.min(45, Math.round(v))) }), 1, 0)}
-                <label class="nf-check nf-wide"
-                  ><input type="checkbox" ?disabled=${!admin} .checked=${!!f.flip} @change=${(e: Event) => set({ flip: (e.target as HTMLInputElement).checked })} />
-                  ${this.t("solar_flip")}</label
-                >`
-            : nothing}
-        </div>
-        <p class="nf-sub">
-          ${this.t("solar_summary", { n, kwp: formatNumber(this.hass, (n * (f.wp ?? 400)) / 1000, 1) })}${n < total ? html` · <b>${this.t("solar_partial", { n, total })}</b>` : nothing}
-        </p>
-        <h4 class="nf-lib-head">🔗 ${this.t("solar_string")}</h4>
-        <div class="nf-form">
-          <label class="nf-field nf-wide"
-            >${this.t("solar_string")}
-            <select ?disabled=${!admin} @change=${(e: Event) => {
-              const v = (e.target as HTMLSelectElement).value;
-              this.setSolarString(v === "" ? null : v);
-            }}>
-              <option value="" ?selected=${!f.string}>${this.t("solar_string_none")}</option>
-              ${(this._doc.settings.roof.strings ?? []).map((st) => html`<option value=${st.id} ?selected=${st.id === f.string}>${st.name}</option>`)}
-              <option value="new">+ ${this.t("solar_string_new")}</option>
-            </select></label
-          >
-          ${(() => {
-            const st = this._doc.settings.roof.strings?.find((x) => x.id === f.string);
-            if (!st) return this.entitySelect(this.t("solar_entity"), f.entity ?? null, undefined, power, (v) => set({ entity: v === "none" ? null : v }));
-            // each inverter by its own name, else its entity's name, numbered across the house only as a last resort (#213)
-            const linked = this.hass ? furnitureEntities(this.hass, this._doc.floors) : null;
-            const inverters = this._doc.floors
-              .flatMap((fl) => fl.furniture.filter((m) => m.type === "inverter").map((m) => ({ m, fl })))
-              .map(({ m, fl }, i) => {
-                const entity = linked?.get(m.id)?.entity;
-                const own = m.name?.trim() || (entity && this.hass ? entityName(this.hass, entity) : "");
-                return { id: m.id, label: `${own || `${this.t("furn_inverter")} ${i + 1}`} · ${fl.name}` };
-              });
-            return html`<label class="nf-field nf-wide"
-                >${this.t("solar_string_name")}
-                <input type="text" ?disabled=${!admin} .value=${st.name} @change=${(e: Event) => this.updateSolarString({ name: (e.target as HTMLInputElement).value.trim() || st.name })}
-              /></label>
-              ${this.entitySelect(this.t("solar_string_entity"), st.entity ?? null, undefined, power, (v) => this.updateSolarString({ entity: v === "none" ? null : v }))}
-              <label class="nf-field nf-wide"
-                >${this.t("solar_string_inverter")}
-                <select ?disabled=${!admin} @change=${(e: Event) => this.updateSolarString({ inverter: (e.target as HTMLSelectElement).value || null })}>
-                  <option value="" ?selected=${!st.inverter}>${this.t(inverters.length ? "solar_string_inverter_none" : "solar_string_inverter_missing")}</option>
-                  ${inverters.map((x) => html`<option value=${x.id} ?selected=${x.id === st.inverter}>${x.label}</option>`)}
-                </select></label
-              >`;
-          })()}
-        </div>
-        <p class="nf-sub">${this.t("solar_string_hint")}</p>
-        <p class="nf-sub">${this.t("solar_form_hint")}</p>
-        ${admin
-          ? html`<div class="nf-actions">
-              <button class="nf-btn" ?disabled=${!face} @click=${() => face && set({ ...proposeField(face, f.id), portrait: f.portrait })}>${this.t("solar_fit")}</button>
-              <button class="nf-btn nf-danger" @click=${() => this.deleteSolar()}>${this.t("delete")}</button>
-            </div>`
-          : nothing}
-      </section>`;
-  }
-
-  /** Sidebar of the roof tool: the selected section's form, or the overview of all sections. */
-  private renderRoofPanel() {
-    const roof = this._doc.settings.roof;
-    const admin = this.isAdmin;
-    const sec = roof.type === "custom" ? this.roofSection : undefined;
-    const win = this._roofWinId ? roof.windows?.find((x) => x.id === this._roofWinId) : undefined;
-    if (win) return this.renderRoofWindowForm(win);
-    if (sec) return this.renderRoofSectionForm(sec);
-    const sections = roof.type === "custom" ? (roof.sections ?? []) : [];
-    return html`<section>
-      ${this.renderRoofFloors()}
-      <h3>${this.t("roof_sections")}</h3>
-      <p class="nf-sub">${this.t("roof_sections_hint")}</p>
-      ${roof.type !== "custom"
-        ? html`<div class="nf-actions"><button class="nf-btn nf-primary" ?disabled=${!admin} @click=${() => this.useRoofSections()}>${this.t("roof_sections_start")}</button></div>`
-        : html`<div class="nf-room-list">
-              ${sections.map(
-                (x, i) => html`<div class="nf-row">
-                  <button class="nf-dev-name" @click=${() => (this._roofId = x.id)}>
-                    <span>${i + 1} · ${x.dormer ? this.t("roof_dormer") : this.t(`roof_shape_${x.shape}` as I18nKey)} · ${formatNumber(this.hass, Math.abs(x.x1 - x.x0), 1)} × ${formatNumber(this.hass, Math.abs(x.z1 - x.z0), 1)} m · ${this.t("roof_ridge_height")} ${formatNumber(this.hass, ridgeHeight(x), 1)} m</span>
-                  </button>
-                </div>`,
-              )}
-            </div>
-            <div class="nf-actions">
-              <button class="nf-btn" ?disabled=${!admin} @click=${() => this.useRoofSections(true)}>${this.t("roof_sections_regen")}</button>
-              <button class="nf-btn" ?disabled=${!admin} @click=${() => this.change((doc) => (doc.settings.roof.type = "gable"))}>${this.t("roof_sections_off")}</button>
-            </div>`}
-    </section>
-    ${this.renderRoofWindowList()}`;
   }
 
   // ------------------------------------------------------------------ helpers the forms of this file still share
@@ -3000,13 +2307,13 @@ export class NfEditor extends LitElement {
   private energyActions(): EnergyActions {
     return {
       follow: (target) => {
-        if (target.kind === "solar-field") this._solarId = target.id;
-        else if (target.kind === "add-solar-field") this.addSolarField();
+        if (target.kind === "solar-field") this.roof.solarId = target.id;
+        else if (target.kind === "add-solar-field") this.roof.addField();
         else if (target.kind === "add-device") this.addEnergyDevice(target.type);
         else this.openEnergyDevice(target.floor, target.item);
       },
       addDevice: (type) => {
-        this._solarId = null;
+        this.roof.solarId = null;
         this.addEnergyDevice(type);
       },
       openDevice: (floor, item) => this.openEnergyDevice(floor, item),
@@ -3017,7 +2324,7 @@ export class NfEditor extends LitElement {
 
   private openEnergyDevice(floor: Floor, item: Furniture): void {
     this._floorId = floor.id;
-    this._solarId = null;
+    this.roof.solarId = null;
     this.selectItem("furniture", item.id);
     this.showPoint(item.x, item.z);
   }
@@ -3060,14 +2367,14 @@ export class NfEditor extends LitElement {
 
   /** Sidebar of the energy tool: the selected solar field, or the overview (fields, strings). */
   private renderEnergyPanel() {
-    const field = this._solarId ? this._doc.settings.roof.solar?.find((x) => x.id === this._solarId) : undefined;
-    if (field) return this.renderSolarForm(field);
+    const field = this.roof.solarId ? this._doc.settings.roof.solar?.find((x) => x.id === this.roof.solarId) : undefined;
+    if (field) return renderSolarForm(this.roofDeps(), field);
     const device = this._furnitureId ? this.floor?.furniture.find((x) => x.id === this._furnitureId && (ENERGY_DEVICES as readonly string[]).includes(x.type)) : undefined;
     if (device)
       return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("furniture", null)}>‹ ${this.t("tool_energy")}</button>
         ${this.renderFurnitureForm(device)}`;
     const actions = this.energyActions();
-    return html`${renderEnergyChecklist(this.host, actions)}${this.renderSolarList()}${renderEnergyDevices(this.host, actions)}${renderEnergyBalance(this.host, actions)}${renderEnergyTeaser(this.host)}`;
+    return html`${renderEnergyChecklist(this.host, actions)}${renderSolarList(this.roofDeps())}${renderEnergyDevices(this.host, actions)}${renderEnergyBalance(this.host, actions)}${renderEnergyTeaser(this.host)}`;
   }
 
   /** NextFloor's car: one entity of the car's device is enough, the rest is found beside it (lh/car.ts). */
@@ -3077,100 +2384,6 @@ export class NfEditor extends LitElement {
     const options = this.entityOptions((id) => /^(device_tracker|sensor|binary_sensor|lock|climate)\./.test(id));
     return html`${this.entitySelect(this.t("live_car_device"), car.device ?? null, null, options, (v) => this.updateFurniture({ car: { ...car, device: v } }))}
       <p class="nf-sub nf-wide">${this.t("live_car_device_hint")}</p>`;
-  }
-
-  private renderRoofSectionForm(sec: RoofSection) {
-    const admin = this.isAdmin;
-    const set = (patch: Partial<RoofSection>) => this.updateRoofSection(patch);
-    // side a is the top (ridge across the plan) or the left (ridge up and down the plan)
-    const sides = sec.axis === "x" ? [this.t("roof_side_top"), this.t("roof_side_bottom")] : [this.t("roof_side_left"), this.t("roof_side_right")];
-    const [sideA, sideB] = sec.flip ? [sides[1], sides[0]] : sides;
-    const flat = sec.shape === "flat" || sec.shape === "parapet";
-    const pent = sec.shape === "pent";
-    const n = (sections: RoofSection[]) => sections.findIndex((x) => x.id === sec.id) + 1;
-    const num = (label: string, value: number, apply: (v: number) => void, step = 0.05, min = 0) => this.num(label, value, (v) => apply(Math.max(min, round(v))), step, min);
-    const planLocked = !!this._doc.settings.lock_plan;
-    return html`<button class="nf-btn nf-back" @click=${() => (this._roofId = null)}>‹ ${this.t("roof_sections")}</button>
-      <section>
-        ${this.renderRoofFloors()}
-        <div class="nf-h3row">
-          <h3>${sec.dormer ? this.t("roof_dormer") : this.t("roof_section")} ${n(this._doc.settings.roof.sections ?? [])}</h3>
-          ${admin
-            ? planLocked
-              ? html`<button class="nf-btn nf-fix" aria-pressed="true" title=${this.t("lock_plan_hint")} @click=${() => this.toggleLockPlan()}>🔒 ${this.t("plan_locked")}</button>`
-              : html`<button class="nf-btn nf-fix" aria-pressed=${!!sec.locked} title=${this.t("fix_hint")} @click=${() => set({ locked: !sec.locked })}>
-                  ${sec.locked ? `🔒 ${this.t("unfix")}` : `🔓 ${this.t("fix")}`}
-                </button>`
-            : nothing}
-        </div>
-        <label class="nf-field nf-wide"
-          >${this.t("roof_shape")}
-          <select ?disabled=${!admin} @change=${(e: Event) => set({ shape: (e.target as HTMLSelectElement).value as RoofShape })}>
-            ${ROOF_SHAPES.map((shape) => html`<option value=${shape} ?selected=${sec.shape === shape}>${this.t(`roof_shape_${shape}` as I18nKey)}</option>`)}
-          </select>
-        </label>
-        ${flat
-          ? nothing
-          : html`<div class="nf-seg nf-dev-source">
-              <button aria-pressed=${sec.axis === "x"} ?disabled=${!admin} @click=${() => set({ axis: "x" })}>${this.t("roof_axis_x")}</button>
-              <button aria-pressed=${sec.axis === "z"} ?disabled=${!admin} @click=${() => set({ axis: "z" })}>${this.t("roof_axis_z")}</button>
-            </div>`}
-        <label class="nf-check nf-wide" title=${this.t("roof_open_hint")}
-          ><input type="checkbox" .checked=${!!sec.open} ?disabled=${!admin} @change=${(e: Event) => set({ open: (e.target as HTMLInputElement).checked })} />
-          ${this.t("roof_open")}</label
-        >
-        <div class="nf-form">
-          ${flat
-            ? num(this.t("roof_height"), sec.eave_a, (v) => set({ eave_a: v, eave_b: v }))
-            : html`${num(`${this.t("roof_eave")} ${pent ? "" : sideA}`, sec.eave_a, (v) => set({ eave_a: v }))}
-              ${pent ? nothing : num(`${this.t("roof_eave")} ${sideB}`, sec.eave_b, (v) => set({ eave_b: v }))}
-              ${num(`${this.t("roof_pitch_short")} ${pent ? "" : sideA}`, sec.pitch_a, (v) => set({ pitch_a: Math.min(75, v) }), 1, 0)}
-              ${pent ? nothing : num(`${this.t("roof_pitch_short")} ${sideB}`, sec.pitch_b, (v) => set({ pitch_b: Math.min(75, v) }), 1, 0)}`}
-          ${num(this.t("roof_base"), sec.base, (v) => set({ base: v }))}
-          <label class="nf-field" title=${this.t("roof_on_floor_hint")}
-            >${this.t("roof_on_floor")}
-            <select
-              ?disabled=${!admin}
-              @change=${(e: Event) => {
-                const f = this._doc.floors.find((x) => x.id === (e.target as HTMLSelectElement).value);
-                if (!f) return;
-                // the section moves onto that floor's wall tops: base and eaves shift by the same amount
-                const top = round(f.elevation + f.height);
-                const shift = top - sec.base;
-                set({ base: top, eave_a: round(sec.eave_a + shift), eave_b: round(sec.eave_b + shift) });
-              }}
-            >
-              ${[...this._doc.floors]
-                .filter((f) => f.rooms.length)
-                .sort((p, q) => q.elevation - p.elevation)
-                .map((f) => html`<option value=${f.id} ?selected=${sectionFloor(this._doc, sec)?.id === f.id}>${f.name}</option>`)}
-            </select></label
-          >
-          <p class="nf-sub nf-wide">${this.t("roof_base_hint")}</p>
-          ${num(this.t("roof_overhang"), sec.overhang ?? this._doc.settings.roof.overhang, (v) => set({ overhang: Math.min(2, v) }), 0.05, 0)}
-        </div>
-        ${flat && admin
-          ? html`<div class="nf-actions">
-              <button class="nf-btn" title=${this.t("roof_outline_hint")} @click=${() => this.takeRoofOutline()}>${this.t("roof_outline")}</button>
-              ${sec.points ? html`<button class="nf-btn" @click=${() => set({ points: null })}>${this.t("roof_rect")}</button>` : nothing}
-            </div>
-            <p class="nf-sub">${this.t(sec.points ? "roof_points_hint" : "roof_outline_hint")}</p>`
-          : nothing}
-        <p class="nf-sub">${this.t("roof_ridge_height")}: ${formatNumber(this.hass, ridgeHeight(sec), 2)} m · ${this.t("roof_section_hint")}</p>
-        ${admin
-          ? html`<div class="nf-actions">
-              ${flat
-                ? nothing
-                : html`<button class="nf-btn" title=${this.t("roof_swap_hint")} @click=${() => set({ flip: !sec.flip })}>⇅ ${this.t("roof_swap")}</button>`}
-              ${!flat && !sec.dormer && !sec.open
-                ? html`<button class="nf-btn" title=${this.t("roof_dormer_hint")} @click=${() => this.addDormer("a")}>+ ${this.t("roof_dormer")} ${sideA}</button>
-                  ${pent ? nothing : html`<button class="nf-btn" title=${this.t("roof_dormer_hint")} @click=${() => this.addDormer("b")}>+ ${this.t("roof_dormer")} ${sideB}</button>`}`
-                : nothing}
-              <button class="nf-btn" @click=${() => this.duplicateRoofSection()}>${this.t("duplicate")}</button>
-              <button class="nf-btn nf-danger" @click=${() => this.deleteRoofSection()}>${this.t("delete")}</button>
-            </div>`
-          : nothing}
-      </section>`;
   }
 
   /** The item of a fixable kind on a floor. */
@@ -3924,8 +3137,8 @@ export class NfEditor extends LitElement {
               ${this.room && this.isAdmin && this._tool === "select" && !this._openingId && !this._furnitureId && !this.isFixedItem("room", this.room.id) ? this.renderHandles(this.room) : nothing}
               ${floor ? this.renderOutdoorHandles(floor) : nothing}
               ${this.room && this._tool === "select" ? this.renderSplitMarks(this.room) : nothing}
-              ${floor ? this.renderHeadroom(floor) : nothing}
-              ${this._tool === "roof" ? svg`${this.renderRoofSections()}${this.renderRoofWindows()}` : this._tool === "energy" ? svg`${this.renderRoofSections()}${this.renderSolarFields()}${this.renderEnergyMarkers()}` : nothing} ${this.renderDraft()} ${this.renderGuides()}
+              ${floor ? headroomLayer(this.canvasContext(), floor) : nothing}
+              ${this._tool === "roof" ? svg`${roofSectionsLayer(this.canvasContext(), this.roof)}${roofWindowsLayer(this.canvasContext(), this.roof)}` : this._tool === "energy" ? svg`${roofSectionsLayer(this.canvasContext(), this.roof)}${solarLayer(this.canvasContext(), this.roof)}${energyMarkersLayer(this.canvasContext(), this.floor, this._furnitureId)}` : nothing} ${this.renderDraft()} ${this.renderGuides()}
             </svg>
             ${this.renderContext()}
             <p class="nf-hint ${this._fixedHint ? "nf-hint-fixed" : ""}">${!floor ? this.t("hint_empty") : this._fixedHint ? this.t("fixed_drag_hint") : this.t(`hint_${this._tool}` as I18nKey)}</p>
@@ -4746,7 +3959,7 @@ export class NfEditor extends LitElement {
     const room = this.room;
     const admin = this.isAdmin;
     const areas = Object.values(this.hass?.areas ?? {}).sort((a, b) => a.name.localeCompare(b.name));
-    if (this._tool === "roof") return this.renderRoofPanel();
+    if (this._tool === "roof") return renderRoofPanel(this.roofDeps());
     if (this._tool === "energy") return this.renderEnergyPanel();
     // furnishing: the library and the selected item come first
     if (this._tool === "furniture" && floor && admin) {
@@ -5378,22 +4591,6 @@ export class NfEditor extends LitElement {
           </div>`
         : nothing}
     </section>`;
-  }
-
-  /** Attic floors: dashed lines where the roof slope leaves 1.5 m and 2 m of headroom, with labels. */
-  private renderHeadroom(floor: Floor) {
-    const ceiling = floor.elevation + floor.height;
-    const sections = this._doc.settings.roof.sections ?? [];
-    if (!sections.some((s) => sectionCutsBelow(s, ceiling))) return nothing;
-    const b = { settings: this._doc.settings };
-    return svg`${[1.5, 2].map((h) =>
-      headroomLines(b, floor.elevation, h).map(([p, q]) => {
-        const [x1, y1] = this.toScreen(p);
-        const [x2, y2] = this.toScreen(q);
-        return svg`<line class="nf-headroom" x1=${x1} y1=${y1} x2=${x2} y2=${y2} />
-          <text class="nf-headroom-label" x=${(x1 + x2) / 2} y=${(y1 + y2) / 2 - 4}>${formatNumber(this.hass, h, 1)} m</text>`;
-      }),
-    )}`;
   }
 
   /** The camera of the editor's 3D pane as it stands right now, rounded for the plan (null: no pane). */

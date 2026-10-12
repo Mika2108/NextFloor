@@ -2,7 +2,7 @@
 
 import { html, LitElement, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
 import { fetchImage, storeImage } from "../api.ts";
-import { areaEntities, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, openingEntities, otherAreaEntities, roomClimateSensors, unassignedEntities, windowPosition, type ClimateKey } from "../devices.ts";
+import { areaEntities, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, otherAreaEntities, roomClimateSensors, unassignedEntities, type ClimateKey } from "../devices.ts";
 import { furnitureSymbol } from "./furniture2d.ts";
 import { closeGaps, suggestedThickness } from "../geometry/gaps.ts";
 import { keepInRoom, snapToWall } from "../geometry/snap.ts";
@@ -43,7 +43,6 @@ import {
   type Direction,
   signedArea,
   OPENING_PRESETS,
-  openingPreset,
   type OpeningPreset,
   resizeFurniture,
   roomTiles,
@@ -63,11 +62,8 @@ import {
   type OpeningType,
   type Room,
   type Vec2,
-  DOOR_STYLES,
-  WINDOW_STYLES,
   openingStyle,
   isFrontDoor,
-  type OpeningStyle,
 } from "../model.ts";
 import { controls, tokens } from "../styles.ts";
 import { renderFavorites, renderPresence, renderStartView } from "./editor/forms/house.ts";
@@ -83,6 +79,7 @@ import { backgroundLayer } from "./editor/canvas/background.ts";
 import { BackgroundTool, readPictureInBrowser } from "./editor/background-tool.ts";
 import { renderBackgroundForm } from "./editor/forms/background.ts";
 import { dragRotation, pictureCentre, pictureLocal } from "./editor/ops/background.ts";
+import { renderOpeningForm, type OpeningActions } from "./editor/forms/opening.ts";
 import { renderRoofPanel } from "./editor/forms/roof.ts";
 import type { RoofPanelDeps } from "./editor/forms/roof-parts.ts";
 import { renderSolarForm, renderSolarList } from "./editor/forms/solar.ts";
@@ -332,6 +329,16 @@ export class NfEditor extends LitElement {
 
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
     return translate(this.hass, key, vars);
+  }
+
+  private openingActions(): OpeningActions {
+    return {
+      update: (patch) => this.updateOpening(patch),
+      setPreset: (opening, preset) => this.setOpeningPreset(opening, preset),
+      remove: () => this.deleteOpening(),
+      isExterior: (opening) => this.openingIsExterior(opening),
+      lockButton: this.fixButton("opening", this.sel.opening ?? ""),
+    };
   }
 
   private makeBackground(): BackgroundTool {
@@ -3602,7 +3609,7 @@ export class NfEditor extends LitElement {
         : this.furnitureItem
           ? this.renderFurnitureForm(this.furnitureItem)
           : this.opening
-            ? this.renderOpeningForm(this.opening)
+            ? renderOpeningForm(this.host, this.opening, this.openingActions())
             : this.device
               ? this.renderDeviceForm(this.device)
               : this.outdoorArea
@@ -3628,7 +3635,7 @@ export class NfEditor extends LitElement {
         : this.outdoorArea
         ? this.renderOutdoorForm(this.outdoorArea)
         : this.opening
-        ? this.renderOpeningForm(this.opening)
+        ? renderOpeningForm(this.host, this.opening, this.openingActions())
         : this.furnitureItem
           ? this.renderFurnitureForm(this.furnitureItem)
           : this.device
@@ -3653,203 +3660,6 @@ export class NfEditor extends LitElement {
     if (!floor || !host) return false;
     const walls = generateWalls(floor.rooms, { exterior: this._doc.settings.wall_exterior, interior: this._doc.settings.wall_interior }, floor.walls ?? []);
     return locateOpening(walls.walls, o, host)?.wall.exterior ?? false;
-  }
-
-  /** The look of a door or window: automatic (by wall), or one of the built-in styles. */
-  /** Front doors with sidelights: which side the single one sits on, and the widths (empty = automatic). */
-  private renderSidelightFields(o: Opening) {
-    if (o.type !== "door") return nothing;
-    const style = openingStyle(o, this.openingIsExterior(o));
-    if (style !== "sidelight" && style !== "sidelights") return nothing;
-    const admin = this.isAdmin;
-    const width = (key: "sidelight_width" | "sidelight_width2", label: I18nKey) => html`<label class="nf-field"
-      >${this.t(label)}
-      <input
-        type="number"
-        step="0.05"
-        min="0.1"
-        max="3"
-        placeholder=${this.t("sidelight_auto")}
-        .value=${o[key] == null ? "" : String(o[key])}
-        ?disabled=${!admin}
-        @change=${(e: Event) => {
-          const v = Number((e.target as HTMLInputElement).value);
-          this.updateOpening({ [key]: Number.isFinite(v) && v > 0 ? Math.min(3, Math.max(0.1, Math.round(v * 100) / 100)) : null });
-        }}
-      />
-    </label>`;
-    return style === "sidelight"
-      ? html`<label class="nf-check" title=${this.t("sidelight_hinge_hint")}
-            ><input type="checkbox" .checked=${!!o.sidelight_hinge} ?disabled=${!admin} @change=${(ev: Event) => this.updateOpening({ sidelight_hinge: (ev.target as HTMLInputElement).checked })} />
-            ${this.t("sidelight_hinge")}</label
-          >
-          ${width("sidelight_width", "sidelight_width")}`
-      : html`${width("sidelight_width", "sidelight_width_left")} ${width("sidelight_width2", "sidelight_width_right")}`;
-  }
-
-  private renderStyleSelect(o: Opening) {
-    const styles: readonly OpeningStyle[] = o.type === "door" ? DOOR_STYLES : WINDOW_STYLES;
-    const auto = openingStyle({ type: o.type, style: null }, this.openingIsExterior(o));
-    const current = o.style && (styles as readonly string[]).includes(o.style) ? o.style : "";
-    return html`<label class="nf-field nf-wide"
-      >${this.t("opening_style")}
-      <select ?disabled=${!this.isAdmin} @change=${(e: Event) => this.updateOpening({ style: ((e.target as HTMLSelectElement).value || null) as OpeningStyle | null })}>
-        <option value="" ?selected=${!current}>${this.t("style_auto", { style: this.t(`style_${auto}` as I18nKey) })}</option>
-        ${styles.map((s) => html`<option value=${s} ?selected=${s === current}>${this.t(`style_${s}` as I18nKey)}</option>`)}
-      </select></label
-    >`;
-  }
-
-  private renderOpeningForm(o: Opening) {
-    const admin = this.isAdmin;
-    const window = o.type === "window";
-    const garage = o.type === "garage";
-    // what "automatic" would pick: resolve with the opening's own links cleared
-    const autoPick = (key: "cover" | "contact") => {
-      if (!this.hass) return null;
-      const probe = structuredClone(this._doc.floors);
-      for (const f of probe) for (const x of f.openings) if (x.id === o.id) x[key] = null;
-      return openingEntities(this.hass, probe).get(o.id)?.[key] ?? null;
-    };
-    const dc = (id: string) => this.hass?.states[id]?.attributes.device_class as string | undefined;
-    const covers = this.entityOptions((id) => id.startsWith("cover."));
-    // sensors with a number for the live position of a blind
-    const positions = this.entityOptions((id) => /^(sensor|number|input_number)\./.test(id) && Number.isFinite(Number(this.hass?.states[id]?.state)));
-    // plain contacts, and handle sensors with three states (open / tilted / closed)
-    const contacts = this.entityOptions(
-      (id) =>
-        (id.startsWith("binary_sensor.") && ["door", "window", "opening", "garage_door"].includes(dc(id) ?? "")) ||
-        (numberish(id) && windowPosition(this.hass?.states[id]) !== null),
-    );
-    // handle sensors: text states (open / tilted / closed), a window_state attribute, or a telling name
-    const handles = this.entityOptions((id) => {
-      const st = this.hass?.states[id];
-      if (id.startsWith("binary_sensor.")) return typeof st?.attributes.window_state === "string";
-      return numberish(id) && (windowPosition(st) !== null || /griff|handle|fenster|window|drehgriff/i.test(`${id} ${entityName(this.hass, id)}`));
-    });
-    const plainContacts = this.entityOptions((id) => id.startsWith("binary_sensor.") && ["door", "window", "opening", "garage_door"].includes(dc(id) ?? ""));
-    type Kind = NonNullable<Opening["sensor"]>;
-    const leafSensors = (leaf: 1 | 2) => {
-      const main = leaf === 1;
-      const tilt = main ? o.tilt : (o.tilt2 ?? null);
-      const contact = main ? o.contact : o.contact2;
-      const kind: Kind = (main ? o.sensor : o.sensor2) ?? (tilt && tilt !== "none" ? "contact_tilt" : "contact");
-      const setContact = (v: string | null) => this.updateOpening(main ? { contact: v } : { contact2: v === "none" ? null : v });
-      return html`<label class="nf-field nf-wide"
-          >${this.t("sensor_kind")}
-          <select
-            ?disabled=${!admin}
-            @change=${(e: Event) => {
-              const next = (e.target as HTMLSelectElement).value as Kind;
-              const clearTilt = next === "contact_tilt" ? {} : main ? { tilt: null } : { tilt2: null };
-              this.updateOpening({ ...(main ? { sensor: next } : { sensor2: next }), ...clearTilt });
-            }}
-          >
-            ${(["contact", "handle", "contact_tilt"] as const).map((k) => html`<option value=${k} ?selected=${k === kind}>${this.t(`sensor_kind_${k}`)}</option>`)}
-          </select></label
-        >
-        ${kind === "handle"
-          ? this.entitySelect(this.t("handle_entity"), contact, undefined, handles, (v) => setContact(v === "none" ? (main ? "none" : null) : v))
-          : this.entitySelect(this.t("contact_entity"), contact, main ? autoPick("contact") : undefined, plainContacts, setContact)}
-        ${kind === "contact_tilt"
-          ? this.entitySelect(this.t("tilt_entity"), tilt, undefined, contacts, (v) => this.updateOpening(main ? { tilt: v === "none" ? null : v } : { tilt2: v === "none" ? null : v }))
-          : nothing}
-        ${main
-          ? html`${this.entitySelect(this.t("tilt_angle_entity"), o.tilt_angle ?? null, undefined, this.entityOptions((id) => numberish(id)), (v) => this.updateOpening({ tilt_angle: v === "none" ? null : v }))}
-            ${o.tilt_angle && o.tilt_angle !== "none"
-              ? html`${this.num(this.t("tilt_angle_max"), o.tilt_max ?? 15, (v) => this.updateOpening({ tilt_max: Math.min(90, Math.max(1, v)) }), 1, 1)}
-                ${this.num(this.t("tilt_angle_offset"), o.tilt_offset ?? 0, (v) => this.updateOpening({ tilt_offset: v }), 0.5)}
-                <label class="nf-check nf-wide"
-                  ><input type="checkbox" .checked=${!!o.tilt_invert} ?disabled=${!admin} @change=${(ev: Event) => this.updateOpening({ tilt_invert: (ev.target as HTMLInputElement).checked })} />
-                  ${this.t("tilt_angle_invert")}</label
-                >`
-              : nothing}`
-          : nothing}`;
-    };
-    const preset = openingPreset(o);
-    const door = o.type === "door";
-    return html`<section>
-      <div class="nf-h3row"><h3>${this.t(`preset_${preset}` as I18nKey)}</h3>${this.fixButton("opening", o.id)}</div>
-      ${admin
-        ? html`<div class="nf-presets" role="group" aria-label=${this.t("opening_type")}>
-            ${(Object.keys(OPENING_PRESETS) as OpeningPreset[]).map(
-              (p) => html`<button class="nf-chip" aria-pressed=${p === preset} @click=${() => this.setOpeningPreset(o, p)}>${this.t(`preset_${p}` as I18nKey)}</button>`,
-            )}
-          </div>`
-        : nothing}
-      ${admin && !garage
-        ? html`<div class="nf-actions">
-            <button class="nf-btn" title=${this.t("flip_hinge_hint")} @click=${() => this.updateOpening({ hinge: o.hinge === "left" ? "right" : "left" })}>
-              ⇆ ${this.t(o.leaves === 2 ? "flip_main_leaf" : "flip_hinge")}
-            </button>
-            ${door
-              ? html`<button class="nf-btn" title=${this.t("flip_swing_hint")} @click=${() => this.updateOpening({ swing: o.swing === "out" ? "in" : "out" })}>
-                  ⇅ ${this.t("flip_swing")}
-                </button>`
-              : nothing}
-          </div>`
-        : nothing}
-      <div class="nf-form">
-        ${this.num(this.t("width"), o.width, (v) => this.updateOpening({ width: Math.max(0.3, v) }), 0.01, 0.3)}
-        ${this.num(this.t("opening_position"), o.offset, (v) => this.updateOpening({ offset: Math.max(0, v) }), 0.01, 0)}
-        ${window ? this.num(this.t("sill"), o.sill, (v) => this.updateOpening({ sill: Math.max(0, v) }), 0.01, 0) : nothing}
-        ${this.num(this.t("opening_height"), o.height, (v) => this.updateOpening({ height: Math.max(0.3, v) }), 0.01, 0.3)}
-        ${garage ? nothing : this.renderStyleSelect(o)}
-        ${this.renderSidelightFields(o)}
-        <label class="nf-field nf-wide" title=${this.t("opening_mark_hint")}
-          >${this.t("opening_mark")}
-          <select ?disabled=${!this.isAdmin} @change=${(e: Event) => this.updateOpening({ mark: (e.target as HTMLSelectElement).value === "closed" ? "closed" : null })}>
-            <option value="" ?selected=${o.mark !== "closed"}>${this.t("opening_mark_open")}</option>
-            <option value="closed" ?selected=${o.mark === "closed"}>${this.t("opening_mark_closed")}</option>
-          </select></label
-        >
-        ${garage
-          ? nothing
-          : html`<label class="nf-field nf-wide"
-          >${this.t(o.leaves === 2 ? "main_leaf" : "hinge")}
-          <select ?disabled=${!admin} @change=${(e: Event) => this.updateOpening({ hinge: (e.target as HTMLSelectElement).value as "left" | "right" })}>
-            <option value="left" ?selected=${o.hinge === "left"}>${this.t("hinge_left")}</option>
-            <option value="right" ?selected=${o.hinge === "right"}>${this.t("hinge_right")}</option>
-          </select></label
-        >`}
-        ${window || garage || door ? this.entitySelect(this.t(window ? "cover_entity" : "door_cover"), o.cover, autoPick("cover"), covers, (v) => this.updateOpening({ cover: v })) : nothing}
-        ${(window || garage || door) && o.cover !== "none" && (o.cover || autoPick("cover"))
-          ? html`${this.entitySelect(this.t("cover_position_entity"), o.position ?? null, undefined, positions, (v) => this.updateOpening({ position: v === "none" ? null : v }))}
-              ${o.position
-                ? html`<label class="nf-check nf-wide"
-                    ><input
-                      type="checkbox"
-                      ?disabled=${!admin}
-                      .checked=${!!o.position_inverted}
-                      @change=${(ev: Event) => this.updateOpening({ position_inverted: (ev.target as HTMLInputElement).checked })}
-                    />
-                    ${this.t("cover_position_invert")}</label
-                  >`
-                : nothing}
-              <label class="nf-check nf-wide" title=${this.t("cover_confirm_hint")}
-                ><input type="checkbox" ?disabled=${!admin} .checked=${!!o.confirm} @change=${(ev: Event) => this.updateOpening({ confirm: (ev.target as HTMLInputElement).checked })} />
-                ${this.t("device_confirm")}</label
-              >`
-          : nothing}
-        ${window
-          ? html`${o.leaves === 2 ? html`<h4 class="nf-lib-head nf-wide">${this.t("leaf_main")}</h4>` : nothing}
-              ${leafSensors(1)} ${o.leaves === 2 ? html`<h4 class="nf-lib-head nf-wide">${this.t("leaf_second")}</h4>${leafSensors(2)}` : nothing}`
-          : html`${this.entitySelect(this.t(o.leaves === 2 ? "contact_main" : "contact_entity"), o.contact, autoPick("contact"), contacts, (v) => this.updateOpening({ contact: v }))}
-              ${o.leaves === 2 && !garage
-                ? this.entitySelect(this.t("contact_second"), o.contact2, undefined, contacts, (v) => this.updateOpening({ contact2: v === "none" ? null : v }))
-                : nothing}
-              ${door
-                ? html`<label class="nf-check nf-wide" title=${this.t("door_shut_hint")}
-                    ><input type="checkbox" .checked=${!!o.shut} ?disabled=${!admin} @change=${(ev: Event) => this.updateOpening({ shut: (ev.target as HTMLInputElement).checked })} />
-                    ${this.t("door_shut")}</label
-                  >`
-                : nothing}`}
-      </div>
-      <p class="nf-sub">${this.t(window ? "opening_hint" : garage ? "garage_hint" : "door_hint")}</p>
-      ${admin
-        ? html`<div class="nf-actions"><button class="nf-btn nf-danger" @click=${() => this.deleteOpening()}>${this.t("delete")}</button></div>`
-        : nothing}
-    </section>`;
   }
 
   private renderFurnitureForm(f: Furniture) {

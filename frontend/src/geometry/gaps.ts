@@ -1,136 +1,117 @@
-// "Close gaps": rooms drawn with a gap between them (e.g. measured inside dimensions) get their facing
-// edges moved onto a common centre line, so one interior wall replaces two exterior walls. The gaps
-// that were closed suggest the interior wall thickness.
+// "Close gaps": rooms drawn with a gap between them (for example from inside measurements) get their facing edges moved
+// onto one common centre line, so a single interior wall replaces two exterior walls. The gaps that were closed also
+// suggest the thickness of interior walls.
 
-import type { Room, Vec2 } from "../model.ts";
-import { signedArea } from "../model.ts";
+import { signedArea, type Room, type Vec2 } from "../model.ts";
+import { cross, dot, norm, sub } from "./vec2.ts";
 
 export interface GapResult {
   rooms: Room[];
-  /** Width of every closed gap (negative for small overlaps). */
+  /** The width of every closed gap (negative for small overlaps). */
   gaps: number[];
 }
 
-interface Edge {
+/** An edge of a room, put in a canonical orientation so edges of different rooms can be compared. */
+interface Side {
   room: number;
   index: number;
-  /** Direction with a canonical sign (angle in [0, π)). */
+  /** The direction, with a canonical sign (angle in [0, π)). */
   dir: Vec2;
-  /** Normal belonging to the canonical direction. */
+  /** The normal belonging to that direction. */
   normal: Vec2;
-  /** Position of the edge's line along the normal. */
+  /** Where the edge's line is along the normal. */
   offset: number;
   /** +1 when the room's outside lies on the normal's side, -1 otherwise. */
-  outside: number;
-  t0: number;
-  t1: number;
+  outside: 1 | -1;
+  /** The covered range along the direction. */
+  from: number;
+  to: number;
 }
 
-const ANGLE_TOLERANCE = 0.05;
-const MIN_OVERLAP = 0.2;
-/** Rooms overlapping by up to this much are pulled apart onto one line as well. */
+const PARALLEL_TOLERANCE = 0.05;
+const MIN_SHARED_LENGTH = 0.2;
+/** Rooms that overlap by up to this much are moved apart onto one line as well. */
 const MAX_OVERLAP = 0.12;
 
-function edgesOf(rooms: readonly Room[]): Edge[] {
-  const out: Edge[] = [];
+function sidesOf(rooms: readonly Room[]): Side[] {
+  const sides: Side[] = [];
   rooms.forEach((room, r) => {
     const pts = room.points;
     if (pts.length < 3) return;
-    const ccw = signedArea(pts) >= 0;
-    for (let i = 0; i < pts.length; i++) {
-      const a = pts[i];
+    const counterClockwise = signedArea(pts) >= 0;
+    pts.forEach((a, i) => {
       const b = pts[(i + 1) % pts.length];
-      const dx = b[0] - a[0];
-      const dz = b[1] - a[1];
-      const l = Math.hypot(dx, dz);
-      if (l < 0.05) continue;
-      let dir: Vec2 = [dx / l, dz / l];
-      // counter-clockwise in x/z: the outside is on the right of a -> b
-      const outward: Vec2 = ccw ? [dir[1], -dir[0]] : [-dir[1], dir[0]];
+      const length = norm(sub(b, a));
+      if (length < 0.05) return;
+      let dir: Vec2 = [(b[0] - a[0]) / length, (b[1] - a[1]) / length];
+      // counter-clockwise in x/z: the outside is on the right of a to b
+      const outward: Vec2 = counterClockwise ? [dir[1], -dir[0]] : [-dir[1], dir[0]];
       if (dir[1] < -1e-9 || (Math.abs(dir[1]) <= 1e-9 && dir[0] < 0)) dir = [-dir[0], -dir[1]];
       const normal: Vec2 = [-dir[1], dir[0]];
-      const ta = a[0] * dir[0] + a[1] * dir[1];
-      const tb = b[0] * dir[0] + b[1] * dir[1];
-      out.push({
-        room: r,
-        index: i,
-        dir,
-        normal,
-        offset: a[0] * normal[0] + a[1] * normal[1],
-        outside: outward[0] * normal[0] + outward[1] * normal[1] > 0 ? 1 : -1,
-        t0: Math.min(ta, tb),
-        t1: Math.max(ta, tb),
-      });
-    }
+      const [ta, tb] = [dot(a, dir), dot(b, dir)];
+      sides.push({ room: r, index: i, dir, normal, offset: dot(a, normal), outside: dot(outward, normal) > 0 ? 1 : -1, from: Math.min(ta, tb), to: Math.max(ta, tb) });
+    });
   });
-  return out;
+  return sides;
 }
+
+/** The gap between two sides that face each other across it, or null when they do not form one. */
+function gapBetween(e: Side, f: Side, maxGap: number): number | null {
+  if (e.room === f.room) return null;
+  if (Math.abs(cross(e.dir, f.dir)) > PARALLEL_TOLERANCE) return null;
+  if (e.outside === f.outside) return null; // facing each other means their outsides point at each other
+  const gap = (f.offset - e.offset) * e.outside;
+  if (gap > maxGap || gap < -MAX_OVERLAP || Math.abs(gap) < 1e-4) return null;
+  return Math.min(e.to, f.to) - Math.max(e.from, f.from) < MIN_SHARED_LENGTH ? null : gap;
+}
+
+const thousandths = (v: number) => Math.round(v * 1000) / 1000;
 
 export function closeGaps(rooms: readonly Room[], maxGap = 0.6): GapResult {
-  const edges = edgesOf(rooms);
-  const parent = edges.map((_, i) => i);
-  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const sides = sidesOf(rooms);
+  const leader = sides.map((_, i) => i);
+  const root = (i: number): number => (leader[i] === i ? i : (leader[i] = root(leader[i])));
   const gaps: number[] = [];
-  for (let i = 0; i < edges.length; i++) {
-    for (let j = i + 1; j < edges.length; j++) {
-      const e = edges[i];
-      const f = edges[j];
-      if (e.room === f.room) continue;
-      if (Math.abs(e.dir[0] * f.dir[1] - e.dir[1] * f.dir[0]) > ANGLE_TOLERANCE) continue;
-      // facing each other: their outsides point at each other
-      if (e.outside === f.outside) continue;
-      const gap = (f.offset - e.offset) * e.outside;
-      if (gap > maxGap || gap < -MAX_OVERLAP || Math.abs(gap) < 1e-4) continue;
-      const overlap = Math.min(e.t1, f.t1) - Math.max(e.t0, f.t0);
-      if (overlap < MIN_OVERLAP) continue;
-      gaps.push(Math.round(gap * 1000) / 1000);
-      parent[find(i)] = find(j);
+  const paired = new Set<number>();
+  for (let i = 0; i < sides.length; i++) {
+    for (let j = i + 1; j < sides.length; j++) {
+      const gap = gapBetween(sides[i], sides[j], maxGap);
+      if (gap === null) continue;
+      gaps.push(thousandths(gap));
+      leader[root(i)] = root(j);
+      paired.add(i).add(j);
     }
   }
-  if (!gaps.length) return { rooms: rooms.map((r) => ({ ...r, points: r.points.map((p) => [p[0], p[1]] as Vec2) })), gaps };
+  const copy = () => rooms.map((r) => ({ ...r, points: r.points.map((p) => [p[0], p[1]] as Vec2) }));
+  if (gaps.length === 0) return { rooms: copy(), gaps };
 
-  // every group of edges meets on the mean of its lines
+  // every group of facing sides meets on the mean of its lines
   const groups = new Map<number, number[]>();
-  edges.forEach((_, i) => {
-    const root = find(i);
-    if (root === i && !edges.some((_, j) => j !== i && find(j) === i)) return;
-    const list = groups.get(root) ?? [];
-    list.push(i);
-    groups.set(root, list);
-  });
-  // shifts per vertex, at most one per group so collinear neighbours do not move a corner twice
+  for (const i of paired) groups.set(root(i), [...(groups.get(root(i)) ?? []), i]);
+  // at most one shift per group and vertex, so collinear neighbours do not move a corner twice
   const shifts = rooms.map((r) => r.points.map(() => new Map<number, Vec2>()));
-  for (const [root, members] of groups) {
-    const target = members.reduce((s, i) => s + edges[i].offset, 0) / members.length;
+  for (const [group, members] of groups) {
+    const target = members.reduce((sum, i) => sum + sides[i].offset, 0) / members.length;
     for (const i of members) {
-      const e = edges[i];
-      const d = target - e.offset;
-      const v: Vec2 = [e.normal[0] * d, e.normal[1] * d];
-      const n = rooms[e.room].points.length;
-      shifts[e.room][e.index].set(root, v);
-      shifts[e.room][(e.index + 1) % n].set(root, v);
+      const s = sides[i];
+      const move: Vec2 = [s.normal[0] * (target - s.offset), s.normal[1] * (target - s.offset)];
+      shifts[s.room][s.index].set(group, move);
+      shifts[s.room][(s.index + 1) % rooms[s.room].points.length].set(group, move);
     }
   }
-  const round = (v: number) => Math.round(v * 1000) / 1000;
-  const out = rooms.map((room, r) => ({
+  const moved = rooms.map((room, r) => ({
     ...room,
-    points: room.points.map((p, k) => {
-      let x = p[0];
-      let z = p[1];
-      for (const [dx, dz] of shifts[r][k].values()) {
-        x += dx;
-        z += dz;
-      }
-      return [round(x), round(z)] as Vec2;
+    points: room.points.map((p, k): Vec2 => {
+      const total = [...shifts[r][k].values()].reduce<Vec2>((sum, d) => [sum[0] + d[0], sum[1] + d[1]], [p[0], p[1]]);
+      return [thousandths(total[0]), thousandths(total[1])];
     }),
   }));
-  return { rooms: out, gaps };
+  return { rooms: moved, gaps };
 }
 
-/** Interior wall thickness suggested by the closed gaps (median), or null for overlaps only. */
+/** The interior wall thickness the closed gaps suggest (their median), or null when there were overlaps only. */
 export function suggestedThickness(gaps: readonly number[]): number | null {
-  const positive = gaps.filter((g) => g > 0.04).sort((a, b) => a - b);
-  if (!positive.length) return null;
-  const median = positive[Math.floor(positive.length / 2)];
-  return Math.min(0.5, Math.max(0.08, Math.round(median * 100) / 100));
+  const widths = gaps.filter((g) => g > 0.04).sort((a, b) => a - b);
+  if (widths.length === 0) return null;
+  return Math.min(0.5, Math.max(0.08, Math.round(widths[Math.floor(widths.length / 2)] * 100) / 100));
 }

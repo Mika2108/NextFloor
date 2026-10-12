@@ -4,48 +4,73 @@ import type { Room } from "../model.ts";
 import { closeGaps, suggestedThickness } from "./gaps.ts";
 import { generateWalls } from "./walls.ts";
 
-function rect(id: string, x0: number, z0: number, x1: number, z1: number, cw = false): Room {
-  const pts: [number, number][] = [
-    [x0, z0],
-    [x1, z0],
-    [x1, z1],
-    [x0, z1],
-  ];
-  return { id, name: id, area_id: null, points: cw ? pts.reverse() : pts, floor_material: "wood" };
-}
-
-const bounds = (r: Room) => {
-  const xs = r.points.map((p) => p[0]);
-  const zs = r.points.map((p) => p[1]);
-  return [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)];
+const room = (id: string, x0: number, z0: number, x1: number, z1: number, clockwise = false): Room => {
+  const points: [number, number][] = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+  return { id, name: id, area_id: null, points: clockwise ? points.reverse() : points, floor_material: "wood" };
 };
 
-test("two rooms with a 30 cm gap meet on the centre line and share one interior wall", () => {
-  const { rooms, gaps } = closeGaps([rect("a", 0, 0, 4, 3), rect("b", 4.3, 0, 8, 3, true)]);
-  assert.deepEqual(gaps, [0.3]);
-  assert.deepEqual(bounds(rooms[0]), [0, 0, 4.15, 3]);
-  assert.deepEqual(bounds(rooms[1]), [4.15, 0, 8, 3]);
-  const { walls } = generateWalls(rooms, { exterior: 0.24, interior: 0.3 });
+const box = (r: Room) => {
+  const xs = r.points.map((p) => p[0]);
+  const zs = r.points.map((p) => p[1]);
+  return { x0: Math.min(...xs), z0: Math.min(...zs), x1: Math.max(...xs), z1: Math.max(...zs) };
+};
+
+test("rooms with a gap meet in the middle of it and share one interior wall", () => {
+  const { rooms, gaps } = closeGaps([room("a", 0, 0, 5, 3), room("b", 5.4, 0, 9, 3)]);
+  assert.deepEqual(gaps, [0.4]);
+  assert.equal(box(rooms[0]).x1, 5.2);
+  assert.equal(box(rooms[1]).x0, 5.2);
+  const { walls } = generateWalls(rooms, { exterior: 0.3, interior: 0.4 });
   assert.equal(walls.filter((w) => !w.exterior).length, 1);
-  assert.equal(suggestedThickness(gaps), 0.3);
+  assert.equal(suggestedThickness(gaps), 0.4);
 });
 
-test("three rooms along one wall meet on one line", () => {
-  // kitchen above, office and hall below with slightly different gaps
-  const { rooms } = closeGaps([rect("k", 0, 0, 7, 3.9), rect("o", 0, 4.25, 3.4, 8), rect("h", 3.4, 4.3, 7, 8.6)]);
-  const kitchenBottom = bounds(rooms[0])[3];
-  assert.equal(bounds(rooms[1])[1], kitchenBottom);
-  assert.equal(bounds(rooms[2])[1], kitchenBottom);
-  assert.ok(kitchenBottom > 3.9 && kitchenBottom < 4.3);
+test("the winding of a room does not matter", () => {
+  const { rooms, gaps } = closeGaps([room("a", 0, 0, 5, 3, true), room("b", 5.4, 0, 9, 3)]);
+  assert.deepEqual(gaps, [0.4]);
+  assert.equal(box(rooms[0]).x1, box(rooms[1]).x0);
 });
 
-test("a small overlap is resolved; far apart and side-by-side rooms stay untouched", () => {
-  const overlap = closeGaps([rect("a", 0, 0, 4, 3), rect("b", 3.95, 0, 8, 3)]);
-  assert.equal(bounds(overlap.rooms[0])[2], bounds(overlap.rooms[1])[0]);
-  assert.equal(suggestedThickness(overlap.gaps), null);
-  const far = closeGaps([rect("a", 0, 0, 4, 3), rect("b", 5, 0, 8, 3)]);
-  assert.deepEqual(far.gaps, []);
-  // rooms only touching at a corner region (no overlap along the edge) are not pulled together
-  const diagonal = closeGaps([rect("a", 0, 0, 4, 3), rect("b", 4.3, 3.3, 8, 6)]);
-  assert.deepEqual(diagonal.gaps, []);
+test("rooms along one wall all meet on the same line, even with different gaps", () => {
+  const { rooms } = closeGaps([room("top", 0, 0, 8, 3), room("left", 0, 3.3, 4, 8), room("right", 4, 3.5, 8, 8)]);
+  const line = box(rooms[0]).z1;
+  assert.equal(box(rooms[1]).z0, line);
+  assert.equal(box(rooms[2]).z0, line);
+  assert.ok(line > 3 && line < 3.5);
+});
+
+test("a small overlap is pulled apart onto one line and suggests no thickness", () => {
+  const { rooms, gaps } = closeGaps([room("a", 0, 0, 4, 3), room("b", 3.92, 0, 8, 3)]);
+  assert.equal(box(rooms[0]).x1, box(rooms[1]).x0);
+  assert.ok(gaps[0] < 0);
+  assert.equal(suggestedThickness(gaps), null);
+});
+
+test("rooms that are too far apart, sit side by side without sharing a stretch of wall, or are alone stay as they were", () => {
+  assert.deepEqual(closeGaps([room("a", 0, 0, 4, 3), room("b", 6, 0, 9, 3)]).gaps, []);
+  assert.deepEqual(closeGaps([room("a", 0, 0, 4, 3), room("b", 4.3, 3.3, 8, 6)]).gaps, [], "only a corner in common");
+  const alone = closeGaps([room("a", 0, 0, 4, 3)]);
+  assert.deepEqual(alone.gaps, []);
+  assert.deepEqual(alone.rooms[0].points, room("a", 0, 0, 4, 3).points);
+});
+
+test("the input rooms are never changed", () => {
+  const input = [room("a", 0, 0, 4, 3), room("b", 4.3, 0, 8, 3)];
+  const before = JSON.stringify(input);
+  closeGaps(input);
+  assert.equal(JSON.stringify(input), before);
+});
+
+test("a larger maximum gap closes wider gaps", () => {
+  const rooms = [room("a", 0, 0, 4, 3), room("b", 5, 0, 8, 3)];
+  assert.deepEqual(closeGaps(rooms).gaps, []);
+  assert.deepEqual(closeGaps(rooms, 1.2).gaps, [1]);
+});
+
+test("the suggested thickness is the median gap, clamped between 8 and 50 cm", () => {
+  assert.equal(suggestedThickness([0.1, 0.12, 0.3]), 0.12);
+  assert.equal(suggestedThickness([0.05, 0.05]), 0.08 > 0.05 ? 0.08 : 0.05);
+  assert.equal(suggestedThickness([0.9, 1.2]), 0.5);
+  assert.equal(suggestedThickness([]), null);
+  assert.equal(suggestedThickness([-0.05, 0.02]), null);
 });

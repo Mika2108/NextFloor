@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { box, floorWith, opening } from "../../../entities/fixtures.ts";
 import type { Placement } from "../../../model.ts";
-import { areaChoice, copyOfRoom, cornerMoved, evenCeilingLights, newRoom, rectangleAfter, removeCorner, removeRoom } from "./rooms.ts";
+import { insertCorner, areaChoice, copyOfRoom, cornerMoved, evenCeilingLights, newRoom, rectangleAfter, removeCorner, removeRoom } from "./rooms.ts";
 
 const lamp = (id: string, x: number, z: number, extra: Partial<Placement> = {}): Placement => ({ entity_id: id, x, z, y: null, ...extra });
 
@@ -84,4 +84,13 @@ test("ceiling lights spread over the room in a grid, a short last row over the f
   assert.deepEqual(evenCeilingLights(room, [lamp("light.a", 1, 1)]), []);
   assert.deepEqual(evenCeilingLights(room, [lamp("light.a", 1, 1), lamp("light.b", 2, 2, { mount: "wall" })]), []);
   assert.deepEqual(evenCeilingLights(room, [lamp("light.a", 1, 1), lamp("light.b", 20, 20)]), []);
+});
+
+test("a corner inserted on an edge splits it: heights are kept, openings stay on their half", () => {
+  const floor = floorWith([{ ...box("r", 0, 0, 4, 4), wall_heights: [1, null, null, null] }], { openings: [{ ...opening("a", "r", "door"), edge: 0, offset: 1 }, { ...opening("b", "r", "door"), edge: 0, offset: 3 }, { ...opening("c", "r", "door"), edge: 1, offset: 1 }] });
+  insertCorner(floor, "r", 0, [2, 0]);
+  assert.deepEqual(floor.rooms[0].points[1], [2, 0]);
+  assert.deepEqual(floor.rooms[0].wall_heights, [1, 1, null, null, null]);
+  assert.deepEqual(floor.openings.map((o) => [o.id, o.edge, o.offset]), [["a", 0, 1], ["b", 1, 1], ["c", 2, 1]]);
+  insertCorner(floor, "missing", 0, [0, 0]);
 });

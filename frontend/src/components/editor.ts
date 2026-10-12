@@ -31,6 +31,7 @@ import {
   pointInPolygon,
   polygonArea,
   uid,
+  type Background,
   type Building,
   type Floor,
   type Furniture,
@@ -59,6 +60,7 @@ import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWall
 import { outdoorRectangleAfter } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
 import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
+import { insertCorner } from "./editor/ops/rooms.ts";
 import { aimReach, dragStep, facingAngle, gridPositionAfter, hasLeftStart, headingAngle, outlineWithCornerAt, shifted, steppedDelta, straightEnd } from "./editor/ops/drags.ts";
 import { snapToPlan } from "./editor/ops/snapping.ts";
 import { draftLayer, guidesLayer } from "./editor/canvas/draft.ts";
@@ -97,6 +99,18 @@ import { mountBase, setPacks, type FurniturePack } from "../packs.ts";
 
 /** Items that can be fixed against moving. */
 type FixKind = "room" | "opening" | "furniture" | "device" | "wall" | "outdoor";
+
+/** What a press on the plan has to work out: where, and which element lies under it. */
+interface Press {
+  local: [number, number];
+  world: Vec2;
+  target: Element;
+  fine: boolean;
+}
+
+/** A recognised press starts a drag, or is already dealt with (a tap that only selects). */
+type Gesture = Drag | typeof NO_GESTURE;
+const NO_GESTURE = "handled";
 
 type Tool = "select" | "rect" | "polygon" | "measure" | "opening" | "furniture" | "outdoor" | "hole" | "wall" | "roof" | "energy";
 
@@ -954,13 +968,13 @@ export class NfEditor extends LitElement {
   }
 
   private pointerDown(e: PointerEvent): void {
-    const svgEl = e.currentTarget as SVGSVGElement;
-    svgEl.setPointerCapture(e.pointerId);
+    (e.currentTarget as SVGSVGElement).setPointerCapture(e.pointerId);
     const local = this.localPoint(e);
     this.pointers.set(e.pointerId, local);
     if (this.pointers.size === 2) {
-      // second finger: cancel the current gesture and pinch instead
-      if (this.drag && EDIT_DRAGS.has(this.drag.kind) && "moved" in this.drag && this.drag.moved && "base" in this.drag) this.restoreLive(this.drag.base);
+      // a second finger cancels the current gesture and pinches instead
+      const d = this.drag;
+      if (d && EDIT_DRAGS.has(d.kind) && "moved" in d && d.moved && "base" in d) this.restoreLive(d.base);
       this.drag = null;
       this.pinch = this.pinchState();
       return;
@@ -970,260 +984,232 @@ export class NfEditor extends LitElement {
       this.drag = { kind: "pan", last: local };
       return;
     }
-    const world = this.toWorld(...local);
-    const target = e.target as Element;
-    if (this.bg.level && this.isAdmin && this.floor?.background) {
-      // straighten: the second tap turns the picture so the tapped wall runs exactly along x or z
+    const press: Press = { local, world: this.toWorld(...local), target: e.target as Element, fine: e.altKey };
+    // the first of these that recognises what was pressed decides what the gesture is
+    const gesture = this.pressBackground(press) ?? this.pressWallTool(press) ?? this.pressRoofTools(press) ?? this.pressDrawingTool(press) ?? this.pressItem(press) ?? this.pressRoom(press);
+    if (gesture !== NO_GESTURE) this.drag = gesture;
+  }
+
+  /** The panning gesture: used when what was pressed cannot be moved (read-only, or fixed). */
+  private pan(press: Press): Drag {
+    return { kind: "pan", last: press.local };
+  }
+
+  /** A gesture that moves the thing pressed, or pans when the user may not change the plan. */
+  private moves<T extends Drag>(press: Press, gesture: T): Drag {
+    return this.isAdmin ? gesture : this.pan(press);
+  }
+
+  /** Straightening, measuring, and moving, scaling and turning the background picture. */
+  private pressBackground(press: Press): Gesture | undefined {
+    const { world, target } = press;
+    const background = this.floor?.background;
+    if (this.bg.level && this.isAdmin && background) {
       this.bg.tapLevel(world);
-      return;
+      return NO_GESTURE;
     }
-    if (this.bg.handlesShown && this.floor.background && target.closest("[data-bg-rotate]")) {
-      const bg = this.floor.background;
-      const img = this.bg.picture(bg.image_id);
-      const c = pictureCentre(bg, img?.aspect ?? 1);
-      this.drag = { kind: "bgrotate", base: this._doc, moved: false, start: Math.atan2(world[1] - c[1], world[0] - c[0]), rot: bg.rotation ?? 0 };
-      return;
+    if (this.bg.handlesShown && background && target.closest("[data-bg-rotate]")) {
+      const centre = pictureCentre(background, this.bg.picture(background.image_id)?.aspect ?? 1);
+      return { kind: "bgrotate", base: this._doc, moved: false, start: Math.atan2(world[1] - centre[1], world[0] - centre[0]), rot: background.rotation ?? 0 };
     }
-    if (this.bg.ruler && this.bg.ruler.length < 2 && this.isAdmin && this.floor?.background) {
-      // the ruler: two taps on a stretch of known length in the picture
+    if (this.bg.ruler && this.bg.ruler.length < 2 && this.isAdmin && background) {
       this.bg.tapRuler(world);
-      return;
+      return NO_GESTURE;
     }
-    if (this.bg.handlesShown && this.floor.background && !this.bg.edit && (target.closest("[data-bg-handle]") || target.closest("[data-bg]"))) {
-      // the background section is open: the picture moves and scales like furniture
-      const bg = this.floor.background;
-      this.drag = target.closest("[data-bg-handle]")
-        ? { kind: "bgscale", base: this._doc, moved: false }
-        : { kind: "bgmove", start: world, bx: bg.x, bz: bg.z, base: this._doc, moved: false };
-      return;
-    }
-    if (this.bg.edit && this.isAdmin && this.floor?.background) {
-      // the background picture: its corner scales it, its body moves it; anything else ends the editing
-      const bg = this.floor.background;
-      if (target.closest("[data-bg-handle]")) {
-        this.drag = { kind: "bgscale", base: this._doc, moved: false };
-        return;
-      }
-      if (target.closest("[data-bg]")) {
-        this.drag = { kind: "bgmove", start: world, bx: bg.x, bz: bg.z, base: this._doc, moved: false };
-        return;
-      }
+    const onPicture = !!target.closest("[data-bg-handle]") || !!target.closest("[data-bg]");
+    if (background && this.bg.handlesShown && !this.bg.edit && onPicture) return this.pictureGesture(press, background);
+    if (this.bg.edit && this.isAdmin && background) {
+      // anything but the picture ends the editing
+      if (onPicture) return this.pictureGesture(press, background);
       this.bg.edit = false;
     }
-    if (this._tool === "wall") {
-      const start = this.snap(world, undefined, e.altKey);
-      this.drag = { kind: "freewall", start, end: start };
-      return;
+    return undefined;
+  }
+
+  /** Its lower right corner scales the picture, and its body moves it. */
+  private pictureGesture(press: Press, background: Background): Drag {
+    if (press.target.closest("[data-bg-handle]")) return { kind: "bgscale", base: this._doc, moved: false };
+    return { kind: "bgmove", start: press.world, bx: background.x, bz: background.z, base: this._doc, moved: false };
+  }
+
+  private pressWallTool(press: Press): Gesture | undefined {
+    if (this._tool !== "wall") return undefined;
+    const start = this.snap(press.world, undefined, press.fine);
+    return { kind: "freewall", start, end: start };
+  }
+
+  /** The roof and energy tools: roof sections and their handles, solar fields, roof windows and energy devices. */
+  private pressRoofTools(press: Press): Gesture | undefined {
+    if (this._tool !== "roof" && this._tool !== "energy") return undefined;
+    const { local, world, target } = press;
+    const attribute = (selector: string, name: string) => target.closest(selector)?.getAttribute(name) ?? null;
+    const energy = this._tool === "energy";
+    const marker = energy ? attribute("[data-energy-device]", "data-energy-device") : null;
+    if (marker) return this.pressEnergyDevice(press, marker);
+    const turn = energy ? attribute("[data-solar-turn]", "data-solar-turn") : null;
+    if (turn && this.isAdmin) return { kind: "solarturn", id: turn, base: this._doc, moved: false };
+    const solar = energy ? attribute("[data-solar]", "data-solar") : null;
+    if (solar) return this.pressSolarField(press, solar);
+    const roofWindow = this._tool === "roof" ? attribute("[data-roofwin]", "data-roofwin") : null;
+    if (roofWindow) return this.pressRoofWindow(press, roofWindow);
+    if (this._tool === "roof") this.roof.windowId = null;
+    const device = energy ? attribute(".nf-energy-item", "data-furniture") : null;
+    if (device) return this.pressEnergyDevice(press, device);
+    if (energy) {
+      // beside the fields the energy tool only pans
+      this.selectItem("furniture", null);
+      this.roof.solarId = null;
+      return this.pan(press);
     }
-    if (this._tool === "roof" || this._tool === "energy") {
-      const corner = target.closest("[data-roof-corner]")?.getAttribute("data-roof-corner");
-      const vertex = target.closest("[data-roof-vertex]")?.getAttribute("data-roof-vertex");
-      const body = target.closest("[data-roof]")?.getAttribute("data-roof");
-      const marker = this._tool === "energy" ? target.closest("[data-energy-device]")?.getAttribute("data-energy-device") : null;
-      if (marker) {
-        // an energy device by its marker (above solar fields on the roof): selected and moved like furniture
-        this.roof.solarId = null;
-        this.selectItem("furniture", marker);
-        this.drag = this.isAdmin ? { kind: "furniture", id: marker, start: world, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
-        return;
-      }
-      const solar = this._tool === "energy" ? target.closest("[data-solar]")?.getAttribute("data-solar") : null;
-      const turn = this._tool === "energy" ? target.closest("[data-solar-turn]")?.getAttribute("data-solar-turn") : null;
-      if (turn && this.isAdmin) {
-        this.drag = { kind: "solarturn", id: turn, base: this._doc, moved: false };
-        return;
-      }
-      if (solar) {
-        const cell = target.closest("[data-cell]")?.getAttribute("data-cell");
-        // pick mode on the selected field: a tap switches the module on or off
-        if (this.roof.picking && solar === this.roof.solarId && cell && this.isAdmin) {
-          this.roof.toggleCell(cell);
-          this.drag = { kind: "pan", last: local };
-          return;
-        }
-        // otherwise: select the field and move it, also onto another roof face
-        if (solar !== this.roof.solarId) this.roof.picking = false;
-        this.roof.solarId = solar;
-        this.roof.sectionId = null;
-        const field = this._doc.settings.roof.solar?.find((x) => x.id === solar);
-        const face = field ? (fieldFace(this._doc, field) ?? undefined) : undefined;
-        const hit = face ? this.faceHit(face, world) : null;
-        const grab = field && hit ? { du: hit.u - field.u, ds: Number.isNaN(hit.s) ? 0 : hit.s - field.v } : null;
-        // solar fields are fittings like furniture: the plan lock (rooms, walls, openings) does not hold them
-        this.drag = this.isAdmin && !field?.locked ? { kind: "solarmove", id: solar, start: world, startScreen: local, base: this._doc, moved: false, grab } : { kind: "pan", last: local };
-        return;
-      }
-      const win = this._tool === "roof" ? target.closest("[data-roofwin]")?.getAttribute("data-roofwin") : null;
-      if (win) {
-        this.roof.windowId = win;
-        this.roof.sectionId = null;
-        const w = this._doc.settings.roof.windows?.find((x) => x.id === win);
-        const face = w ? roofFaces(this._doc).find((f) => f.key === w.face) : undefined;
-        const hit = face ? pointOnFace(face, world) : null;
-        const grab = w && hit ? { du: hit.u - w.u, ds: hit.s - w.v } : null;
-        this.drag = this.isAdmin && !w?.locked ? { kind: "solarmove", id: win, start: world, startScreen: local, base: this._doc, moved: false, grab, win: true } : { kind: "pan", last: local };
-        return;
-      }
-      if (this._tool === "roof") this.roof.windowId = null;
-      const device = this._tool === "energy" ? target.closest(".nf-energy-item")?.getAttribute("data-furniture") : null;
-      if (device) {
-        // an energy device (inverter, battery, wallbox): selected and moved like furniture
-        this.roof.solarId = null;
-        this.selectItem("furniture", device);
-        this.drag = this.isAdmin ? { kind: "furniture", id: device, start: world, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
-        return;
-      }
-      if (this._tool === "energy") {
-        // beside the fields the energy tool only pans the plan
-        this.selectItem("furniture", null);
-        this.roof.solarId = null;
-        this.drag = { kind: "pan", last: local };
-        return;
-      }
-      if (vertex && this.isAdmin) {
-        const [id, idx] = vertex.split(":");
-        this.drag = { kind: "roofvertex", id, index: Number(idx), base: this._doc, moved: false };
-      } else if (corner && this.isAdmin) {
-        const [id, cx, cz] = corner.split(":");
-        this.drag = { kind: "roofcorner", id, corner: [cx === "1" ? 1 : 0, cz === "1" ? 1 : 0], base: this._doc, moved: false };
-      } else if (body) {
-        const fixed = this.roof.isFixed(this._doc.settings.roof.sections?.find((x) => x.id === body));
-        if (fixed && this.roof.sectionId === body) this._fixedHint = true;
-        this.roof.sectionId = body;
-        this.drag = this.isAdmin && !fixed ? { kind: "roofmove", id: body, start: world, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
-      } else if (this.isAdmin) {
-        this.roof.sectionId = null;
-        const start = this.snap(world, undefined, e.altKey);
-        this.drag = { kind: "rect", start, end: start, roof: true };
-      } else this.drag = { kind: "pan", last: local };
-      return;
+    const vertex = attribute("[data-roof-vertex]", "data-roof-vertex");
+    const corner = attribute("[data-roof-corner]", "data-roof-corner");
+    const body = attribute("[data-roof]", "data-roof");
+    if (vertex && this.isAdmin) {
+      const [id, index] = vertex.split(":");
+      return { kind: "roofvertex", id, index: Number(index), base: this._doc, moved: false };
     }
-    if (this._tool === "rect" || this._tool === "outdoor" || this._tool === "hole") {
-      const start = this.snap(world, undefined, e.altKey);
-      this.drag = { kind: "rect", start, end: start, outdoor: this._tool === "outdoor", hole: this._tool === "hole" };
-      return;
+    if (corner && this.isAdmin) {
+      const [id, cx, cz] = corner.split(":");
+      return { kind: "roofcorner", id, corner: [cx === "1" ? 1 : 0, cz === "1" ? 1 : 0], base: this._doc, moved: false };
     }
-    if (this._tool === "polygon" || this._tool === "measure") {
-      this.drag = { kind: "tap", startScreen: local, last: local, panning: false };
-      return;
+    if (body) {
+      const fixed = this.roof.isFixed(this._doc.settings.roof.sections?.find((s) => s.id === body));
+      if (fixed && this.roof.sectionId === body) this._fixedHint = true;
+      this.roof.sectionId = body;
+      return this.isAdmin && !fixed ? { kind: "roofmove", id: body, start: world, startScreen: local, base: this._doc, moved: false } : this.pan(press);
     }
-    if (this._tool === "opening") {
-      if (!this.placeOpening(this._openingPreset, local)) this.drag = { kind: "pan", last: local };
-      return;
+    if (!this.isAdmin) return this.pan(press);
+    this.roof.sectionId = null;
+    const start = this.snap(world, undefined, press.fine);
+    return { kind: "rect", start, end: start, roof: true };
+  }
+
+  /** An energy device, by its marker or its furniture symbol: selected and moved like furniture. */
+  private pressEnergyDevice(press: Press, id: string): Drag {
+    this.roof.solarId = null;
+    this.selectItem("furniture", id);
+    return this.moves(press, { kind: "furniture", id, start: press.world, startScreen: press.local, base: this._doc, moved: false });
+  }
+
+  /** A solar field: a tap on a module in pick mode switches it, otherwise the field is selected and can be moved onto another face. */
+  private pressSolarField(press: Press, id: string): Drag {
+    const { local, world, target } = press;
+    const cell = target.closest("[data-cell]")?.getAttribute("data-cell");
+    if (this.roof.picking && id === this.roof.solarId && cell && this.isAdmin) {
+      this.roof.toggleCell(cell);
+      return this.pan(press);
     }
-    const deviceEl = target.closest("[data-device]");
-    if (deviceEl && this.isAdmin) {
-      this.drag = { kind: "device", entityId: deviceEl.getAttribute("data-device")!, start: world, startScreen: local, base: this._doc, moved: false };
-      return;
+    if (id !== this.roof.solarId) this.roof.picking = false;
+    this.roof.solarId = id;
+    this.roof.sectionId = null;
+    const field = this._doc.settings.roof.solar?.find((f) => f.id === id);
+    const face = field ? (fieldFace(this._doc, field) ?? undefined) : undefined;
+    const hit = face ? this.faceHit(face, world) : null;
+    const grab = field && hit ? { du: hit.u - field.u, ds: Number.isNaN(hit.s) ? 0 : hit.s - field.v } : null;
+    // solar fields are fittings like furniture: the plan lock does not hold them
+    return this.isAdmin && !field?.locked ? { kind: "solarmove", id, start: world, startScreen: local, base: this._doc, moved: false, grab } : this.pan(press);
+  }
+
+  private pressRoofWindow(press: Press, id: string): Drag {
+    this.roof.windowId = id;
+    this.roof.sectionId = null;
+    const w = this._doc.settings.roof.windows?.find((x) => x.id === id);
+    const face = w ? roofFaces(this._doc).find((f) => f.key === w.face) : undefined;
+    const hit = face ? pointOnFace(face, press.world) : null;
+    const grab = w && hit ? { du: hit.u - w.u, ds: hit.s - w.v } : null;
+    return this.isAdmin && !w?.locked ? { kind: "solarmove", id, start: press.world, startScreen: press.local, base: this._doc, moved: false, grab, win: true } : this.pan(press);
+  }
+
+  /** The tools that draw: rectangles, outdoor areas, floor openings, outlines, measuring, and placing doors and windows. */
+  private pressDrawingTool(press: Press): Gesture | undefined {
+    const tool = this._tool;
+    if (tool === "rect" || tool === "outdoor" || tool === "hole") {
+      const start = this.snap(press.world, undefined, press.fine);
+      return { kind: "rect", start, end: start, outdoor: tool === "outdoor", hole: tool === "hole" };
     }
-    const openingEl = target.closest("[data-opening]");
-    if (openingEl) {
-      const id = openingEl.getAttribute("data-opening")!;
-      this.selectItem("opening", id);
-      this.drag = this.isAdmin ? { kind: "opening", id, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
-      return;
+    if (tool === "polygon" || tool === "measure") return { kind: "tap", startScreen: press.local, last: press.local, panning: false };
+    if (tool === "opening") return this.placeOpening(this._openingPreset, press.local) ? NO_GESTURE : this.pan(press);
+    return undefined;
+  }
+
+  /** Pressing something in the plan: a device, opening, furniture and its handles, a room's corners, walls and outdoor areas. */
+  private pressItem(press: Press): Gesture | undefined {
+    const { local, world, target } = press;
+    const find = (selector: string, name: string) => target.closest(selector)?.getAttribute(name) ?? null;
+    const base = this._doc;
+    const device = find("[data-device]", "data-device");
+    if (device && this.isAdmin) return { kind: "device", entityId: device, start: world, startScreen: local, base, moved: false };
+    const opening = find("[data-opening]", "data-opening");
+    if (opening) {
+      this.selectItem("opening", opening);
+      return this.moves(press, { kind: "opening", id: opening, startScreen: local, base, moved: false });
     }
-    const resizeEl = target.closest("[data-resize]");
-    if (resizeEl && this.isAdmin) {
-      const [id, sx, sz] = resizeEl.getAttribute("data-resize")!.split(":");
-      this.drag = { kind: "resize", id, corner: [sx === "1" ? 1 : -1, sz === "1" ? 1 : -1], base: this._doc, moved: false };
-      return;
+    const resize = find("[data-resize]", "data-resize");
+    if (resize && this.isAdmin) {
+      const [id, sx, sz] = resize.split(":");
+      return { kind: "resize", id, corner: [sx === "1" ? 1 : -1, sz === "1" ? 1 : -1], base, moved: false };
     }
-    const rotateEl = target.closest("[data-rotate]");
-    if (rotateEl && this.isAdmin) {
-      this.drag = { kind: "rotate", id: rotateEl.getAttribute("data-rotate")!, base: this._doc, moved: false };
-      return;
+    const rotate = find("[data-rotate]", "data-rotate");
+    if (rotate && this.isAdmin) return { kind: "rotate", id: rotate, base, moved: false };
+    const aim = find("[data-aim]", "data-aim");
+    if (aim && this.isAdmin) return { kind: "aim", entityId: aim, base, moved: false };
+    const furniture = target.closest("[data-vertex], [data-mid]") ? null : find("[data-furniture]", "data-furniture");
+    if (furniture) {
+      this.selectItem("furniture", furniture);
+      return this.moves(press, { kind: "furniture", id: furniture, start: world, startScreen: local, base, moved: false });
     }
-    const aimEl = target.closest("[data-aim]");
-    if (aimEl && this.isAdmin) {
-      this.drag = { kind: "aim", entityId: aimEl.getAttribute("data-aim")!, base: this._doc, moved: false };
-      return;
+    const corner = find("[data-vertex]", "data-vertex");
+    const edge = find("[data-mid]", "data-mid");
+    if (corner !== null && this.room && this.isAdmin) {
+      this.sel.corner = Number(corner);
+      return { kind: "vertex", roomId: this.room.id, index: this.sel.corner, base, moved: false };
     }
-    const furnitureEl = target.closest("[data-furniture]");
-    if (furnitureEl && !target.closest("[data-vertex], [data-mid]")) {
-      const id = furnitureEl.getAttribute("data-furniture")!;
-      this.selectItem("furniture", id);
-      this.drag = this.isAdmin ? { kind: "furniture", id, start: world, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
-      return;
+    if (edge !== null && this.room && this.isAdmin) return this.splitEdgeGesture(this.room, Number(edge));
+    const wallEnd = find("[data-wall-end]", "data-wall-end");
+    if (wallEnd && this.isAdmin) {
+      const [id, end] = wallEnd.split(":");
+      return { kind: "wallmove", id, end: end as "a" | "b", start: world, startScreen: local, base, moved: false };
     }
-    const vertexEl = target.closest("[data-vertex]");
-    const midEl = target.closest("[data-mid]");
-    if (vertexEl && this.room && this.isAdmin) {
-      this.sel.corner = Number(vertexEl.getAttribute("data-vertex"));
-      this.drag = { kind: "vertex", roomId: this.room.id, index: this.sel.corner, base: this._doc, moved: false };
-      return;
+    const freeWall = find("[data-free-wall]", "data-free-wall");
+    if (freeWall) {
+      this.selectItem("wall", freeWall);
+      return this.moves(press, { kind: "wallmove", id: freeWall, end: null, start: world, startScreen: local, base, moved: false });
     }
-    if (midEl && this.room && this.isAdmin) {
-      const i = Number(midEl.getAttribute("data-mid"));
-      const pts = this.room.points;
-      const a = pts[i];
-      const b = pts[(i + 1) % pts.length];
-      const mid: Vec2 = [round((a[0] + b[0]) / 2), round((a[1] + b[1]) / 2)];
-      const base = this._doc;
-      const roomId = this.room.id;
-      // no history here: the pointer-up records the state before the insert
-      this.change(
-        (_, floor) => {
-          const target = floor.rooms.find((r) => r.id === roomId)!;
-          target.points.splice(i + 1, 0, mid);
-          // both halves of the split edge keep its wall height
-          if (target.wall_heights) target.wall_heights.splice(i + 1, 0, target.wall_heights[i] ?? null);
-          if (target.wall_thickness) target.wall_thickness.splice(i + 1, 0, target.wall_thickness[i] ?? null);
-          const first = Math.hypot(mid[0] - a[0], mid[1] - a[1]);
-          for (const o of floor.openings) {
-            if (o.room_id !== roomId || o.wall) continue;
-            if (o.edge > i) o.edge += 1;
-            else if (o.edge === i && o.offset > first) {
-              o.edge = i + 1;
-              o.offset = round(o.offset - first);
-            }
-          }
-        },
-        base,
-        false,
-      );
-      this.sel.corner = i + 1;
-      this.drag = { kind: "vertex", roomId, index: i + 1, base, moved: true };
-      return;
+    const outVertex = find("[data-out-vertex]", "data-out-vertex");
+    if (outVertex && this.isAdmin) {
+      const [id, index] = outVertex.split(":");
+      return { kind: "outvertex", id, index: Number(index), base, moved: false };
     }
-    const wallEndEl = target.closest("[data-wall-end]");
-    if (wallEndEl && this.isAdmin) {
-      const [id, end] = wallEndEl.getAttribute("data-wall-end")!.split(":");
-      this.drag = { kind: "wallmove", id, end: end as "a" | "b", start: world, startScreen: local, base: this._doc, moved: false };
-      return;
+    const outdoor = find("[data-outdoor]", "data-outdoor");
+    if (outdoor && !target.closest("[data-room]") && !this.roomAt(world)) {
+      this.selectItem("outdoor", outdoor);
+      return this.moves(press, { kind: "outdoor", id: outdoor, start: world, startScreen: local, base, moved: false });
     }
-    const freeWallEl = target.closest("[data-free-wall]");
-    if (freeWallEl) {
-      const id = freeWallEl.getAttribute("data-free-wall")!;
-      this.selectItem("wall", id);
-      this.drag = this.isAdmin ? { kind: "wallmove", id, end: null, start: world, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
-      return;
+    return undefined;
+  }
+
+  /** The "+" in the middle of an edge: inserts a corner there and starts dragging it. */
+  private splitEdgeGesture(room: Room, edge: number): Drag {
+    const [a, b] = [room.points[edge], room.points[(edge + 1) % room.points.length]];
+    const middle = shifted([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], [0, 0]);
+    const base = this._doc;
+    // no history entry here: releasing the pointer records the state before the insert
+    this.change((_, floor) => insertCorner(floor, room.id, edge, middle), base, false);
+    this.sel.corner = edge + 1;
+    return { kind: "vertex", roomId: room.id, index: edge + 1, base, moved: true };
+  }
+
+  /** What is left: a room (selected, and moved unless furnishing), or nothing, which pans. */
+  private pressRoom(press: Press): Gesture {
+    const roomId = press.target.closest("[data-room]")?.getAttribute("data-room") ?? this.roomAt(press.world);
+    if (!roomId) {
+      this.selectItem("room", null);
+      return this.pan(press);
     }
-    const outVertexEl = target.closest("[data-out-vertex]");
-    if (outVertexEl && this.isAdmin) {
-      const [id, i] = outVertexEl.getAttribute("data-out-vertex")!.split(":");
-      this.drag = { kind: "outvertex", id, index: Number(i), base: this._doc, moved: false };
-      return;
-    }
-    const outdoorEl = target.closest("[data-outdoor]");
-    if (outdoorEl && !target.closest("[data-room]") && !this.roomAt(world)) {
-      const id = outdoorEl.getAttribute("data-outdoor")!;
-      this.selectItem("outdoor", id);
-      this.drag = this.isAdmin ? { kind: "outdoor", id, start: world, startScreen: local, base: this._doc, moved: false } : { kind: "pan", last: local };
-      return;
-    }
-    const roomId = target.closest("[data-room]")?.getAttribute("data-room") ?? this.roomAt(world);
-    if (roomId) {
-      if (roomId !== this.sel.room) this.sel.corner = null;
-      this.selectItem("room", roomId);
-      this.drag =
-        this.isAdmin && this._tool !== "furniture"
-        ? { kind: "room", roomId, start: world, startScreen: local, base: this._doc, moved: false }
-        : { kind: "pan", last: local };
-      return;
-    }
-    this.selectItem("room", null);
-    this.drag = { kind: "pan", last: local };
+    if (roomId !== this.sel.room) this.sel.corner = null;
+    this.selectItem("room", roomId);
+    if (!this.isAdmin || this._tool === "furniture") return this.pan(press);
+    return { kind: "room", roomId, start: press.world, startScreen: press.local, base: this._doc, moved: false };
   }
 
   private onPointerMove(e: PointerEvent): void {

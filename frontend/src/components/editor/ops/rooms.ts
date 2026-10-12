@@ -95,3 +95,25 @@ export function evenCeilingLights(room: Room, placements: readonly Placement[]):
     return { entityId: light.entity_id, x: thousandths(box.x0 + (width / inRow) * (column + 0.5)), z: thousandths(box.z0 + (depth / rows) * (row + 0.5)) };
   });
 }
+
+/**
+ * Puts a new corner on an edge. Both halves keep the edge's wall height and thickness, and openings on the edge stay where they were
+ * on the half that now holds them.
+ */
+export function insertCorner(floor: Floor, roomId: string, edge: number, at: Vec2): void {
+  const room = floor.rooms.find((r) => r.id === roomId);
+  if (!room) return;
+  const start = room.points[edge];
+  room.points.splice(edge + 1, 0, at);
+  room.wall_heights?.splice(edge + 1, 0, room.wall_heights[edge] ?? null);
+  room.wall_thickness?.splice(edge + 1, 0, room.wall_thickness[edge] ?? null);
+  const firstHalf = Math.hypot(at[0] - start[0], at[1] - start[1]);
+  for (const o of floor.openings) {
+    if (o.room_id !== roomId || o.wall) continue;
+    if (o.edge > edge) o.edge += 1;
+    else if (o.edge === edge && o.offset > firstHalf) {
+      o.edge = edge + 1;
+      o.offset = thousandths(o.offset - firstHalf);
+    }
+  }
+}

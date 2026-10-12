@@ -7,7 +7,6 @@
 
 import {
   AdditiveBlending,
-  
   Box3,
   type Object3D,
   CanvasTexture,
@@ -19,11 +18,9 @@ import {
   LineSegments,
   Mesh,
   MeshBasicMaterial,
-  MultiplyBlending,
   OrthographicCamera,
   PerspectiveCamera,
   Points,
-  PointsMaterial,
   PlaneGeometry,
   Raycaster,
   RepeatWrapping,
@@ -44,9 +41,13 @@ import type { Building, Floor, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
 import { centroid, pointInPolygon, openingStyle, WALL_LAMP_Y } from "../model.ts";
 import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
+import { LAMP_SIZE, HANGING_LAMPS } from "./scene/lamp-data.ts";
+import { lightSourcesOf } from "./scene/light-sources.ts";
+import { makeFloorMaterials, type FloorMaterials } from "./scene/materials.ts";
+import { createDevicePin, type PinHooks } from "./scene/pins.ts";
 import { buildFloorGeometry, SLAB, stairHoles, type FloorGeometry } from "./build.ts";
 import { OrbitControls, type OrbitView } from "./controls.ts";
-import { makeFoldable, type FoldMasks } from "./fold.ts";
+import { type FoldMasks } from "./fold.ts";
 import { pushCameraModel, pushPackLamp, screenRect, pushFridgeDoors } from "./furniture.ts";
 import { hasMesh, mountBase, packItem, setMeshSource, setPacks, type FurniturePack, type MeshSource } from "../packs.ts";
 import { withVehicles } from "../parking.ts";
@@ -56,7 +57,7 @@ import { accentOnUniform, accentUniform, parseAccent, lineBlending, themed, them
 
 export type { Theme } from "./theme.ts";
 import { ALWAYS, DEG, GeoBuffer, LineBuffer, pushPrism } from "./geo.ts";
-import { buildLightSurface, lightColors, roomIndexAt, type LightKind, type LightSource, type LightSurface, zoneOf } from "./lighting.ts";
+import { buildLightSurface, lightColors, type LightSurface } from "./lighting.ts";
 import { buildOpeningParts, CLOSED, type OpeningState } from "./openings.ts";
 import { WeatherLayer, type SkyView } from "./live-weather.ts";
 import { EnergyLayer, type EnergyArc, type PlanPoint, type SparkField } from "./live-energy.ts";
@@ -257,52 +258,15 @@ const BELOW_OPACITY = 0.22;
 const FLOOR_TAU = 140;
 /** Grid cells across the ground texture. */
 const GROUND_CELLS = 32;
-/** Press duration that counts as a long press (ms). */
-const HOLD_MS = 500;
 /** Time constant of window and blind movements (ms). */
 const OPENING_TAU = 160;
 const LAMP_BODY = 0x2a3a60;
 const LAMP_SHADE = 0x1d2946;
 /** Lamps that hang from the ceiling (hidden in the cut view). */
-/** LED strips mounted below this height (metres) light upwards instead of down. */
-const LOW_STRIP = 1.0;
-const HANGING = new Set<LampModel>(["ceiling", "downlight", "spot", "panel", "pendant", "strip"]);
 const FLASH_MS = 450;
 const EFFECT_MS = 125;
 /** Turns of the colour wheel per second while a colour effect runs. */
 const EFFECT_SPEED = 0.08;
-const LAMP_SIZE: Record<LampModel, [number, number, number]> = {
-  ceiling: [0.4, 0.4, 0.08],
-  downlight: [0.1, 0.1, 0.02],
-  spot: [0.1, 0.1, 0.14],
-  panel: [0.6, 0.6, 0.03],
-  uplight: [0.35, 0.35, 1.8],
-  bollard: [0.16, 0.16, 0.8],
-  garden: [0.12, 0.12, 0.3],
-  pendant: [0.4, 0.4, 0.8],
-  floor: [0.42, 0.42, 1.7],
-  table: [0.26, 0.26, 0.45],
-  wall: [0.22, 0.12, 0.2],
-  strip: [2, 0.04, 0.03],
-};
-
-interface FloorMaterials {
-  floor: MeshBasicMaterial;
-  pattern: MeshBasicMaterial;
-  wall: MeshBasicMaterial;
-  glassWall: MeshBasicMaterial;
-  shadow: MeshBasicMaterial;
-  lines: LineBasicMaterial;
-  glow: MeshBasicMaterial;
-  frames: MeshBasicMaterial;
-  glass: MeshBasicMaterial;
-  blinds: MeshBasicMaterial;
-  /** Energiefluss: the living overlay of the solar fields on this floor (garden, walls). */
-  lamps: MeshBasicMaterial;
-  halos: PointsMaterial;
-  cones: MeshBasicMaterial;
-  screens: MeshBasicMaterial;
-}
 
 interface FloorView {
   floor: Floor;
@@ -493,6 +457,21 @@ export class NextFloorViewer {
   /** Furnishing: the selected device, the pin a pointer just went down on, and a device being dragged. */
   private selectedDevice: string | null = null;
   private pendingDevice: string | null = null;
+  /** What the device pins ask of this viewer. */
+  private readonly pinHooks: PinHooks = {
+    furnishing: () => this.furnish,
+    pressedWhileFurnishing: (id) => (this.pendingDevice = id),
+    selectWhileFurnishing: (id) => {
+      this.selectDevice(id);
+      this.options.onDeviceSelect?.(id);
+    },
+    centre: (pin) => {
+      const [box, area] = [pin.getBoundingClientRect(), this.host.getBoundingClientRect()];
+      return { x: box.left + box.width / 2 - area.left, y: box.top + box.height / 2 - area.top };
+    },
+    tap: (id, x, y) => this.options.onDeviceTap?.(id, x, y),
+    hold: (id, x, y) => this.options.onDeviceHold?.(id, x, y),
+  };
   private deviceGrab: { id: string; floorId: string; offset: [number, number]; x: number; z: number; moved: boolean } | null = null;
   private grab: { floorId: string; id: string; offset: [number, number]; x: number; z: number; moved: boolean } | null = null;
   private ghost: LineSegments | null = null;
@@ -713,7 +692,7 @@ export class NextFloorViewer {
       seen.add(d.id);
       let pin = this.devicePins.get(d.id);
       if (!pin) {
-        pin = { el: this.makeDevicePin(d.id), icon: "", text: "", watt: "", label: "", active: false, unavailable: false, glow: "", caption: "" };
+        pin = { el: createDevicePin(d.id, this.pinHooks), icon: "", text: "", watt: "", label: "", active: false, unavailable: false, glow: "", caption: "" };
         this.devicePins.set(d.id, pin);
         this.labels.append(pin.el);
       }
@@ -1191,66 +1170,6 @@ export class NextFloorViewer {
     for (const el of [...this.labels.children]) if (!(el as HTMLElement).dataset.entity) el.remove();
   }
 
-  private makeDevicePin(entityId: string): HTMLButtonElement {
-    const pin = document.createElement("button");
-    pin.className = "nf-dev";
-    pin.dataset.entity = entityId;
-    const icon = document.createElement("span");
-    icon.className = "nf-dev-icon";
-    const text = document.createElement("span");
-    text.className = "nf-dev-text";
-    const watt = document.createElement("span");
-    watt.className = "nf-dev-watt";
-    const name = document.createElement("span");
-    name.className = "nf-dev-name";
-    pin.append(icon, text, watt, name);
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let held = false;
-    pin.addEventListener("pointerdown", (e) => {
-      if (this.furnish) {
-        // the controls see this pointer too (no stopPropagation) and call grab(): the device is dragged
-        this.pendingDevice = entityId;
-        return;
-      }
-      e.stopPropagation();
-      held = false;
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        held = true;
-        const r = pin.getBoundingClientRect();
-        const h = this.host.getBoundingClientRect();
-        this.options.onDeviceHold?.(entityId, r.left + r.width / 2 - h.left, r.top + r.height / 2 - h.top);
-      }, HOLD_MS);
-    });
-    const cancel = () => clearTimeout(timer);
-    pin.addEventListener("pointerleave", cancel);
-    pin.addEventListener("pointercancel", cancel);
-    pin.addEventListener("pointerup", cancel);
-    pin.addEventListener("contextmenu", (e) => e.preventDefault());
-    pin.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (this.furnish) {
-        this.selectDevice(entityId);
-        this.options.onDeviceSelect?.(entityId);
-        return;
-      }
-      if (held) return;
-      const r = pin.getBoundingClientRect();
-      const h = this.host.getBoundingClientRect();
-      this.options.onDeviceTap?.(entityId, r.left + r.width / 2 - h.left, r.top + r.height / 2 - h.top);
-    });
-    pin.addEventListener("keydown", (e) => {
-      // keyboard: Enter acts like a tap; Shift+Enter or the context-menu key opens the details
-      if ((e.key === "Enter" && e.shiftKey) || e.key === "ContextMenu") {
-        e.preventDefault();
-        const r = pin.getBoundingClientRect();
-        const h = this.host.getBoundingClientRect();
-        this.options.onDeviceHold?.(entityId, r.left + r.width / 2 - h.left, r.top + r.height / 2 - h.top);
-      }
-    });
-    return pin;
-  }
-
   /** Light cones of the lights that are on, merged into one mesh per floor. */
   /** Light surface of a floor (rebuilt with the floor plan and when the detail level changes). */
   private buildLightSurface(fv: FloorView): void {
@@ -1286,55 +1205,11 @@ export class NextFloorViewer {
     this.buildGlow(fv);
   }
 
-  /** Light sources of the lights that are on, with the height and characteristic of their lamp. */
-  private lightSources(fv: FloorView): LightSource[] {
-    const H = fv.floor.height;
-    const out: LightSource[] = [];
-    for (const d of this.devices) {
-      const glow = this.glowOf(d);
-      if (d.floorId !== fv.floor.id || !glow) continue;
-      const ri = roomIndexAt(fv.floor, d.x, d.z);
-      const room = zoneOf(fv.lightZones, ri);
-      const [w, , h] = d.size ?? (d.lamp ? LAMP_SIZE[d.lamp] : [0.3, 0.3, 0.3]);
-      const base = d.base ?? 0;
-      const kinds: Record<LampModel, [number, LightKind]> = {
-        ceiling: [H - 0.12, "ceiling"],
-        downlight: [H - 0.03, "spot"],
-        spot: [H - h, "spot"],
-        panel: [H - 0.05, "ceiling"],
-        pendant: [Math.max(0.5, H - h), "pendant"],
-        floor: [base + h - 0.15, "omni"],
-        uplight: [base + h, "up"],
-        table: [base + h - 0.1, "omni"],
-        wall: [base + 0.1, "wall"],
-        // a strip under the ceiling or the wall cabinets shines down; one low down (skirting,
-        // behind a cabinet) washes the wall and the floor around it from below
-        strip: [base + Math.max(0.02, h) - 0.01, base < LOW_STRIP ? "up" : "ceiling"],
-        bollard: [base + h - 0.08, "ceiling"],
-        garden: [base + h, "up"],
-      };
-      const [y0, kind] = d.lamp ? kinds[d.lamp] : [d.y, "omni" as LightKind];
-      const y = d.lightY ?? y0;
-      const color = glow.color;
-      if (d.lamp === "strip") {
-        // a strip lights along its length: three sources spread over it; standing upright they climb,
-        // and a strip turned on its side (or standing) lights all around rather than up or down
-        const a = (d.rotation ?? 0) * DEG;
-        const sideways = !!d.upright || Math.abs(d.roll ?? 0) > 45;
-        for (const t of [-1 / 3, 0, 1 / 3]) {
-          if (d.upright) out.push({ x: d.x, y: base + w * (0.5 + t), z: d.z, color, level: glow.level * 0.55, kind: "omni", room });
-          else out.push({ x: d.x + Math.cos(a) * w * t, y, z: d.z + Math.sin(a) * w * t, color, level: glow.level * 0.55, kind: sideways ? "omni" : kind, room });
-        }
-      } else out.push({ x: d.x, y, z: d.z, color, level: glow.level, kind, room });
-    }
-    return out;
-  }
-
   /** Colours of the light surface for the current lights and doors. */
   private buildGlow(fv: FloorView): void {
     const surface = fv.lightSurface;
     if (!surface) return;
-    const sources = this.lightSources(fv);
+    const sources = lightSourcesOf(fv.floor, fv.lightZones, this.devices, (d) => this.glowOf(d));
     const doorOpen = surface.doors.map((d) => {
       const info = fv.geo.openings.find((i) => i.opening.id === d.id);
       if (info && openingStyle(info.opening, info.exterior) === "passage") return 1;
@@ -1379,63 +1254,6 @@ export class NextFloorViewer {
     fv.glowMesh.visible = n > 0;
   }
 
-  private makeMaterials(mask: FoldMasks): FloorMaterials {
-    return {
-      floor: themed(new MeshBasicMaterial({ vertexColors: true }), this.themeUniform),
-      pattern: patternMaterial(this.patternTexture),
-      wall: themed(makeFoldable(new MeshBasicMaterial({ vertexColors: true }), mask, "solid"), this.themeUniform),
-      glassWall: makeFoldable(new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }), mask, "glass"),
-      // result = floor colour * vertex colour (white leaves the floor untouched)
-      shadow: new MeshBasicMaterial({
-        vertexColors: true,
-        blending: MultiplyBlending,
-        premultipliedAlpha: true,
-        transparent: true,
-        depthWrite: false,
-        side: DoubleSide,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-      }),
-      lines: themed(
-        makeFoldable(new LineBasicMaterial({ vertexColors: true, transparent: true, blending: lineBlending(this.theme), depthWrite: false }), mask),
-        this.themeUniform,
-        true,
-      ),
-      // light on floors and walls follows cut and glass walls like the walls themselves
-      glow: makeFoldable(
-        new MeshBasicMaterial({
-          vertexColors: true,
-          transparent: true,
-          blending: AdditiveBlending,
-          depthWrite: false,
-          side: DoubleSide,
-          polygonOffset: true,
-          polygonOffsetFactor: -3,
-        }),
-        mask,
-        "solid",
-      ),
-      frames: themed(makeFoldable(new MeshBasicMaterial({ vertexColors: true, side: DoubleSide }), mask), this.themeUniform),
-      glass: makeFoldable(
-        new MeshBasicMaterial({ vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide }),
-        mask,
-      ),
-      blinds: themed(makeFoldable(new MeshBasicMaterial({ map: this.blindTexture, vertexColors: true, side: DoubleSide }), mask), this.themeUniform),
-      lamps: themed(new MeshBasicMaterial({ vertexColors: true }), this.themeUniform),
-      halos: new PointsMaterial({
-        map: this.haloTexture,
-        size: 0.9,
-        sizeAttenuation: true,
-        vertexColors: true,
-        transparent: true,
-        blending: AdditiveBlending,
-        depthWrite: false,
-      }),
-      cones: new MeshBasicMaterial({ vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide }),
-      screens: new MeshBasicMaterial({ vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide }),
-    };
-  }
-
   private rebuild(): void {
     const previous = new Map(this.floors.map((f) => [f.floor.id, { y: f.y, o: f.o }]));
     const previousOpenings = new Map(this.floors.map((f) => [f.floor.id, f.openings]));
@@ -1467,7 +1285,7 @@ export class NextFloorViewer {
         : undefined;
       const geo = buildFloorGeometry(withVehicles(floor, this.parked), b.settings.wall_exterior, b.settings.wall_interior, stairHoles(b.floors, floor), garden, roofUnder);
       const mask: FoldMasks = { standing: { value: 0xffff }, glass: { value: 0 } };
-      const materials = this.makeMaterials(mask);
+      const materials = makeFloorMaterials({ mask, look: this.themeUniform, theme: this.theme, textures: { pattern: this.patternTexture, blinds: this.blindTexture, halo: this.haloTexture } });
       const group = new Group();
       const floorMesh = new Mesh(geo.floor, materials.floor);
       const shadowMesh = new Mesh(geo.shadow, materials.shadow);
@@ -1923,7 +1741,7 @@ export class NextFloorViewer {
       const H = fv.floor.height;
       for (const d of lamps) {
         // hanging lamps (and ceiling cameras) would float above cut walls
-        const hanging = d.lamp === "strip" ? (d.base ?? H) > Math.min(fv.floor.cut_height, H) : d.lamp ? HANGING.has(d.lamp) : d.model === "camera_ceiling";
+        const hanging = d.lamp === "strip" ? (d.base ?? H) > Math.min(fv.floor.cut_height, H) : d.lamp ? HANGING_LAMPS.has(d.lamp) : d.model === "camera_ceiling";
         if ((!d.lamp && !d.model) || (hanging && this.wallMode === "cut")) continue;
         const start = buf.count;
         const packed = d.pack ? packItem(d.pack) : undefined;
@@ -2094,7 +1912,7 @@ export class NextFloorViewer {
       }
       const glow = this.glowOf(d);
       if (d.floorId !== fv.floor.id || !d.lamp || !glow) continue;
-      if (HANGING.has(d.lamp) && this.wallMode === "cut") continue;
+      if (HANGING_LAMPS.has(d.lamp) && this.wallMode === "cut") continue;
       const [w, dd, h] = d.size ?? LAMP_SIZE[d.lamp];
       const base = d.base ?? 0;
       const ang = (d.rotation ?? 0) * DEG;
@@ -3228,35 +3046,6 @@ function makePatternTexture(): CanvasTexture {
   tex.anisotropy = 4;
   tex.colorSpace = SRGBColorSpace;
   return tex;
-}
-
-/** Additive floor pattern: picks the atlas tile per vertex and repeats it every metre. */
-function patternMaterial(texture: CanvasTexture): MeshBasicMaterial {
-  const m = new MeshBasicMaterial({
-    map: texture,
-    transparent: true,
-    blending: AdditiveBlending,
-    depthWrite: false,
-    polygonOffset: true,
-    polygonOffsetFactor: -2,
-  });
-  m.onBeforeCompile = (shader) => {
-    shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nattribute vec2 tile;\nvarying vec2 vNfTile;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvNfTile = tile;");
-    shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vNfTile;").replace(
-      "#include <map_fragment>",
-      `#ifdef USE_MAP
-        vec2 nfCell = fract(vMapUv);
-        vec2 nfUv = (vNfTile + 0.004 + nfCell * 0.992) / vec2(3.0, 2.0);
-        // gradients of the unwrapped coordinates avoid mip seams at the tile borders
-        vec4 sampledDiffuseColor = textureGrad(map, nfUv, dFdx(vMapUv) / vec2(3.0, 2.0), dFdy(vMapUv) / vec2(3.0, 2.0));
-        diffuseColor *= sampledDiffuseColor;
-      #endif`,
-    );
-  };
-  m.customProgramCacheKey = () => "nf-pattern";
-  return m;
 }
 
 /** Blind slats: dark stripes with a faint cyan edge, repeated along v. */

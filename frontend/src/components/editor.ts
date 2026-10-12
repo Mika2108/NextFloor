@@ -2,13 +2,11 @@
 
 import { html, LitElement, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
 import { fetchImage, storeImage } from "../api.ts";
-import { areaEntities, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, groupByDevice, hasScreen, isPlaceable, isRoomClimateSensor, kindOf, otherAreaEntities, roomClimateSensors, unassignedEntities, type ClimateKey } from "../devices.ts";
+import { areaEntities, defaultHeight, entityName, kindOf } from "../devices.ts";
 import { furnitureSymbol } from "./furniture2d.ts";
 import { closeGaps, suggestedThickness } from "../geometry/gaps.ts";
 import { keepInRoom, snapToWall } from "../geometry/snap.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
-import { cameraMotionSensors, detectionKind } from "../markers.ts";
-import { TOGGLE_KINDS } from "../devices.ts";
 import { polygonBox } from "../roof-sections.ts";
 import { clampField, faceAt, fieldFace, pointOnFace, roofFaces, turnGroundField, fieldCenter, wallFaces, windowAsField, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
@@ -27,7 +25,6 @@ import {
   FURNITURE_GROUPS,
   ENERGY_DEVICES,
   type StartView,
-  FURNITURE_TYPES,
   canLift,
   isFixed,
   isLamp,
@@ -52,7 +49,6 @@ import {
   type Furniture,
   type LampMount,
   type SolarField,
-  type MarkerShow,
   type OutdoorArea,
   type OutdoorType,
   type Placement,
@@ -68,8 +64,7 @@ import { renderFavorites, renderPresence, renderStartView } from "./editor/forms
 import { BackupService } from "./editor/backup.ts";
 import { renderBackup } from "./editor/forms/backup.ts";
 import { renderSettings, type SettingsActions } from "./editor/forms/settings.ts";
-import { entityOptions, isNumeric as numberish, type EntityOption } from "./editor/entities.ts";
-import { entityField, glowField, iconField, markerField, numberField } from "./editor/fields.ts";
+import { numberField } from "./editor/fields.ts";
 import { renderEnergyBalance, renderEnergyChecklist, renderEnergyDevices, renderEnergyTeaser, renderHelpLinks, type EnergyActions } from "./editor/forms/energy.ts";
 import { energyMarkersLayer, headroomLayer, roofSectionsLayer, roofWindowsLayer, solarLayer } from "./editor/canvas/roof-layers.ts";
 import type { CanvasContext } from "./editor/canvas/context.ts";
@@ -77,6 +72,8 @@ import { backgroundLayer } from "./editor/canvas/background.ts";
 import { BackgroundTool, readPictureInBrowser } from "./editor/background-tool.ts";
 import { renderBackgroundForm } from "./editor/forms/background.ts";
 import { dragRotation, pictureCentre, pictureLocal } from "./editor/ops/background.ts";
+import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
+import { renderDeviceForm, type DeviceActions } from "./editor/forms/device.ts";
 import { renderFurnitureForm, type FurnitureActions } from "./editor/forms/furniture.ts";
 import { renderOpeningForm, type OpeningActions } from "./editor/forms/opening.ts";
 import { renderRoofPanel } from "./editor/forms/roof.ts";
@@ -103,7 +100,7 @@ import type { HassFloor, HomeAssistant } from "../types.ts";
 import { load3d } from "../load3d.ts";
 import type { WallMode } from "../viewer/viewer3d.ts";
 import { furnitureName } from "../furniture-names.ts";
-import { furnitureSize, isElectric, isPackType, mountBase, packItemName, packName, packType, setPacks, type FurniturePack } from "../packs.ts";
+import { furnitureSize, isElectric, mountBase, packItemName, packName, packType, setPacks, type FurniturePack } from "../packs.ts";
 
 /** Items that can be fixed against moving. */
 type FixKind = "room" | "opening" | "furniture" | "device" | "wall" | "outdoor";
@@ -165,12 +162,9 @@ export class NfEditor extends LitElement {
     _sidePinned: { state: true },
     _sideOpen: { state: true },
     _floorId: { state: true },
-    _deviceQuery: { state: true },
-    _devSource: { state: true },
     _energyNote: { state: true },
     _furnQuery: { state: true },
     _libOpen: { state: true },
-    _expanded: { state: true },
     _ctx: { state: true },
     _fixedHint: { state: true },
     _openingPreset: { state: true },
@@ -208,16 +202,11 @@ export class NfEditor extends LitElement {
   private declare _sidePinned: boolean;
   private declare _sideOpen: boolean;
   private declare _floorId: string | null;
-  private declare _deviceQuery: string;
-  /** Which devices the room form lists: its own area, other areas, or entities without an area. */
-  private declare _devSource: "area" | "other" | "none";
   /** What the import from the energy dashboard did (shown under its button). */
   private declare _energyNote: string | null;
   /** Furniture library: the search text, and which sections are open (built-in groups and packs). */
   private declare _furnQuery: string;
   private declare _libOpen: Set<string>;
-  /** Devices whose further entities are unfolded in the device list. */
-  private declare _expanded: Set<string>;
   /** Open context menu (right-click, long press) at a plan point, for one item. */
   private declare _ctx: { x: number; y: number; kind: FixKind; id: string } | null;
   /** A drag on a fixed item was turned into panning: the hint line says why. */
@@ -269,8 +258,6 @@ export class NfEditor extends LitElement {
     super();
     this.narrow = false;
     this._floorId = null;
-    this._deviceQuery = "";
-    this._devSource = "area";
     this.roof.sectionId = null;
     this.roof.solarId = null;
     this.roof.picking = false;
@@ -284,7 +271,6 @@ export class NfEditor extends LitElement {
     } catch {
       // no storage: the defaults stand
     }
-    this._expanded = new Set();
     this._openingPreset = "door";
     let split = false;
     try {
@@ -325,6 +311,31 @@ export class NfEditor extends LitElement {
 
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
     return translate(this.hass, key, vars);
+  }
+
+  private deviceActions(): DeviceActions {
+    return {
+      update: (patch) => this.updateDevice(patch),
+      centre: () => this.centreDevice(),
+      remove: () => {
+        this.removeDevice(this.sel.device ?? "");
+        this.sel.device = null;
+      },
+      asFurniture: (placed, type) => this.deviceToFurniture(placed, type),
+      packs: this.packs ?? [],
+      lockButton: this.fixButton("device", this.sel.device ?? ""),
+    };
+  }
+
+  private deviceListActions(): DeviceListActions {
+    return {
+      select: (id) => this.selectItem("device", id),
+      place: (ids) => this.placeDevices(ids),
+      remove: (id) => this.removeDevice(id),
+      patchRoom: (patch) => this.updateRoom(patch),
+      spreadLights: (room) => this.spreadCeilingLights(room),
+      confirm: (text) => confirm(text),
+    };
   }
 
   private furnitureActions(): FurnitureActions {
@@ -2107,7 +2118,7 @@ export class NfEditor extends LitElement {
       placeSpots: () => this.placeSpots(room),
       lockButton: this.fixButton("room", room.id),
       wallHeights: this.renderEdgeHeights(room),
-      climate: this.renderRoomClimate(room),
+      climate: renderRoomClimate(this.host, room, (patch) => this.updateRoom(patch)),
       corner: this.sel.corner,
     };
   }
@@ -2351,24 +2362,10 @@ export class NfEditor extends LitElement {
 
   // ------------------------------------------------------------------ helpers the forms of this file still share
 
-  private entityOptions(accept: (id: string) => boolean) {
-    return entityOptions(this.hass, accept);
-  }
+  // ------------------------------------------------------------------ helpers the forms of this file still share
 
   private num(label: string, value: number, onChange: (v: number) => void, step = 0.01, min?: number) {
     return numberField(this.host, label, value, onChange, step, min);
-  }
-
-  private entitySelect(label: string, value: string | null, auto: string | null | undefined, options: EntityOption[], onChange: (v: string | null) => void) {
-    return entityField(this.host, label, value, auto, options, onChange);
-  }
-
-  private iconInput(value: string | null | undefined, onChange: (v: string | null) => void) {
-    return iconField(this.host, value, onChange);
-  }
-
-  private markerSelect(value: MarkerShow | null, onChange: (v: MarkerShow | null) => void) {
-    return markerField(this.host, value, onChange);
   }
 
   // ------------------------------------------------------------------ energy tool
@@ -2689,43 +2686,6 @@ export class NfEditor extends LitElement {
     this.sel.opening = null;
   }
 
-  /** Furniture that can stand for a placed device of this kind (a speaker for a media player, a lamp for a light …). */
-  private furnitureFor(entityId: string): { type: string; label: string }[] {
-    const kind = kindOf(entityId);
-    const lang = this.hass?.language ?? "en";
-    const all = [
-      ...FURNITURE_TYPES.map((t) => ({ type: t as string, label: this.t(`furn_${t}` as I18nKey) })),
-      ...(this.packs ?? []).flatMap((p) => p.items.map((it) => ({ type: packType(p.id, it.id), label: `${packItemName(it, lang)} · ${packName(p, lang)}` }))),
-    ];
-    const speakerish = /speaker|sound|subwoofer|receiver|smart_|display|tv|media|turntable|projector|console/;
-    const fits = (t: string): boolean => {
-      if (kind === "light") return isLamp(t);
-      if (kind === "climate") return t === "radiator";
-      if (entityId.startsWith("vacuum.")) return t === "robot_vacuum" || (isPackType(t) && t.endsWith(":robot_vacuum"));
-      if (kind === "media") return hasScreen(t) || (isElectric(t) && speakerish.test(t));
-      return isElectric(t) && !isLamp(t);
-    };
-    return all.filter((x) => fits(x.type)).sort((a, b) => a.label.localeCompare(b.label));
-  }
-
-  private renderAsFurniture(pl: Placement) {
-    if (!this.isAdmin) return nothing;
-    const options = this.furnitureFor(pl.entity_id);
-    if (!options.length) return nothing;
-    return html`<label class="nf-field nf-wide" title=${this.t("as_furniture_hint")}
-      >${this.t("as_furniture")}
-      <select
-        @change=${(e: Event) => {
-          const v = (e.target as HTMLSelectElement).value;
-          if (v) this.deviceToFurniture(pl, v);
-        }}
-      >
-        <option value="" selected>${this.t("as_furniture_pick")}</option>
-        ${options.map((o) => html`<option value=${o.type}>${o.label}</option>`)}
-      </select></label
-    >`;
-  }
-
   /**
    * Snap a furniture item against the nearest wall of its room: back to the wall (or a side, when it
    * stands sideways), flush with the wall face. Null when no wall is close enough.
@@ -2952,19 +2912,6 @@ export class NfEditor extends LitElement {
         r.wall_heights = list.every((h) => h === null) ? undefined : list;
       }
     });
-  }
-
-  /** Kameras: which detection sensors the camera's device brings (person, vehicle, animal, motion) – found by itself. */
-  private renderCameraDetections(cameraId: string) {
-    if (!this.hass) return nothing;
-    const hass = this.hass;
-    const sensors = cameraMotionSensors(hass, cameraId);
-    const kinds = [...new Set(sensors.map((id) => detectionKind(hass, id)))];
-    return html`<p class="nf-sub nf-wide">
-      ${sensors.length
-        ? html`${this.t("camera_detect_found", { kinds: kinds.map((k) => this.t(`detect_${k}` as I18nKey)).join(", "), n: sensors.length })}`
-        : this.t("camera_detect_none")}
-    </p>`;
   }
 
   /** Cut a wall (or one part of it) in the middle: a split point of its own, the new part keeps the height. */
@@ -3589,7 +3536,7 @@ export class NfEditor extends LitElement {
           : this.opening
             ? renderOpeningForm(this.host, this.opening, this.openingActions())
             : this.device
-              ? this.renderDeviceForm(this.device)
+              ? renderDeviceForm(this.host, this.device, this.deviceActions())
               : this.outdoorArea
                 ? this.renderOutdoorForm(this.outdoorArea)
                 : this.freeWall
@@ -3601,7 +3548,7 @@ export class NfEditor extends LitElement {
     }
     if (room && this._tool !== "measure") {
       return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("room", null)}>‹ ${this.t("back_to_floor")}</button>
-        ${renderRoomForm(this.host, this.side, room, this.roomActions(room))} ${this.renderDeviceList(room)}`;
+        ${renderRoomForm(this.host, this.side, room, this.roomActions(room))} ${renderDeviceList(this.host, this.side, room, this.deviceListActions())}`;
     }
     return html`
       ${admin ? nothing : html`<p class="nf-note">${this.t("read_only")}</p>`}
@@ -3617,9 +3564,9 @@ export class NfEditor extends LitElement {
         : this.furnitureItem
           ? renderFurnitureForm(this.host, this.furnitureItem, this.furnitureActions())
           : this.device
-            ? this.renderDeviceForm(this.device)
+            ? renderDeviceForm(this.host, this.device, this.deviceActions())
           : room
-            ? html`${renderRoomForm(this.host, this.side, room, this.roomActions(room))} ${this.renderDeviceList(room)}`
+            ? html`${renderRoomForm(this.host, this.side, room, this.roomActions(room))} ${renderDeviceList(this.host, this.side, room, this.deviceListActions())}`
             : floor
               ? renderRoomList(this.host, floor, { select: (id) => this.selectItem("room", id) })
               : nothing}
@@ -3808,285 +3755,6 @@ export class NfEditor extends LitElement {
       ${p.url ? html`<img src=${p.url} alt="" />` : html`<span class="nf-preview-wait"></span>`}
       <b>${furnitureName(this.hass, p.type)}</b>
     </div>`;
-  }
-
-  private renderDeviceForm(pl: Placement) {
-    const admin = this.isAdmin;
-    const kind = kindOf(pl.entity_id);
-    const light = kind === "light";
-    const mount = pl.mount ?? "ceiling";
-    const auto = kind ? defaultHeight(kind, this.floor?.height ?? 2.5, light ? mount : null) : 1;
-    return html`<section>
-      <div class="nf-h3row"><h3>${this.t("device")}</h3>${this.fixButton("device", pl.entity_id)}</div>
-      <p class="nf-dev-title">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d=${kind ? iconPath(kind) : ""} />
-        </svg>
-        ${entityName(this.hass, pl.entity_id)}
-      </p>
-      <div class="nf-form">
-        ${light
-          ? html`<label class="nf-field nf-wide"
-              >${this.t("lamp_mount")}
-              <select ?disabled=${!admin} @change=${(e: Event) => this.updateDevice({ mount: (e.target as HTMLSelectElement).value as LampMount, y: null })}>
-                ${(["ceiling", "floor", "table", "wall"] as const).map((m) => html`<option value=${m} ?selected=${m === mount}>${this.t(`lamp_${m}`)}</option>`)}
-              </select></label
-            >
-            ${glowField(this.host, pl.glow_scale, (v) => this.updateDevice({ glow_scale: v }))}`
-          : kind === "camera"
-            ? html`<label class="nf-field nf-wide"
-                >${this.t("camera_mount")}
-                <select ?disabled=${!admin} @change=${(e: Event) => this.updateDevice({ mount: (e.target as HTMLSelectElement).value as LampMount, y: null })}>
-                  <option value="wall" ?selected=${(pl.mount ?? "wall") === "wall"}>${this.t("camera_mount_wall")}</option>
-                  <option value="ceiling" ?selected=${pl.mount === "ceiling"}>${this.t("camera_mount_ceiling")}</option>
-                </select></label
-              >`
-            : nothing}
-        ${this.num(this.t("x"), pl.x, (v) => this.updateDevice({ x: v }))} ${this.num(this.t("z"), pl.z, (v) => this.updateDevice({ z: v }))}
-        ${this.num(this.t("marker_height"), pl.y ?? auto, (v) => this.updateDevice({ y: Math.max(0, v) }), 0.05, 0)}
-        ${this.num(this.t("rotation"), pl.rotation ?? 0, (v) => this.updateDevice({ rotation: ((v % 360) + 360) % 360 }), 1)}
-        ${kind === "camera"
-          ? html`${this.num(this.t("camera_fov"), pl.fov ?? (pl.mount === "ceiling" ? 360 : 90), (v) => this.updateDevice({ fov: Math.min(360, Math.max(10, v)) }), 5, 10)}
-            ${this.num(this.t("camera_reach"), pl.reach ?? (pl.mount === "ceiling" ? 3 : 4.5), (v) => this.updateDevice({ reach: Math.min(50, Math.max(0.5, v)) }), 0.5, 0.5)}
-            ${this.num(this.t("camera_tilt"), pl.tilt ?? (pl.mount === "ceiling" ? 65 : 20), (v) => this.updateDevice({ tilt: Math.min(90, Math.max(0, v)) }), 5, 0)}
-            <label class="nf-check nf-wide"
-              ><input type="checkbox" .checked=${pl.cone !== false} ?disabled=${!admin} @change=${(ev: Event) => this.updateDevice({ cone: (ev.target as HTMLInputElement).checked ? null : false })} />
-              ${this.t("camera_cone")}</label
-            >
-            <p class="nf-sub nf-wide">${this.t("camera_aim_hint")}</p>
-            ${this.renderCameraDetections(pl.entity_id)}`
-          : nothing}
-        ${kind && TOGGLE_KINDS.has(kind)
-          ? html`<label class="nf-check nf-wide" title=${this.t("device_confirm_hint")}
-              ><input type="checkbox" .checked=${!!pl.confirm} ?disabled=${!admin} @change=${(ev: Event) => this.updateDevice({ confirm: (ev.target as HTMLInputElement).checked })} />
-              ${this.t("device_confirm")}</label
-            >`
-          : nothing}
-
-        ${this.markerSelect(pl.marker ?? null, (v) => this.updateDevice({ marker: v }))}
-        <label class="nf-field nf-wide" title=${this.t("device_name_hint")}
-          >${this.t("device_name")}
-          <input type="text" .value=${pl.name ?? ""} ?disabled=${!admin} maxlength="60" placeholder=${entityName(this.hass!, pl.entity_id)} @change=${(e: Event) => this.updateDevice({ name: (e.target as HTMLInputElement).value.trim() || null })}
-        /></label>
-        ${pl.name
-          ? html`<label class="nf-check nf-wide"
-              ><input type="checkbox" .checked=${!!pl.show_name} ?disabled=${!admin} @change=${(ev: Event) => this.updateDevice({ show_name: (ev.target as HTMLInputElement).checked || undefined })} />
-              ${this.t("show_name")}</label
-            >`
-          : nothing}
-        ${this.iconInput(pl.icon, (v) => this.updateDevice({ icon: v }))}
-      </div>
-      ${admin
-        ? html`<div class="nf-actions">
-            <button class="nf-btn" @click=${() => this.centreDevice()}>${this.t("device_centre")}</button>
-            ${pl.y !== null ? html`<button class="nf-btn" @click=${() => this.updateDevice({ y: null })}>${this.t("height_auto")}</button>` : nothing}
-            ${this.renderAsFurniture(pl)}
-            <button
-              class="nf-btn nf-danger"
-              @click=${() => {
-                this.removeDevice(pl.entity_id);
-                this.sel.device = null;
-              }}
-            >
-              ${this.t("devices_remove")}
-            </button>
-          </div>`
-        : nothing}
-    </section>`;
-  }
-
-  private renderDeviceList(room: Room) {
-    const admin = this.isAdmin;
-    const hass = this.hass;
-    const areaName = room.area_id ? hass?.areas?.[room.area_id]?.name : undefined;
-    const ids = hass ? areaEntities(hass, room.area_id).filter((id) => isPlaceable(kindOf(id))) : [];
-    // placed as a device, or as a lamp with this light
-    const placedHere = new Set([
-      ...(this.floor?.placements.filter((pl) => pointInPolygon([pl.x, pl.z], room.points)).map((pl) => pl.entity_id) ?? []),
-      ...(this.floor?.furniture.filter((m) => isLamp(m.type) && m.entity && pointInPolygon([m.x, m.z], room.points)).map((m) => m.entity!) ?? []),
-    ]);
-    const groups = hass ? groupByDevice(hass, ids) : [];
-    // the automatic placement only takes each device's main entity
-    const unplacedMain = groups.map((g) => g.primary).filter((id) => !placedHere.has(id));
-    const q = this._deviceQuery.trim().toLowerCase();
-    const matches = (id: string) => !q || entityName(hass, id, areaName).toLowerCase().includes(q) || id.includes(q);
-    const ceilingLights = this.floor?.placements.filter(
-      (p) => kindOf(p.entity_id) === "light" && (p.mount ?? "ceiling") === "ceiling" && pointInPolygon([p.x, p.z], room.points),
-    ).length;
-    const pinned = new Set(room.panel ?? []);
-    const hidden = new Set(room.hidden ?? []);
-    const noState = new Set(room.no_state ?? []);
-    // where an entity from elsewhere is placed already (placing it here moves it)
-    const placedIn = new Map<string, string>();
-    for (const f of this._doc.floors)
-      for (const id of [...f.placements.map((p) => [p.entity_id, p.x, p.z] as const), ...f.furniture.filter((m) => isLamp(m.type) && m.entity).map((m) => [m.entity!, m.x, m.z] as const)]) {
-        const r = f.rooms.find((x) => pointInPolygon([id[1], id[2]], x.points));
-        if (r && r.id !== room.id) placedIn.set(id[0], r.name);
-      }
-    const row = (id: string, extra = false, nameArea = areaName) => {
-      const placed = placedHere.has(id);
-      const elsewhere = placed ? undefined : placedIn.get(id);
-      return html`<div class="nf-row nf-dev-row ${extra ? "nf-dev-extra" : ""} ${hidden.has(id) ? "nf-dev-hidden" : ""}">
-        <button class="nf-dev-name ${placed ? "" : "nf-muted"}" ?disabled=${!placed} @click=${() => this.selectItem("device", id)}>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d=${iconPath(kindOf(id)!)} />
-          </svg>
-          <span>${entityName(hass, id, nameArea)}${elsewhere ? html`<small class="nf-muted"> · ${this.t("devices_placed_in", { room: elsewhere })}</small>` : nothing}</span>
-        </button>
-        ${admin && !extra
-          ? html`<button
-              class="nf-pin ${hidden.has(id) ? "nf-pin-on" : ""}"
-              aria-pressed=${hidden.has(id)}
-              title=${this.t(hidden.has(id) ? "panel_unhide" : "panel_hide")}
-              @click=${() => this.updateRoom({ hidden: hidden.has(id) ? [...hidden].filter((x) => x !== id) : [...hidden, id] })}
-            >
-              ${hidden.has(id) ? "🙈" : "👁"}
-            </button>`
-          : nothing}
-        ${admin && !extra && !hidden.has(id)
-          ? html`<button
-              class="nf-pin ${noState.has(id) ? "nf-pin-on" : ""}"
-              aria-pressed=${noState.has(id)}
-              title=${this.t(noState.has(id) ? "panel_state_show" : "panel_state_hide")}
-              @click=${() => this.updateRoom({ no_state: noState.has(id) ? [...noState].filter((x) => x !== id) : [...noState, id] })}
-            >
-              ${noState.has(id) ? "∅" : "Aa"}
-            </button>`
-          : nothing}
-        ${admin && !placed
-          ? html`<button
-              class="nf-pin ${pinned.has(id) ? "nf-pin-on" : ""}"
-              aria-pressed=${pinned.has(id)}
-              title=${this.t(pinned.has(id) ? "panel_unpin" : "panel_pin")}
-              @click=${() => this.updateRoom({ panel: pinned.has(id) ? [...pinned].filter((x) => x !== id) : [...pinned, id] })}
-            >
-              ${pinned.has(id) ? "★" : "☆"}
-            </button>`
-          : nothing}
-        ${admin
-          ? placed
-            ? html`<button class="nf-link" @click=${() => this.removeDevice(id)}>${this.t("devices_remove")}</button>`
-            : html`<button class="nf-link" @click=${() => this.placeDevices([id])}>${this.t("devices_place")}</button>`
-          : nothing}
-      </div>`;
-    };
-    const source = admin ? this._devSource : "area";
-    const setSource = (v: "area" | "other" | "none") => {
-      this._devSource = v;
-      this._deviceQuery = "";
-    };
-    const searchField = html`<input
-      class="nf-search"
-      type="search"
-      placeholder=${this.t("devices_search")}
-      .value=${this._deviceQuery}
-      @input=${(e: Event) => (this._deviceQuery = (e.target as HTMLInputElement).value)}
-    />`;
-    const placeAll = () => {
-      if (confirm(this.t("devices_place_all_confirm", { n: unplacedMain.length }))) this.placeDevices(unplacedMain);
-    };
-    return html`<section>
-      <h3>${this.t("devices")}</h3>
-      <p class="nf-sub">${this.t("devices_panel_hint")}</p>
-      ${admin
-        ? html`<div class="nf-seg nf-dev-source">
-            <button aria-pressed=${source === "area"} @click=${() => setSource("area")}>${this.t("devices_src_area")}${ids.length ? ` (${groups.length})` : ""}</button>
-            <button aria-pressed=${source === "other"} @click=${() => setSource("other")}>${this.t("devices_src_other")}</button>
-            <button aria-pressed=${source === "none"} @click=${() => setSource("none")}>${this.t("devices_src_none")}</button>
-          </div>`
-        : nothing}
-      ${source !== "area"
-        ? html`${searchField}${this.renderDeviceExtras(room, row, source)}`
-        : !room.area_id
-        ? html`<p class="nf-sub">${this.t("devices_none_area")}</p>`
-        : !ids.length
-          ? html`<p class="nf-sub">${this.t("devices_none")}</p>`
-          : html`${admin && (ceilingLights ?? 0) >= 2
-                ? html`<button class="nf-btn nf-wide-btn" @click=${() => this.spreadCeilingLights(room)}>${this.t("lights_spread")}</button>`
-                : nothing}
-              ${ids.length > 8 ? searchField : nothing}
-              <div class="nf-room-list">
-                ${groups.map((g) => {
-                  const others = g.others.filter(matches);
-                  const open = this._expanded.has(g.primary) || (!!q && others.length > 0);
-                  if (!matches(g.primary) && !others.length) return nothing;
-                  return html`${row(g.primary)}
-                  ${g.others.length
-                    ? html`<button
-                        class="nf-more"
-                        @click=${() => {
-                          const next = new Set(this._expanded);
-                          if (next.has(g.primary)) next.delete(g.primary);
-                          else next.add(g.primary);
-                          this._expanded = next;
-                        }}
-                      >
-                        ${open ? this.t("devices_less") : this.t("devices_more", { n: g.others.length })}
-                      </button>`
-                    : nothing}
-                  ${open ? (q ? others : g.others).map((id) => row(id, true)) : nothing}`;
-                })}
-              </div>
-              ${admin && unplacedMain.length > 1
-                ? html`<button class="nf-link nf-place-all" @click=${placeAll}>${this.t("devices_place_all_n", { n: unplacedMain.length })}</button>`
-                : nothing}
-              <p class="nf-sub">${this.t("devices_hint")}</p>`}
-    </section>`;
-  }
-
-  /** Devices from other areas or without an area, for the chosen source (computed only when shown). */
-  private renderDeviceExtras(room: Room, row: (id: string, extra?: boolean, nameArea?: string) => unknown, source: "other" | "none") {
-    const hass = this.hass;
-    if (!hass) return nothing;
-    const LIMIT = 50;
-    const q = this._deviceQuery.trim().toLowerCase();
-    const match = (id: string, area?: string) => !q || `${entityName(hass, id, area)} ${id} ${area ?? ""}`.toLowerCase().includes(q);
-    const more = (n: number) => (n > 0 ? html`<p class="nf-sub">${this.t("devices_narrow", { n })}</p>` : nothing);
-    if (source === "other") {
-      let shown = 0;
-      let hidden = 0;
-      const blocks = otherAreaEntities(hass, room.area_id).map((a) => {
-        const ids = a.ids.filter((id) => match(id, a.name));
-        const take = ids.slice(0, Math.max(0, LIMIT - shown));
-        shown += take.length;
-        hidden += ids.length - take.length;
-        return take.length ? html`<div class="nf-dev-area">${a.name}</div>${take.map((id) => row(id, false, a.name))}` : nothing;
-      });
-      return shown ? html`<div class="nf-room-list">${blocks}</div>${more(hidden)}` : html`<p class="nf-sub">${this.t("devices_none")}</p>`;
-    }
-    const ids = unassignedEntities(hass).filter((id) => match(id));
-    return ids.length
-      ? html`<div class="nf-room-list">${ids.slice(0, LIMIT).map((id) => row(id))}</div>${more(ids.length - Math.min(ids.length, LIMIT))}`
-      : html`<p class="nf-sub">${this.t("devices_none")}</p>`;
-  }
-
-  /** Room climate: temperature, humidity and CO2 from chosen sensors, or picked automatically. */
-  private renderRoomClimate(room: Room) {
-    const hass = this.hass;
-    if (!hass) return nothing;
-    const set = (key: ClimateKey, v: string | null) => {
-      const next = { ...(room.climate ?? {}), [key]: v };
-      const empty = Object.values(next).every((x) => x == null);
-      this.updateRoom({ climate: empty ? null : next });
-    };
-    const chosen = !!room.climate && Object.values(room.climate).some((x) => x != null);
-    const field = (key: ClimateKey, label: string) => {
-      const dc = CLIMATE_CLASSES[key];
-      const auto = roomClimateSensors(hass, this.floor ?? null, { ...room, climate: null }, key);
-      // the room's own sensors first, then all others; device temperatures (printer, heat pump) last
-      const options = this.entityOptions((id) => numberish(id) && hass.states[id]?.attributes.device_class === dc)
-        .map((o) => ({ ...o, rank: (entityAreaId(hass, o.id) === room.area_id ? 0 : 1) + (isRoomClimateSensor(hass, o.id) ? 0 : 2) }))
-        .sort((a, b) => a.rank - b.rank)
-        .map(({ id, label }) => ({ id, label }));
-      return this.entitySelect(label, room.climate?.[key] ?? null, auto[0] ?? null, options, (v) => set(key, v));
-    };
-    return html`<details class="nf-points" ?open=${chosen}>
-      <summary>${this.t("climate")}</summary>
-      <div class="nf-form">
-        ${field("temperature", this.t("climate_temperature"))} ${field("humidity", this.t("climate_humidity"))} ${field("co2", this.t("climate_co2"))}
-      </div>
-      <p class="nf-sub">${this.t("climate_hint")}</p>
-    </details>`;
   }
 
   static styles = [tokens, controls, editorStyles];

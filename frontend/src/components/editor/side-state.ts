@@ -21,6 +21,9 @@ export class SideState {
   private shiftZMetres = 0;
   private wholeHouse = false;
   private line: string | null = null;
+  private query = "";
+  private source: "area" | "other" | "none" = "area";
+  private unfolded = new Set<string>();
 
   constructor(onChange: () => void) {
     this.onChange = onChange;
@@ -83,6 +86,36 @@ export class SideState {
   }
   set notice(text: string | null) {
     this.line = text;
+    this.onChange();
+  }
+
+  /** The text typed into the search box of the device list. */
+  get deviceQuery(): string {
+    return this.query;
+  }
+  set deviceQuery(text: string) {
+    this.query = text;
+    this.onChange();
+  }
+
+  /** Where the device list takes its entities from: the room's area, other areas, or entities without an area. */
+  get deviceSource(): "area" | "other" | "none" {
+    return this.source;
+  }
+  set deviceSource(source: "area" | "other" | "none") {
+    this.source = source;
+    this.query = "";
+    this.onChange();
+  }
+
+  /** The devices whose further entities are shown in the list. */
+  isUnfolded(id: string): boolean {
+    return this.unfolded.has(id);
+  }
+  toggleUnfolded(id: string): void {
+    const next = new Set(this.unfolded);
+    if (!next.delete(id)) next.add(id);
+    this.unfolded = next;
     this.onChange();
   }
 }

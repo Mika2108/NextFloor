@@ -403,8 +403,11 @@ export const liveCardStyles = css`
   .live-wall-grid {
     flex: 1;
     display: grid;
-    gap: 8px;
-    padding: 8px;
+    /* tiles of a pleasant size: as many per row as fit, never wider than 560 px, the whole set centred */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 560px));
+    justify-content: center;
+    gap: 12px;
+    padding: 14px;
     overflow: auto;
     align-content: start;
   }
@@ -413,10 +416,15 @@ export const liveCardStyles = css`
     aspect-ratio: 16 / 9;
     padding: 0;
     border: 1px solid rgba(120, 200, 255, 0.3);
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
     background: #000;
     cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .live-wall-cam:hover {
+    transform: scale(1.015);
+    border-color: rgba(120, 200, 255, 0.7);
   }
   .live-wall-cam.live-seen {
     border-color: #ff4d6d;

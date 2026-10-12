@@ -1530,13 +1530,12 @@ export class NfView3d extends LitElement {
     const cams = cameraSpots(hass, this.building);
     this.watchCameras(true);
     const close = () => this.dispatchEvent(new CustomEvent("camera-wall-close", { bubbles: true, composed: true }));
-    const cols = Math.max(1, Math.min(4, Math.ceil(Math.sqrt(cams.length))));
     return html`<div class="live-wall">
       <div class="live-wall-head">
         <b>${translate(hass, "camera_wall_title")}</b><span>· ${cams.length}</span><span class="live-spacer"></span>
         <button class="nf-chip" aria-label="✕" @click=${close}>✕</button>
       </div>
-      <div class="live-wall-grid" style=${`grid-template-columns: repeat(${cols}, 1fr)`}>
+      <div class="live-wall-grid">
         ${cams.map((c) => {
           // the wall shows snapshots (a few streams at once would load the house); the stream comes with a tap
           const { snapshot } = cameraUrls(hass, c.entity, this.cameraTick * 5000);

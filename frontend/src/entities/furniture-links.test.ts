@@ -1,0 +1,115 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import type { Furniture } from "../model.ts";
+import { box, entity, floorWith, hassOf, opening } from "./fixtures.ts";
+import { confirmEntities, fridgeDoors, furnitureEntities, hasScreen, isMediaFurniture, pictureRuleMatches, roomPanelEntities } from "./furniture-links.ts";
+
+const piece = (id: string, type: string, extra: Partial<Furniture> = {}): Furniture => ({ id, type, x: 1, z: 1, rotation: 0, w: 1, d: 1, h: 1, variant: null, entity: null, power: null, ...extra });
+const room = box("r", 0, 0, 4, 3, "area");
+const inRoom = (...ids: string[]) => Object.fromEntries(ids.map((id) => [id, { area_id: "area" }]));
+
+test("a TV takes the media player of its room, a real TV before another player", () => {
+  const hass = hassOf([entity("media_player.speaker", "idle"), entity("media_player.living_tv", "off", { device_class: "tv" })], inRoom("media_player.speaker", "media_player.living_tv"));
+  const floor = floorWith([room], { furniture: [piece("tv", "tv_board")] });
+  assert.equal(furnitureEntities(hass, [floor]).get("tv")?.entity, "media_player.living_tv");
+});
+
+test("a desk's monitor does not take a smart speaker, but a TV board takes any player", () => {
+  const hass = hassOf([entity("media_player.speaker", "idle")], inRoom("media_player.speaker"));
+  assert.equal(furnitureEntities(hass, [floorWith([room], { furniture: [piece("desk", "desk")] })]).get("desk"), undefined);
+  assert.equal(furnitureEntities(hass, [floorWith([room], { furniture: [piece("tv", "tv_board")] })]).get("tv")?.entity, "media_player.speaker");
+});
+
+test("appliances look for a switch or player with a fitting name, and power on the same device or by name", () => {
+  const hass = hassOf(
+    [entity("switch.dishwasher_plug", "on"), entity("switch.lamp_plug", "on"), entity("sensor.dishwasher_power", "5", { device_class: "power" })],
+    { "switch.dishwasher_plug": { area_id: "area", device_id: "dw" }, "switch.lamp_plug": { area_id: "area" }, "sensor.dishwasher_power": { area_id: "area", device_id: "dw" } },
+  );
+  const links = furnitureEntities(hass, [floorWith([room], { furniture: [piece("dw", "dishwasher")] })]).get("dw");
+  assert.deepEqual(links, { entity: "switch.dishwasher_plug", power: "sensor.dishwasher_power" });
+});
+
+test("a power sensor can be found by name when the entity has none on its device", () => {
+  const hass = hassOf([entity("sensor.fridge_power", "40", { device_class: "power" })], inRoom("sensor.fridge_power"));
+  assert.deepEqual(furnitureEntities(hass, [floorWith([room], { furniture: [piece("f", "fridge")] })]).get("f"), { entity: null, power: "sensor.fridge_power" });
+});
+
+test("lamps take a light of the room, preferring a fitting name, and each light is used once", () => {
+  const hass = hassOf([entity("light.floor_standing", "on"), entity("light.main_ceiling", "on")], inRoom("light.floor_standing", "light.main_ceiling"));
+  const floor = floorWith([room], { furniture: [piece("a", "lamp_ceiling"), piece("b", "lamp_ceiling")] });
+  const links = furnitureEntities(hass, [floor]);
+  assert.equal(links.get("a")?.entity, "light.main_ceiling");
+  assert.equal(links.get("b")?.entity, "light.floor_standing");
+});
+
+test("entities set by hand and placed devices are never taken by another piece", () => {
+  const hass = hassOf([entity("light.one", "on"), entity("light.two", "on")], inRoom("light.one", "light.two"));
+  const floor = floorWith([room], { furniture: [piece("a", "lamp_ceiling", { entity: "light.one" }), piece("b", "lamp_ceiling")], placements: [] });
+  assert.equal(furnitureEntities(hass, [floor]).get("b")?.entity, "light.two");
+  const placed = floorWith([room], { furniture: [piece("c", "lamp_ceiling")], placements: [{ entity_id: "light.one", x: 0, z: 0, y: null, mount: null }] });
+  assert.equal(furnitureEntities(hass, [placed]).get("c")?.entity, "light.two");
+});
+
+test("'none' keeps a piece unlinked and a piece outside every room finds nothing", () => {
+  const hass = hassOf([entity("light.one", "on")], inRoom("light.one"));
+  assert.equal(furnitureEntities(hass, [floorWith([room], { furniture: [piece("a", "lamp_ceiling", { entity: "none" })] })]).get("a"), undefined);
+  assert.equal(furnitureEntities(hass, [floorWith([room], { furniture: [piece("a", "lamp_ceiling", { x: 20, z: 20 })] })]).get("a"), undefined);
+});
+
+test("a robot vacuum and a radiator find their own kind in the room's area", () => {
+  const hass = hassOf([entity("vacuum.rob", "docked"), entity("climate.heater", "heat"), entity("climate.other", "off")], { "vacuum.rob": { area_id: "area" }, "climate.heater": { area_id: "area" }, "climate.other": { area_id: "elsewhere" } });
+  const links = furnitureEntities(hass, [floorWith([room], { furniture: [piece("v", "robot_vacuum"), piece("r", "radiator")] })]);
+  assert.equal(links.get("v")?.entity, "vacuum.rob");
+  assert.equal(links.get("r")?.entity, "climate.heater");
+});
+
+test("screens: built-in TVs and a few devices have one", () => {
+  assert.equal(isMediaFurniture("tv_wall"), true);
+  assert.equal(isMediaFurniture("sofa"), false);
+  assert.equal(hasScreen("desk"), true);
+  assert.equal(hasScreen("fridge_smart"), true);
+  assert.equal(hasScreen("sofa"), false);
+});
+
+test("picture rules: equal, contained (3+ letters), wildcard, attribute, missing", () => {
+  const hass = hassOf([entity("media_player.tv", "playing", { app_name: "YouTube TV", volume: 0.5 })]);
+  const rule = (state: string, attribute?: string) => ({ entity: "media_player.tv", state, attribute });
+  assert.equal(pictureRuleMatches(hass, rule("playing")), true);
+  assert.equal(pictureRuleMatches(hass, rule("PLAY")), true);
+  assert.equal(pictureRuleMatches(hass, rule("pl")), false, "too short to match inside");
+  assert.equal(pictureRuleMatches(hass, rule("*")), true);
+  assert.equal(pictureRuleMatches(hass, rule("youtube", "app_name")), true);
+  assert.equal(pictureRuleMatches(hass, rule("x", "nothing")), false);
+  assert.equal(pictureRuleMatches(hass, { entity: "media_player.gone", state: "*" }), false);
+});
+
+test("entities that ask first: placed devices, linked furniture and marked blinds", () => {
+  const hass = hassOf([entity("light.a", "on"), entity("cover.blind", "open", { device_class: "shutter" }), entity("switch.s", "on")], { "light.a": { area_id: "area" }, "cover.blind": { area_id: "area" }, "switch.s": { area_id: "area" } });
+  const floor = floorWith([room], {
+    placements: [{ entity_id: "light.a", x: 0, z: 0, y: null, mount: null, confirm: true }],
+    openings: [opening("w", "r", "window", { confirm: true } as never)],
+    furniture: [piece("sw", "kitchen", { entity: "switch.s", confirm: true })],
+  });
+  assert.deepEqual([...confirmEntities(hass, [floor])].sort(), ["cover.blind", "light.a", "switch.s"]);
+});
+
+test("a smart fridge's doors follow their sensors, unset or none means closed", () => {
+  const hass = hassOf([entity("binary_sensor.l", "on"), entity("binary_sensor.r", "open"), entity("binary_sensor.x", "off")]);
+  const floor = floorWith([room], { furniture: [piece("f1", "fridge_smart", { door_left: "binary_sensor.l", door_right: "none" }), piece("f2", "fridge_smart", { door_right: "binary_sensor.r" }), piece("f3", "fridge")] });
+  const doors = fridgeDoors(hass, [floor]);
+  assert.deepEqual(doors.get("f1"), { left: true, right: false });
+  assert.deepEqual(doors.get("f2"), { left: false, right: true });
+  assert.equal(doors.has("f3"), false);
+});
+
+test("the room panel shows placed and linked entities, own picks and door sensors, minus hidden ones", () => {
+  const hass = hassOf(
+    [entity("light.placed", "on"), entity("light.lamp", "on", { friendly_name: "Ceiling lamp" }), entity("light.picked", "on"), entity("light.hidden", "on"), entity("binary_sensor.door", "off", { device_class: "door" }), entity("sensor.rest", "1", { device_class: "temperature" })],
+    inRoom("light.placed", "light.lamp", "light.picked", "light.hidden", "binary_sensor.door", "sensor.rest"),
+  );
+  const r = { ...room, panel: ["light.picked", "light.gone"], hidden: ["light.hidden"] };
+  const floor = floorWith([r], { placements: [{ entity_id: "light.placed", x: 1, z: 1, y: null, mount: null }], furniture: [piece("l", "lamp_ceiling")], openings: [opening("d", "r", "door")] });
+  const { shown, more } = roomPanelEntities(hass, floor, r);
+  assert.deepEqual(shown.sort(), ["binary_sensor.door", "light.lamp", "light.picked", "light.placed"]);
+  assert.deepEqual(more, ["sensor.rest"]);
+});

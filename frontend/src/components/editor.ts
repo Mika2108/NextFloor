@@ -56,7 +56,6 @@ import { renderFavorites, renderPresence, renderStartView } from "./editor/forms
 import { BackupService } from "./editor/backup.ts";
 import { renderBackup } from "./editor/forms/backup.ts";
 import { renderSettings, type SettingsActions } from "./editor/forms/settings.ts";
-import { numberField } from "./editor/fields.ts";
 import { renderEnergyBalance, renderEnergyChecklist, renderEnergyDevices, renderEnergyTeaser, renderHelpLinks, type EnergyActions } from "./editor/forms/energy.ts";
 import { energyMarkersLayer, headroomLayer, roofSectionsLayer, roofWindowsLayer, solarLayer } from "./editor/canvas/roof-layers.ts";
 import type { CanvasContext } from "./editor/canvas/context.ts";
@@ -68,6 +67,8 @@ import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWall
 import { outdoorRectangleAfter } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
 import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
+import { renderEdgeHeights, type EdgeActions } from "./editor/forms/edges.ts";
+import { cutEdge, joinAtCut, moveCut, setPartHeight, setWallHeight, setWallThickness } from "./editor/ops/edges.ts";
 import { renderDeviceForm, type DeviceActions } from "./editor/forms/device.ts";
 import { renderFurnitureForm, type FurnitureActions } from "./editor/forms/furniture.ts";
 import { renderOpeningForm, type OpeningActions } from "./editor/forms/opening.ts";
@@ -1981,6 +1982,62 @@ export class NfEditor extends LitElement {
     return { u: (p[0] - face.o[0]) * face.eu[0] + (p[1] - face.o[2]) * face.eu[2], s: Number.NaN };
   }
 
+  private wallsOfFloor() {
+    const floor = this.floor;
+    const { wall_exterior, wall_interior } = this._doc.settings;
+    return floor ? generateWalls(floor.rooms, { exterior: wall_exterior, interior: wall_interior }, floor.walls ?? []).walls : [];
+  }
+
+  /** Where the parts of a wall begin: another room can split it into several. */
+  private edgeParts(room: Room, edge: number): number[] {
+    const starts = this.wallsOfFloor().flatMap((w) => w.sources.filter((s) => s.room_id === room.id && s.edge === edge).map((s) => s.t0));
+    return starts.length > 0 ? [...new Set(starts)].sort((a, b) => a - b) : [0];
+  }
+
+  private changeRoom(room: Room, edit: (target: Room) => void): void {
+    if (!this.isAdmin) return;
+    this.change((_, floor) => {
+      const target = floor.rooms.find((r) => r.id === room.id);
+      if (target) edit(target);
+    });
+  }
+
+  private edgeActions(): EdgeActions {
+    return {
+      partsOf: (room, edge) => this.edgeParts(room, edge),
+      isOuter: (room, edge) => this.wallsOfFloor().some((w) => w.exterior && w.sources.some((s) => s.room_id === room.id && s.edge === edge)),
+      setHeight: (room, edge, part, height) => {
+        if (part !== undefined) {
+          const parts = this.edgeParts(room, edge).length;
+          this.changeRoom(room, (r) => setPartHeight(r, edge, part, height, parts));
+          return;
+        }
+        // a whole wall: every wall piece shared with it follows
+        const shared = this.wallsOfFloor().filter((w) => w.sources.some((s) => s.room_id === room.id && s.edge === edge)).flatMap((w) => w.sources);
+        if (!shared.some((s) => s.room_id === room.id && s.edge === edge)) shared.push({ room_id: room.id, edge, t0: 0, t1: 0 });
+        if (!this.isAdmin) return;
+        this.change((_, floor) => {
+          for (const source of shared) {
+            const r = floor.rooms.find((x) => x.id === source.room_id);
+            if (r) setWallHeight(r, source.edge, height);
+          }
+        });
+      },
+      setThickness: (room, edge, thickness) => this.changeRoom(room, (r) => setWallThickness(r, edge, thickness)),
+      cut: (room, edge, part) => {
+        const starts = this.edgeParts(room, edge);
+        this.changeRoom(room, (r) => cutEdge(r, edge, part, starts));
+      },
+      moveCut: (room, edge, from, to) => {
+        const starts = this.edgeParts(room, edge);
+        this.changeRoom(room, (r) => moveCut(r, edge, from, to, starts));
+      },
+      join: (room, edge, at, part) => this.changeRoom(room, (r) => joinAtCut(r, edge, at, part)),
+      lit: this.sel.edge,
+      light: (edge) => (this.sel.edge = edge),
+    };
+  }
+
   // ------------------------------------------------------------------ floors and rooms
 
   private addFloor(from: HassFloor | null = null): void {
@@ -2051,7 +2108,7 @@ export class NfEditor extends LitElement {
       },
       placeSpots: () => this.placeSpots(room),
       lockButton: this.fixButton("room", room.id),
-      wallHeights: this.renderEdgeHeights(room),
+      wallHeights: renderEdgeHeights(this.host, room, this.edgeActions()),
       climate: renderRoomClimate(this.host, room, (patch) => this.updateRoom(patch)),
       corner: this.sel.corner,
     };
@@ -2297,10 +2354,6 @@ export class NfEditor extends LitElement {
   // ------------------------------------------------------------------ helpers the forms of this file still share
 
   // ------------------------------------------------------------------ helpers the forms of this file still share
-
-  private num(label: string, value: number, onChange: (v: number) => void, step = 0.01, min?: number) {
-    return numberField(this.host, label, value, onChange, step, min);
-  }
 
   // ------------------------------------------------------------------ energy tool
 
@@ -2803,110 +2856,6 @@ export class NfEditor extends LitElement {
     })}</g>`;
   }
 
-  /** Sets the height of one edge of a room, and of every wall piece shared with it. */
-  /** The parts another room splits an edge into (start distances along the edge), in order; one part when whole. */
-  private edgeParts(room: Room, edge: number): number[] {
-    const floor = this.floor;
-    if (!floor) return [0];
-    const walls = generateWalls(floor.rooms, { exterior: this._doc.settings.wall_exterior, interior: this._doc.settings.wall_interior }, floor.walls ?? []).walls;
-    const starts = walls.flatMap((w) => w.sources.filter((s) => s.room_id === room.id && s.edge === edge).map((s) => s.t0));
-    return starts.length ? [...new Set(starts)].sort((a, b) => a - b) : [0];
-  }
-
-  /** Set a wall height on a room edge (and on the rooms sharing it), or on one part of a split edge only. */
-  private setEdgeHeight(room: Room, edge: number, height: number | null, part?: number): void {
-    const floor = this.floor;
-    if (!floor || !this.isAdmin) return;
-    if (part !== undefined) {
-      const n = this.edgeParts(room, edge).length;
-      this.change((_, f) => {
-        const r = f.rooms.find((x) => x.id === room.id);
-        if (!r) return;
-        const list = (r.wall_heights ?? []).slice(0, r.points.length);
-        while (list.length < r.points.length) list.push(null);
-        const cur = list[edge];
-        const parts: (number | null)[] = Array.isArray(cur) ? [...cur] : new Array<number | null>(n).fill(typeof cur === "number" ? cur : null);
-        while (parts.length < n) parts.push(null);
-        parts[part] = height;
-        list[edge] = parts.every((h) => h === parts[0]) ? parts[0] : parts;
-        r.wall_heights = list.every((h) => h === null) ? undefined : list;
-      });
-      return;
-    }
-    const walls = generateWalls(floor.rooms, { exterior: this._doc.settings.wall_exterior, interior: this._doc.settings.wall_interior }, floor.walls ?? []).walls;
-    const sources = walls.filter((w) => w.sources.some((s) => s.room_id === room.id && s.edge === edge)).flatMap((w) => w.sources);
-    if (!sources.some((s) => s.room_id === room.id && s.edge === edge)) sources.push({ room_id: room.id, edge, t0: 0, t1: 0 });
-    this.change((_, f) => {
-      for (const s of sources) {
-        const r = f.rooms.find((x) => x.id === s.room_id);
-        if (!r) continue;
-        const list = (r.wall_heights ?? []).slice(0, r.points.length);
-        while (list.length < r.points.length) list.push(null);
-        list[s.edge] = height;
-        r.wall_heights = list.every((h) => h === null) ? undefined : list;
-      }
-    });
-  }
-
-  /** Cut a wall (or one part of it) in the middle: a split point of its own, the new part keeps the height. */
-  private splitEdge(room: Room, edge: number, part: number | undefined): void {
-    if (!this.isAdmin) return;
-    const pts = room.points;
-    const len = Math.hypot(pts[(edge + 1) % pts.length][0] - pts[edge][0], pts[(edge + 1) % pts.length][1] - pts[edge][1]);
-    const starts = this.edgeParts(room, edge);
-    const s0 = part === undefined ? 0 : starts[part];
-    const s1 = part === undefined ? len : (starts[part + 1] ?? len);
-    if (s1 - s0 < 0.4) return;
-    const at = Math.round(((s0 + s1) / 2) * 100) / 100;
-    this.change((_, f) => {
-      const r = f.rooms.find((x) => x.id === room.id);
-      if (!r) return;
-      const splits = (r.wall_splits ?? []).slice(0, r.points.length);
-      while (splits.length < r.points.length) splits.push(null);
-      splits[edge] = [...(splits[edge] ?? []), at].sort((a, b) => a - b);
-      r.wall_splits = splits;
-      // a per-part height list grows by the new part, which starts with the height of the one it was cut from
-      const cur = r.wall_heights?.[edge];
-      if (Array.isArray(cur)) {
-        const k = part ?? 0;
-        cur.splice(k + 1, 0, cur[k] ?? null);
-      }
-    });
-  }
-
-  /** Move a split point along its edge (kept clear of the ends and of other stops). */
-  private moveSplit(room: Room, edge: number, from: number, to: number): void {
-    const pts = room.points;
-    const len = Math.hypot(pts[(edge + 1) % pts.length][0] - pts[edge][0], pts[(edge + 1) % pts.length][1] - pts[edge][1]);
-    const others = this.edgeParts(room, edge).filter((s) => Math.abs(s - from) > 1e-3 && s > 0);
-    let at = Math.max(0.1, Math.min(len - 0.1, Math.round(to * 100) / 100));
-    if (others.some((s) => Math.abs(s - at) < 0.1)) at = from;
-    this.change((_, f) => {
-      const r = f.rooms.find((x) => x.id === room.id);
-      const list = r?.wall_splits?.[edge];
-      if (!list) return;
-      const k = list.findIndex((d) => Math.abs(d - from) < 1e-3);
-      if (k >= 0) list[k] = at;
-      list.sort((a, b) => a - b);
-    });
-  }
-
-  /** Remove a split point: the part behind it joins the one before (whose height stays). */
-  private joinSplit(room: Room, edge: number, at: number, part: number): void {
-    this.change((_, f) => {
-      const r = f.rooms.find((x) => x.id === room.id);
-      if (!r?.wall_splits?.[edge]) return;
-      const list = r.wall_splits[edge]!.filter((d) => Math.abs(d - at) > 1e-3);
-      r.wall_splits[edge] = list.length ? list : null;
-      if (r.wall_splits.every((l) => !l)) r.wall_splits = undefined;
-      const cur = r.wall_heights?.[edge];
-      if (Array.isArray(cur)) {
-        cur.splice(part, 1);
-        if (cur.every((h) => h === cur[0])) r.wall_heights![edge] = cur[0] ?? null;
-      }
-    });
-  }
-
   /** Marks on the selected room's edges where a wall is split by hand. */
   private renderSplitMarks(room: Room) {
     const pts = room.points;
@@ -2923,81 +2872,6 @@ export class NfEditor extends LitElement {
         return svg`<line class="nf-split-mark" x1=${x - uz * 7} y1=${y + ux * 7} x2=${x + uz * 7} y2=${y - ux * 7} />`;
       });
     })}`;
-  }
-
-  /** Height list per wall of a room in the room form (always open); hovering a row lights the wall up. */
-  private renderEdgeHeights(room: Room) {
-    const H = this.floor!.height;
-    const n = room.points.length;
-    // which edges are outer walls (their default thickness is the exterior one)
-    const s = this._doc.settings;
-    const outer = new Set<number>();
-    for (const w of generateWalls(this.floor!.rooms, { exterior: s.wall_exterior, interior: s.wall_interior }, this.floor!.walls ?? []).walls) {
-      if (w.exterior) for (const src of w.sources) if (src.room_id === room.id) outer.add(src.edge);
-    }
-    const setThick = (edge: number, v: number | null) =>
-      this.change((_, f) => {
-        const r = f.rooms.find((x) => x.id === room.id);
-        if (!r) return;
-        const list = (r.wall_thickness ?? []).slice(0, r.points.length);
-        while (list.length < r.points.length) list.push(null);
-        list[edge] = v;
-        r.wall_thickness = list.every((t) => t === null) ? undefined : list;
-      });
-    return html`<div class="nf-edge-box">
-      <h4>${this.t("wall_heights")}</h4>
-      ${room.points.flatMap((a, i) => {
-        const b = room.points[(i + 1) % n];
-        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-        const entry = room.wall_heights?.[i] ?? null;
-        const on = () => (this.sel.edge = i);
-        const off = () => (this.sel.edge = null);
-        // an edge another room splits: one row per part, each with its own height (#77)
-        const starts = this.edgeParts(room, i);
-        const parts = starts.length > 1 ? starts.map((_, k) => k) : [undefined];
-        return parts.map((part) => {
-          const h = part === undefined ? (Array.isArray(entry) ? (entry[0] ?? null) : entry) : Array.isArray(entry) ? (entry[part] ?? null) : entry;
-          const partLen = part === undefined ? len : (starts[part + 1] ?? len) - starts[part];
-          const set = (v: number | null) => this.setEdgeHeight(room, i, v, part);
-          return html`<div
-            class="nf-edge-height${i === this.sel.edge ? " nf-edge-on" : ""}${h !== null ? " nf-edge-low" : ""}"
-            @mouseenter=${on}
-            @mouseleave=${off}
-            @focusin=${on}
-            @focusout=${off}
-          >
-            <span
-              ><b>${this.t("wall_n", { a: i + 1, b: ((i + 1) % n) + 1 })}${part === undefined ? "" : ` · ${this.t("wall_part", { n: part + 1 })}`}</b><br /><span class="nf-muted"
-                >${formatNumber(this.hass, partLen, 2)} m</span
-              ></span
-            >
-            ${h === 0
-              ? html`<span class="nf-muted">${this.t("wall_none")}</span>`
-              : this.num(this.t("wall_height"), h ?? H, (v) => set(v >= H - 0.005 ? null : Math.max(0.05, v)), 0.05, 0.05)}
-            ${this.isAdmin && h !== null ? html`<button class="nf-btn" title=${this.t("wall_height_full")} @click=${() => set(null)}>↥</button>` : nothing}
-            ${this.isAdmin && h !== 0 ? html`<button class="nf-btn" title=${this.t("wall_none_hint")} @click=${() => set(0)}>${this.t("wall_none")}</button>` : nothing}
-            ${this.isAdmin && partLen >= 0.4 ? html`<button class="nf-btn" title=${this.t("wall_split_hint")} @click=${() => this.splitEdge(room, i, part)}>✂</button>` : nothing}
-            ${(part === undefined || part === 0) && h !== 0
-              ? html`<span class="nf-wide nf-split-row" title=${this.t("wall_thickness_hint")}
-                  >${this.num(this.t("edge_thickness"), room.wall_thickness?.[i] ?? (outer.has(i) ? s.wall_exterior : s.wall_interior), (v) => {
-                    const def = outer.has(i) ? s.wall_exterior : s.wall_interior;
-                    const t = Math.min(1.5, Math.max(0.02, Math.round(v * 1000) / 1000));
-                    setThick(i, Math.abs(t - def) < 0.0005 ? null : t);
-                  }, 0.01, 0.02)}
-                  ${this.isAdmin && room.wall_thickness?.[i] != null ? html`<button class="nf-btn" title=${this.t("wall_thickness_reset")} @click=${() => setThick(i, null)}>↺</button>` : nothing}</span
-                >`
-              : nothing}
-            ${part !== undefined && part > 0 && (room.wall_splits?.[i] ?? []).some((d) => Math.abs(d - starts[part]) < 1e-3)
-              ? html`<span class="nf-wide nf-split-row"
-                  >${this.num(this.t("wall_split_at"), starts[part], (v) => this.moveSplit(room, i, starts[part], v), 0.05, 0.1)}
-                  ${this.isAdmin ? html`<button class="nf-btn" title=${this.t("wall_join_hint")} @click=${() => this.joinSplit(room, i, starts[part], part)}>⨉</button>` : nothing}</span
-                >`
-              : nothing}
-          </div>`;
-        });
-      })}
-      <p class="nf-sub">${this.t("room_wall_hint")}</p>
-    </div>`;
   }
 
 

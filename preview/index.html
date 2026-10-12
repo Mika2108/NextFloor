@@ -70,7 +70,7 @@ const params = new URLSearchParams(location.search);
         const sets = [
           ...window.BASIC_TYPES.map((g) => ({ id: `basic:${g.id}`, label: `${names(g.name)}`, items: g.items.map((i) => ({ type: i.type, size: i.size, name: names(i.name) })) })),
         ];
-        for (const key of ["bad", "energie", "fahrzeuge", "ikea", "fitness", "garten", "kino", "kueche", "schlafen", "technik", "wohnen"]) {
+        for (const key of ["bad", "energie", "fahrzeuge", "ikea", "fitness", "garten", "kino", "kueche", "schlafen", "technik", "wohnen", "treppen", "ausbau", "werkstatt"]) {
           try {
             const pack = await (await fetch(`../custom_components/nextfloor/packs/nextfloor.${key}.json`)).json();
             sets.push({ id: `pack:${key}`, label: names({ en: pack.name, de: pack.name }), items: pack.items.map((i) => ({ type: `pack:${pack.id}:${i.id}`, size: i.size, name: names(i.name) })) });
@@ -137,7 +137,7 @@ const params = new URLSearchParams(location.search);
       const history = [{ id: "s0", revision: 0, saved_at: Date.now() / 1000 - 3600, building: structuredClone(building) }];
 
       // furniture packs: the invented demo pack and the packs that come with NextFloor
-      const BUILTIN = ["bad", "energie", "fahrzeuge", "ikea", "fitness", "garten", "kino", "kueche", "schlafen", "technik", "wohnen"];
+      const BUILTIN = ["bad", "energie", "fahrzeuge", "ikea", "fitness", "garten", "kino", "kueche", "schlafen", "technik", "wohnen", "treppen", "ausbau", "werkstatt"];
       let importedPacks = null;
       // one shared load: parallel callers must not see the list half filled
       let packsLoad = null;

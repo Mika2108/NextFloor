@@ -1,0 +1,452 @@
+{
+ "format": "nfpack",
+ "version": 1,
+ "id": "nextfloor.ausbau",
+ "name": "Architektur & Ausbau",
+ "publisher": "NextFloor",
+ "description": "Säulen, Balken, Kaminzug, Glaswand, Schiebewand, Podest, Halbwand und Raumteiler",
+ "release": 1,
+ "items": [
+  {
+   "id": "column_round",
+   "name": {
+    "de": "Säule rund",
+    "en": "Round column"
+   },
+   "size": [
+    0.35,
+    0.35,
+    2.6
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.05,
+     "color": "white"
+    },
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0,
+     "w": 0.85,
+     "d": 0.85,
+     "y": 0.05,
+     "h": 0.9,
+     "color": "white"
+    },
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.95,
+     "h": 0.05,
+     "color": "white"
+    }
+   ]
+  },
+  {
+   "id": "column_square",
+   "name": {
+    "de": "Säule eckig",
+    "en": "Square column"
+   },
+   "size": [
+    0.3,
+    0.3,
+    2.6
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white",
+     "edges": "faint"
+    }
+   ]
+  },
+  {
+   "id": "beam",
+   "name": {
+    "de": "Deckenbalken",
+    "en": "Ceiling beam"
+   },
+   "size": [
+    3.0,
+    0.2,
+    0.25
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "edges": "faint"
+    }
+   ],
+   "mount": "ceiling"
+  },
+  {
+   "id": "chimney",
+   "name": {
+    "de": "Kaminzug",
+    "en": "Chimney breast"
+   },
+   "size": [
+    0.9,
+    0.5,
+    2.6
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.6,
+     "color": "#b8b2a8",
+     "edges": "faint"
+    },
+    {
+     "shape": "loft",
+     "x": 0,
+     "z": 0,
+     "w": 0.8,
+     "d": 0.8,
+     "y": 0.6,
+     "h": 0.4,
+     "color": "#b8b2a8",
+     "tw": 0.45,
+     "td": 0.45
+    }
+   ]
+  },
+  {
+   "id": "glass_wall",
+   "name": {
+    "de": "Glaswand",
+    "en": "Glass partition"
+   },
+   "size": [
+    2.0,
+    0.05,
+    2.4
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "glass"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.02,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.98,
+     "h": 0.02,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.5,
+     "z": 0,
+     "w": 0.012,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.5,
+     "z": 0,
+     "w": 0.012,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "sliding_wall",
+   "name": {
+    "de": "Schiebewand",
+    "en": "Sliding wall"
+   },
+   "size": [
+    2.4,
+    0.12,
+    2.3
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 0.3,
+     "y": 0.97,
+     "h": 0.03,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.2,
+     "w": 0.5,
+     "d": 0.25,
+     "y": 0,
+     "h": 0.96,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.2,
+     "z": -0.2,
+     "w": 0.5,
+     "d": 0.25,
+     "y": 0,
+     "h": 0.96,
+     "color": "wood",
+     "edges": "faint"
+    }
+   ]
+  },
+  {
+   "id": "platform",
+   "name": {
+    "de": "Podest (Bühne)",
+    "en": "Raised platform"
+   },
+   "size": [
+    3.0,
+    2.0,
+    0.3
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "edges": "faint"
+    }
+   ],
+   "surface": true
+  },
+  {
+   "id": "half_wall",
+   "name": {
+    "de": "Halbwand",
+    "en": "Half wall"
+   },
+   "size": [
+    2.0,
+    0.15,
+    1.1
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.93,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.93,
+     "h": 0.07,
+     "color": "wood"
+    }
+   ]
+  },
+  {
+   "id": "divider_shelf",
+   "name": {
+    "de": "Raumteiler-Regal",
+    "en": "Shelving divider"
+   },
+   "size": [
+    1.6,
+    0.35,
+    1.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.5,
+     "z": 0,
+     "w": 0.03,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.5,
+     "z": 0,
+     "w": 0.03,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.025,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.25,
+     "h": 0.025,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.5,
+     "h": 0.025,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.75,
+     "h": 0.025,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 1,
+     "h": 0.025,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.5,
+     "w": 1,
+     "d": 0.02,
+     "y": 0,
+     "h": 1,
+     "color": "wood"
+    }
+   ]
+  },
+  {
+   "id": "pilaster",
+   "name": {
+    "de": "Wandpfeiler",
+    "en": "Pilaster"
+   },
+   "size": [
+    0.25,
+    0.12,
+    2.6
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.04,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 0.8,
+     "d": 0.8,
+     "y": 0.04,
+     "h": 0.92,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.96,
+     "h": 0.04,
+     "color": "white"
+    }
+   ]
+  }
+ ]
+}

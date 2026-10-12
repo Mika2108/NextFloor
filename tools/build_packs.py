@@ -2203,6 +2203,363 @@ pack(
     ikea_items(),
 )
 
+
+# ------------------------------------------------------------------ Treppen & Geländer
+def steps_run(x, z_front, z_back, width, count, y0, rise, color="wood"):
+    """A straight run of steps rising from z_front (low) to z_back (high); heights are fractions of the item."""
+    run = (z_front - z_back) / count
+    return [B(x, z_front - run * (i + 0.5), width, run, y0, rise * (i + 1), color, edges="faint") for i in range(count)]
+
+
+def spiral_steps(count, turns, radius, rise, color="wood"):
+    import math
+
+    parts = []
+    for i in range(count):
+        a = 2 * math.pi * turns * i / count
+        parts.append(
+            C(
+                radius * math.cos(a) * 0.5,
+                radius * math.sin(a) * 0.5,
+                0.34,
+                0.34,
+                0,
+                rise * (i + 1) / count,
+                color,
+                edges="faint",
+            )
+        )
+    return parts
+
+
+def rail_posts(n, z0, z1, x, h, color="metal", w=0.02):
+    return [B(x, z0 + (z1 - z0) * i / (n - 1), w, w, 0, h, color) for i in range(n)]
+
+
+pack(
+    "nextfloor.treppen",
+    "Treppen & Geländer",
+    "Gerade, L- und U-Treppen, Wendeltreppe, Podest, Außentreppe und Geländer aus Metall, Glas und Holz",
+    [
+        item(
+            "stairs_straight",
+            "Gerade Treppe",
+            "Straight staircase",
+            [1.0, 3.0, 2.8],
+            [
+                *steps_run(0, 0.5, -0.5, 1.0, 14, 0, 1 / 14),
+                B(-0.49, 0, 0.02, 1.0, 0, 1.0, "wood", tz=-0.5, td=0.001),
+                B(0.49, 0, 0.02, 1.0, 0, 1.0, "wood", tz=-0.5, td=0.001),
+            ],
+            hole=True,
+        ),
+        item(
+            "stairs_l",
+            "L-Treppe mit Podest",
+            "L-shaped staircase with landing",
+            [2.0, 2.6, 2.8],
+            [
+                *steps_run(-0.25, 0.5, -0.1, 0.5, 7, 0, 1 / 14),
+                B(-0.25, -0.3, 0.5, 0.4, 0, 0.5, "wood", edges="faint"),
+                *[
+                    B(0.1 + 0.5 * (i + 0.5) / 7, -0.3, 0.5 / 7, 0.4, 0, 0.5 + 0.5 * (i + 1) / 7, "wood", edges="faint")
+                    for i in range(7)
+                ],
+            ],
+            hole=True,
+        ),
+        item(
+            "stairs_u",
+            "U-Treppe",
+            "U-shaped staircase",
+            [2.2, 3.0, 2.8],
+            [
+                *steps_run(-0.27, 0.5, -0.2, 0.42, 7, 0, 1 / 14),
+                B(0, -0.35, 1.0, 0.3, 0, 0.5, "wood", edges="faint"),
+                *steps_run(0.27, -0.2, 0.5, 0.42, 7, 0.5, 1 / 14),
+            ],
+            hole=True,
+        ),
+        item(
+            "stairs_spiral",
+            "Wendeltreppe",
+            "Spiral staircase",
+            [1.6, 1.6, 2.8],
+            [C(0, 0, 0.1, 0.1, 0, 1.0, "metal"), *spiral_steps(16, 1.0, 0.9, 1.0)],
+            hole=True,
+        ),
+        item(
+            "stairs_compact",
+            "Raumspartreppe",
+            "Space-saving staircase",
+            [0.8, 2.2, 2.7],
+            [
+                *steps_run(0, 0.5, -0.5, 0.8, 11, 0, 1 / 11, "wood"),
+                B(0.4, 0, 0.03, 1.0, 0, 0.5, "metal", tz=-0.5, td=0.001),
+            ],
+            hole=True,
+        ),
+        item(
+            "landing",
+            "Podest",
+            "Landing",
+            [1.2, 1.2, 1.4],
+            [B(0, 0, 1, 1, 0.92, 0.08, "wood", edges="faint"), *legs4(0.04, 0.06, 0.92, 0, "metal")],
+        ),
+        item(
+            "steps_outdoor",
+            "Außentreppe",
+            "Outdoor steps",
+            [1.4, 1.1, 0.6],
+            steps_run(0, 0.5, -0.5, 1.0, 4, 0, 0.25, "#9a9fa8"),
+        ),
+        item(
+            "rail_metal",
+            "Geländer Metall",
+            "Metal railing",
+            [2.0, 0.06, 1.0],
+            [
+                B(0, 0, 1, 0.8, 0.94, 0.06, "metal"),
+                *[B(-0.5 + i / 12, 0, 0.012, 0.5, 0, 0.94, "metal") for i in range(13)],
+                B(0, 0, 1, 0.5, 0.04, 0.04, "metal"),
+            ],
+        ),
+        item(
+            "rail_glass",
+            "Geländer Glas",
+            "Glass railing",
+            [2.0, 0.06, 1.0],
+            [
+                B(0, 0, 0.99, 0.35, 0.08, 0.84, "glass"),
+                B(0, 0, 1, 0.8, 0.94, 0.06, "metal"),
+                B(-0.49, 0, 0.02, 0.8, 0, 0.94, "metal"),
+                B(0.49, 0, 0.02, 0.8, 0, 0.94, "metal"),
+            ],
+        ),
+        item(
+            "rail_wood",
+            "Geländer Holz",
+            "Wooden railing",
+            [2.0, 0.08, 1.0],
+            [
+                B(0, 0, 1, 1, 0.92, 0.08, "wood"),
+                *[B(-0.5 + i / 8, 0, 0.04, 0.6, 0, 0.92, "wood") for i in range(9)],
+                B(0, 0, 1, 0.5, 0.06, 0.05, "wood"),
+            ],
+        ),
+    ],
+)
+
+# ------------------------------------------------------------------ Architektur & Ausbau
+pack(
+    "nextfloor.ausbau",
+    "Architektur & Ausbau",
+    "Säulen, Balken, Kaminzug, Glaswand, Schiebewand, Podest, Halbwand und Raumteiler",
+    [
+        item(
+            "column_round",
+            "Säule rund",
+            "Round column",
+            [0.35, 0.35, 2.6],
+            [
+                C(0, 0, 1.0, 1.0, 0, 0.05, "white"),
+                C(0, 0, 0.85, 0.85, 0.05, 0.9, "white"),
+                C(0, 0, 1.0, 1.0, 0.95, 0.05, "white"),
+            ],
+        ),
+        item(
+            "column_square",
+            "Säule eckig",
+            "Square column",
+            [0.3, 0.3, 2.6],
+            [B(0, 0, 1, 1, 0, 1, "white", edges="faint")],
+        ),
+        item(
+            "beam",
+            "Deckenbalken",
+            "Ceiling beam",
+            [3.0, 0.2, 0.25],
+            [B(0, 0, 1, 1, 0, 1, "wood", edges="faint")],
+            mount="ceiling",
+        ),
+        item(
+            "chimney",
+            "Kaminzug",
+            "Chimney breast",
+            [0.9, 0.5, 2.6],
+            [B(0, 0, 1, 1, 0, 0.6, "#b8b2a8", edges="faint"), L(0, 0, 0.8, 0.8, 0.6, 0.4, "#b8b2a8", tw=0.45, td=0.45)],
+        ),
+        item(
+            "glass_wall",
+            "Glaswand",
+            "Glass partition",
+            [2.0, 0.05, 2.4],
+            [
+                B(0, 0, 1, 1, 0, 1, "glass"),
+                B(0, 0, 1, 1, 0, 0.02, "metal"),
+                B(0, 0, 1, 1, 0.98, 0.02, "metal"),
+                B(-0.5, 0, 0.012, 1, 0, 1, "metal"),
+                B(0.5, 0, 0.012, 1, 0, 1, "metal"),
+            ],
+        ),
+        item(
+            "sliding_wall",
+            "Schiebewand",
+            "Sliding wall",
+            [2.4, 0.12, 2.3],
+            [
+                B(0, 0, 1, 0.3, 0.97, 0.03, "metal"),
+                B(-0.25, 0.2, 0.5, 0.25, 0, 0.96, "wood", edges="faint"),
+                B(0.2, -0.2, 0.5, 0.25, 0, 0.96, "wood", edges="faint"),
+            ],
+        ),
+        item(
+            "platform",
+            "Podest (Bühne)",
+            "Raised platform",
+            [3.0, 2.0, 0.3],
+            [B(0, 0, 1, 1, 0, 1, "wood", edges="faint")],
+            surface=True,
+        ),
+        item(
+            "half_wall",
+            "Halbwand",
+            "Half wall",
+            [2.0, 0.15, 1.1],
+            [B(0, 0, 1, 1, 0, 0.93, "white", edges="faint"), B(0, 0, 1.02, 1.1, 0.93, 0.07, "wood")],
+        ),
+        item(
+            "divider_shelf",
+            "Raumteiler-Regal",
+            "Shelving divider",
+            [1.6, 0.35, 1.8],
+            [
+                B(-0.5, 0, 0.03, 1, 0, 1, "wood"),
+                B(0.5, 0, 0.03, 1, 0, 1, "wood"),
+                *[B(0, 0, 1, 1, i / 4, 0.025, "wood") for i in range(5)],
+                B(0, -0.5, 1, 0.02, 0, 1, "wood"),
+            ],
+        ),
+        item(
+            "pilaster",
+            "Wandpfeiler",
+            "Pilaster",
+            [0.25, 0.12, 2.6],
+            [
+                B(0, 0, 1, 1, 0, 0.04, "white"),
+                B(0, 0, 0.8, 0.8, 0.04, 0.92, "white"),
+                B(0, 0, 1, 1, 0.96, 0.04, "white"),
+            ],
+        ),
+    ],
+)
+
+# ------------------------------------------------------------------ Garage & Werkstatt
+pack(
+    "nextfloor.werkstatt",
+    "Garage & Werkstatt",
+    "Werkbank, Werkzeugschrank, Regal, Reifenstapel, Ständerbohrmaschine, Kompressor und Fahrradständer",
+    [
+        item(
+            "workbench",
+            "Werkbank",
+            "Workbench",
+            [1.8, 0.7, 0.9],
+            [
+                B(0, 0, 1, 1, 0.92, 0.08, "wood", edges="faint"),
+                *legs4(0.04, 0.06, 0.92, 0, "metal"),
+                B(0, 0, 0.9, 0.9, 0.25, 0.04, "wood"),
+                B(0, -0.5, 1, 0.03, 0.4, 0.5, "dark"),
+            ],
+            surface=True,
+        ),
+        item(
+            "tool_cabinet",
+            "Werkzeugschrank",
+            "Tool cabinet",
+            [0.9, 0.45, 1.9],
+            [
+                B(0, 0, 1, 1, 0, 1, "#b23b2e", edges="faint"),
+                B(-0.25, 0.5, 0.45, 0.01, 0.1, 0.8, "dark"),
+                B(0.25, 0.5, 0.45, 0.01, 0.1, 0.8, "dark"),
+                B(0, 0.5, 0.02, 0.02, 0.45, 0.1, "metal"),
+            ],
+        ),
+        item(
+            "tool_chest",
+            "Werkstattwagen",
+            "Tool trolley",
+            [0.7, 0.45, 0.95],
+            [
+                B(0, 0, 1, 1, 0.1, 0.8, "#c0392b", edges="faint"),
+                *[B(0, 0.5, 0.92, 0.01, 0.15 + i * 0.15, 0.12, "dark") for i in range(5)],
+                *legs4(0.06, 0.08, 0.1, 0, "dark"),
+                B(0, 0, 1.02, 1.02, 0.9, 0.1, "metal"),
+            ],
+        ),
+        item(
+            "shelf_rack",
+            "Lagerregal",
+            "Storage rack",
+            [1.5, 0.5, 2.0],
+            [
+                *[B(sx * 0.49, sz * 0.47, 0.04, 0.05, 0, 1, "#3d6fa8") for sx in (-1, 1) for sz in (-1, 1)],
+                *[B(0, 0, 1, 1, i / 5, 0.025, "metal") for i in range(1, 6)],
+                *[B(-0.25 + 0.5 * (i % 2), 0, 0.3, 0.7, 0.2 * (i // 2 + 1) + 0.025, 0.12, "#a07c4a") for i in range(6)],
+            ],
+        ),
+        item(
+            "tyre_stack",
+            "Reifenstapel",
+            "Stack of tyres",
+            [0.7, 0.7, 0.8],
+            [C(0, 0, 1, 1, i / 4, 0.24, "dark") for i in range(4)],
+        ),
+        item(
+            "drill_press",
+            "Ständerbohrmaschine",
+            "Drill press",
+            [0.45, 0.5, 1.7],
+            [
+                B(0, 0, 1, 0.9, 0, 0.05, "metal"),
+                C(0, -0.35, 0.08, 0.08, 0.05, 0.95, "metal"),
+                B(0, -0.05, 0.9, 0.5, 0.8, 0.18, "#2e7d6b"),
+                C(0, 0.2, 0.12, 0.12, 0.5, 0.3, "metal"),
+                B(0, 0.1, 0.7, 0.6, 0.33, 0.04, "metal"),
+            ],
+        ),
+        item(
+            "compressor",
+            "Kompressor",
+            "Air compressor",
+            [0.7, 0.35, 0.65],
+            [
+                C(0, 0, 1, 0.5, 0.2, 0.4, "#c0392b"),
+                B(0, 0, 0.25, 1, 0.6, 0.35, "metal"),
+                *legs4(0.1, 0.1, 0.2, 0, "dark"),
+            ],
+        ),
+        item(
+            "bike_stand",
+            "Fahrradständer",
+            "Bicycle stand",
+            [0.6, 1.8, 0.9],
+            [
+                B(0, 0, 1, 0.04, 0.0, 0.04, "metal"),
+                *[B(-0.5 + i * 0.2, 0, 0.04, 0.6, 0.0, 0.5, "metal") for i in range(6)],
+                B(0, 0.45, 1, 0.1, 0, 0.04, "metal"),
+            ],
+        ),
+        item(
+            "paint_cabinet",
+            "Farbschrank",
+            "Paint cabinet",
+            [0.6, 0.5, 1.1],
+            [B(0, 0, 1, 1, 0, 1, "#d8b84a", edges="faint"), B(0, 0.5, 0.9, 0.01, 0.1, 0.8, "dark")],
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     total = 0
     for p in PACKS:

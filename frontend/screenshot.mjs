@@ -49,6 +49,9 @@ const PACK_SCRIPT = `
 const shots = [
   // the house, the floors, a room
   { name: "showcase-living", dev: true, query: "?showcase&lang=en&set=basic%3Aliving", width: 1400, height: 800 },
+  { name: "showcase-stairs", dev: true, query: "?showcase&lang=en&set=pack%3Atreppen", width: 1400, height: 800 },
+  { name: "showcase-build", dev: true, query: "?showcase&lang=en&set=pack%3Aausbau", width: 1400, height: 800 },
+  { name: "showcase-shop", dev: true, query: "?showcase&lang=en&set=pack%3Awerkstatt", width: 1400, height: 800 },
   { name: "showcase-cars", dev: true, query: "?showcase&lang=en&set=pack%3Afahrzeuge&page=2", width: 1400, height: 800 },
   { name: "view-house", query: "?pv=5400&flows", width: 1280, height: 800 },
   { name: "view-floor-eg", query: "?pv=5400&flows", width: 1280, height: 800, click: "Erdgeschoss" },

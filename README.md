@@ -32,7 +32,7 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 |---|---|
 | ✏️ **Plan editor** | Floors, rooms, walls, doors, windows, stairs, outdoor areas and a roof, drawn in Home Assistant with the 3D view beside the plan. |
 | 💡 **Live 3D** | Tap to switch, swipe to dim, long press for colours. Blinds, windows and doors follow their entities; a room panel lists everything in the room. |
-| 🛋️ **Furniture & vehicles** | 40 basic models and 11 packs with over 130 more, popular IKEA sizes, Tesla models in their paint colours. |
+| 🛋️ **Furniture & vehicles** | 40 basic models and 14 packs with over 160 more, popular IKEA sizes, Tesla models in their paint colours. |
 | ⚡ **Energy & weather** | Solar fields and power flow, rain, snow, fog, sun and moon, sunlight through the windows. |
 | 📺 **Media & cameras** | TV screens with cover and ambilight, a camera wall, flights into live streams, a motion trail. |
 | 🖥️ **Wall tablet ready** | Alerts for smoke, gas, water and open windows, kiosk mode with night dimming, a light quality level for Fire tablets. |

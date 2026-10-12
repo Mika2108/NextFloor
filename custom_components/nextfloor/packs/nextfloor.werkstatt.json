@@ -1,0 +1,762 @@
+{
+ "format": "nfpack",
+ "version": 1,
+ "id": "nextfloor.werkstatt",
+ "name": "Garage & Werkstatt",
+ "publisher": "NextFloor",
+ "description": "Werkbank, Werkzeugschrank, Regal, Reifenstapel, Ständerbohrmaschine, Kompressor und Fahrradständer",
+ "release": 1,
+ "items": [
+  {
+   "id": "workbench",
+   "name": {
+    "de": "Werkbank",
+    "en": "Workbench"
+   },
+   "size": [
+    1.8,
+    0.7,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.92,
+     "h": 0.08,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.46,
+     "z": -0.46,
+     "w": 0.06,
+     "d": 0.06,
+     "y": 0,
+     "h": 0.92,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.46,
+     "z": 0.46,
+     "w": 0.06,
+     "d": 0.06,
+     "y": 0,
+     "h": 0.92,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.46,
+     "z": -0.46,
+     "w": 0.06,
+     "d": 0.06,
+     "y": 0,
+     "h": 0.92,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.46,
+     "z": 0.46,
+     "w": 0.06,
+     "d": 0.06,
+     "y": 0,
+     "h": 0.92,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 0.9,
+     "d": 0.9,
+     "y": 0.25,
+     "h": 0.04,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.5,
+     "w": 1,
+     "d": 0.03,
+     "y": 0.4,
+     "h": 0.5,
+     "color": "dark"
+    }
+   ],
+   "surface": true
+  },
+  {
+   "id": "tool_cabinet",
+   "name": {
+    "de": "Werkzeugschrank",
+    "en": "Tool cabinet"
+   },
+   "size": [
+    0.9,
+    0.45,
+    1.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#b23b2e",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.5,
+     "w": 0.45,
+     "d": 0.01,
+     "y": 0.1,
+     "h": 0.8,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0.5,
+     "w": 0.45,
+     "d": 0.01,
+     "y": 0.1,
+     "h": 0.8,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.5,
+     "w": 0.02,
+     "d": 0.02,
+     "y": 0.45,
+     "h": 0.1,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "tool_chest",
+   "name": {
+    "de": "Werkstattwagen",
+    "en": "Tool trolley"
+   },
+   "size": [
+    0.7,
+    0.45,
+    0.95
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.1,
+     "h": 0.8,
+     "color": "#c0392b",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.5,
+     "w": 0.92,
+     "d": 0.01,
+     "y": 0.15,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.5,
+     "w": 0.92,
+     "d": 0.01,
+     "y": 0.3,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.5,
+     "w": 0.92,
+     "d": 0.01,
+     "y": 0.45,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.5,
+     "w": 0.92,
+     "d": 0.01,
+     "y": 0.6,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.5,
+     "w": 0.92,
+     "d": 0.01,
+     "y": 0.75,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.44,
+     "z": -0.44,
+     "w": 0.08,
+     "d": 0.08,
+     "y": 0,
+     "h": 0.1,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.44,
+     "z": 0.44,
+     "w": 0.08,
+     "d": 0.08,
+     "y": 0,
+     "h": 0.1,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.44,
+     "z": -0.44,
+     "w": 0.08,
+     "d": 0.08,
+     "y": 0,
+     "h": 0.1,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.44,
+     "z": 0.44,
+     "w": 0.08,
+     "d": 0.08,
+     "y": 0,
+     "h": 0.1,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.9,
+     "h": 0.1,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "shelf_rack",
+   "name": {
+    "de": "Lagerregal",
+    "en": "Storage rack"
+   },
+   "size": [
+    1.5,
+    0.5,
+    2.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.49,
+     "z": -0.47,
+     "w": 0.04,
+     "d": 0.05,
+     "y": 0,
+     "h": 1,
+     "color": "#3d6fa8"
+    },
+    {
+     "shape": "box",
+     "x": -0.49,
+     "z": 0.47,
+     "w": 0.04,
+     "d": 0.05,
+     "y": 0,
+     "h": 1,
+     "color": "#3d6fa8"
+    },
+    {
+     "shape": "box",
+     "x": 0.49,
+     "z": -0.47,
+     "w": 0.04,
+     "d": 0.05,
+     "y": 0,
+     "h": 1,
+     "color": "#3d6fa8"
+    },
+    {
+     "shape": "box",
+     "x": 0.49,
+     "z": 0.47,
+     "w": 0.04,
+     "d": 0.05,
+     "y": 0,
+     "h": 1,
+     "color": "#3d6fa8"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.2,
+     "h": 0.025,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.4,
+     "h": 0.025,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.6,
+     "h": 0.025,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.8,
+     "h": 0.025,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 1,
+     "h": 0.025,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0,
+     "w": 0.3,
+     "d": 0.7,
+     "y": 0.225,
+     "h": 0.12,
+     "color": "#a07c4a"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0,
+     "w": 0.3,
+     "d": 0.7,
+     "y": 0.225,
+     "h": 0.12,
+     "color": "#a07c4a"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0,
+     "w": 0.3,
+     "d": 0.7,
+     "y": 0.425,
+     "h": 0.12,
+     "color": "#a07c4a"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0,
+     "w": 0.3,
+     "d": 0.7,
+     "y": 0.425,
+     "h": 0.12,
+     "color": "#a07c4a"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0,
+     "w": 0.3,
+     "d": 0.7,
+     "y": 0.625,
+     "h": 0.12,
+     "color": "#a07c4a"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0,
+     "w": 0.3,
+     "d": 0.7,
+     "y": 0.625,
+     "h": 0.12,
+     "color": "#a07c4a"
+    }
+   ]
+  },
+  {
+   "id": "tyre_stack",
+   "name": {
+    "de": "Reifenstapel",
+    "en": "Stack of tyres"
+   },
+   "size": [
+    0.7,
+    0.7,
+    0.8
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.25,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.5,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.75,
+     "h": 0.24,
+     "color": "dark"
+    }
+   ]
+  },
+  {
+   "id": "drill_press",
+   "name": {
+    "de": "Ständerbohrmaschine",
+    "en": "Drill press"
+   },
+   "size": [
+    0.45,
+    0.5,
+    1.7
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 0.9,
+     "y": 0,
+     "h": 0.05,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": -0.35,
+     "w": 0.08,
+     "d": 0.08,
+     "y": 0.05,
+     "h": 0.95,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.05,
+     "w": 0.9,
+     "d": 0.5,
+     "y": 0.8,
+     "h": 0.18,
+     "color": "#2e7d6b"
+    },
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0.2,
+     "w": 0.12,
+     "d": 0.12,
+     "y": 0.5,
+     "h": 0.3,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.1,
+     "w": 0.7,
+     "d": 0.6,
+     "y": 0.33,
+     "h": 0.04,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "compressor",
+   "name": {
+    "de": "Kompressor",
+    "en": "Air compressor"
+   },
+   "size": [
+    0.7,
+    0.35,
+    0.65
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 0.5,
+     "y": 0.2,
+     "h": 0.4,
+     "color": "#c0392b"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 0.25,
+     "d": 1,
+     "y": 0.6,
+     "h": 0.35,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.4,
+     "z": -0.4,
+     "w": 0.1,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.2,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.4,
+     "z": 0.4,
+     "w": 0.1,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.2,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.4,
+     "z": -0.4,
+     "w": 0.1,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.2,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.4,
+     "z": 0.4,
+     "w": 0.1,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.2,
+     "color": "dark"
+    }
+   ]
+  },
+  {
+   "id": "bike_stand",
+   "name": {
+    "de": "Fahrradständer",
+    "en": "Bicycle stand"
+   },
+   "size": [
+    0.6,
+    1.8,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 0.04,
+     "y": 0,
+     "h": 0.04,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.5,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.5,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.3,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.5,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.1,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.5,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.1,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.5,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.3,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.5,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.5,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.5,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.45,
+     "w": 1,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.04,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "paint_cabinet",
+   "name": {
+    "de": "Farbschrank",
+    "en": "Paint cabinet"
+   },
+   "size": [
+    0.6,
+    0.5,
+    1.1
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#d8b84a",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.5,
+     "w": 0.9,
+     "d": 0.01,
+     "y": 0.1,
+     "h": 0.8,
+     "color": "dark"
+    }
+   ]
+  }
+ ]
+}

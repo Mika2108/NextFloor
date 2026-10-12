@@ -1,0 +1,1378 @@
+{
+ "format": "nfpack",
+ "version": 1,
+ "id": "nextfloor.treppen",
+ "name": "Treppen & Geländer",
+ "publisher": "NextFloor",
+ "description": "Gerade, L- und U-Treppen, Wendeltreppe, Podest, Außentreppe und Geländer aus Metall, Glas und Holz",
+ "release": 1,
+ "items": [
+  {
+   "id": "stairs_straight",
+   "name": {
+    "de": "Gerade Treppe",
+    "en": "Straight staircase"
+   },
+   "size": [
+    1.0,
+    3.0,
+    2.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.4643,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.0714,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.3929,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.1429,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.3214,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.2143,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.25,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.2857,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.1786,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.3571,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.1071,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.4286,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.0357,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.5,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.0357,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.5714,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.1071,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.6429,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.1786,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.7143,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.25,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.7857,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.3214,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.8571,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.3929,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.9286,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.4643,
+     "w": 1,
+     "d": 0.0714,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.49,
+     "z": 0,
+     "w": 0.02,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "tz": -0.5,
+     "td": 0.001
+    },
+    {
+     "shape": "box",
+     "x": 0.49,
+     "z": 0,
+     "w": 0.02,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "tz": -0.5,
+     "td": 0.001
+    }
+   ],
+   "hole": true
+  },
+  {
+   "id": "stairs_l",
+   "name": {
+    "de": "L-Treppe mit Podest",
+    "en": "L-shaped staircase with landing"
+   },
+   "size": [
+    2.0,
+    2.6,
+    2.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.4571,
+     "w": 0.5,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.0714,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.3714,
+     "w": 0.5,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.1429,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.2857,
+     "w": 0.5,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.2143,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.2,
+     "w": 0.5,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.2857,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.1143,
+     "w": 0.5,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.3571,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.0286,
+     "w": 0.5,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.4286,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": -0.0571,
+     "w": 0.5,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.5,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": -0.3,
+     "w": 0.5,
+     "d": 0.4,
+     "y": 0,
+     "h": 0.5,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.1357,
+     "z": -0.3,
+     "w": 0.0714,
+     "d": 0.4,
+     "y": 0,
+     "h": 0.5714,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.2071,
+     "z": -0.3,
+     "w": 0.0714,
+     "d": 0.4,
+     "y": 0,
+     "h": 0.6429,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.2786,
+     "z": -0.3,
+     "w": 0.0714,
+     "d": 0.4,
+     "y": 0,
+     "h": 0.7143,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.35,
+     "z": -0.3,
+     "w": 0.0714,
+     "d": 0.4,
+     "y": 0,
+     "h": 0.7857,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.4214,
+     "z": -0.3,
+     "w": 0.0714,
+     "d": 0.4,
+     "y": 0,
+     "h": 0.8571,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.4929,
+     "z": -0.3,
+     "w": 0.0714,
+     "d": 0.4,
+     "y": 0,
+     "h": 0.9286,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.5,
+     "z": -0.3,
+     "w": 0.0714,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "edges": "faint"
+    }
+   ],
+   "hole": true
+  },
+  {
+   "id": "stairs_u",
+   "name": {
+    "de": "U-Treppe",
+    "en": "U-shaped staircase"
+   },
+   "size": [
+    2.2,
+    3.0,
+    2.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.27,
+     "z": 0.45,
+     "w": 0.42,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.0714,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.27,
+     "z": 0.35,
+     "w": 0.42,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.1429,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.27,
+     "z": 0.25,
+     "w": 0.42,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.2143,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.27,
+     "z": 0.15,
+     "w": 0.42,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.2857,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.27,
+     "z": 0.05,
+     "w": 0.42,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.3571,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.27,
+     "z": -0.05,
+     "w": 0.42,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.4286,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.27,
+     "z": -0.15,
+     "w": 0.42,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.5,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.35,
+     "w": 1,
+     "d": 0.3,
+     "y": 0,
+     "h": 0.5,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.27,
+     "z": -0.15,
+     "w": 0.42,
+     "d": 0.001,
+     "y": 0.5,
+     "h": 0.0714,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.27,
+     "z": -0.05,
+     "w": 0.42,
+     "d": 0.001,
+     "y": 0.5,
+     "h": 0.1429,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.27,
+     "z": 0.05,
+     "w": 0.42,
+     "d": 0.001,
+     "y": 0.5,
+     "h": 0.2143,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.27,
+     "z": 0.15,
+     "w": 0.42,
+     "d": 0.001,
+     "y": 0.5,
+     "h": 0.2857,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.27,
+     "z": 0.25,
+     "w": 0.42,
+     "d": 0.001,
+     "y": 0.5,
+     "h": 0.3571,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.27,
+     "z": 0.35,
+     "w": 0.42,
+     "d": 0.001,
+     "y": 0.5,
+     "h": 0.4286,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.27,
+     "z": 0.45,
+     "w": 0.42,
+     "d": 0.001,
+     "y": 0.5,
+     "h": 0.5,
+     "color": "wood",
+     "edges": "faint"
+    }
+   ],
+   "hole": true
+  },
+  {
+   "id": "stairs_spiral",
+   "name": {
+    "de": "Wendeltreppe",
+    "en": "Spiral staircase"
+   },
+   "size": [
+    1.6,
+    1.6,
+    2.8
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0,
+     "z": 0,
+     "w": 0.1,
+     "d": 0.1,
+     "y": 0,
+     "h": 1,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.45,
+     "z": 0.0,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.0625,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.4157,
+     "z": 0.1722,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.125,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.3182,
+     "z": 0.3182,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.1875,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.1722,
+     "z": 0.4157,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.25,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.45,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.3125,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.1722,
+     "z": 0.4157,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.375,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.3182,
+     "z": 0.3182,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.4375,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.4157,
+     "z": 0.1722,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.5,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.45,
+     "z": 0.0,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.5625,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.4157,
+     "z": -0.1722,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.625,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.3182,
+     "z": -0.3182,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.6875,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.1722,
+     "z": -0.4157,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.75,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.0,
+     "z": -0.45,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.8125,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.1722,
+     "z": -0.4157,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.875,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.3182,
+     "z": -0.3182,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 0.9375,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.4157,
+     "z": -0.1722,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "edges": "faint"
+    }
+   ],
+   "hole": true
+  },
+  {
+   "id": "stairs_compact",
+   "name": {
+    "de": "Raumspartreppe",
+    "en": "Space-saving staircase"
+   },
+   "size": [
+    0.8,
+    2.2,
+    2.7
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.4545,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.0909,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.3636,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.1818,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.2727,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.2727,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.1818,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.3636,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.0909,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.4545,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.0,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.5455,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.0909,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.6364,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.1818,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.7273,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.2727,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.8182,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.3636,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 0.9091,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.4545,
+     "w": 0.8,
+     "d": 0.0909,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.4,
+     "z": 0,
+     "w": 0.03,
+     "d": 1,
+     "y": 0,
+     "h": 0.5,
+     "color": "metal",
+     "tz": -0.5,
+     "td": 0.001
+    }
+   ],
+   "hole": true
+  },
+  {
+   "id": "landing",
+   "name": {
+    "de": "Podest",
+    "en": "Landing"
+   },
+   "size": [
+    1.2,
+    1.2,
+    1.4
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.92,
+     "h": 0.08,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.46,
+     "z": -0.46,
+     "w": 0.06,
+     "d": 0.06,
+     "y": 0,
+     "h": 0.92,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.46,
+     "z": 0.46,
+     "w": 0.06,
+     "d": 0.06,
+     "y": 0,
+     "h": 0.92,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.46,
+     "z": -0.46,
+     "w": 0.06,
+     "d": 0.06,
+     "y": 0,
+     "h": 0.92,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.46,
+     "z": 0.46,
+     "w": 0.06,
+     "d": 0.06,
+     "y": 0,
+     "h": 0.92,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "steps_outdoor",
+   "name": {
+    "de": "Außentreppe",
+    "en": "Outdoor steps"
+   },
+   "size": [
+    1.4,
+    1.1,
+    0.6
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.375,
+     "w": 1,
+     "d": 0.25,
+     "y": 0,
+     "h": 0.25,
+     "color": "#9a9fa8",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0.125,
+     "w": 1,
+     "d": 0.25,
+     "y": 0,
+     "h": 0.5,
+     "color": "#9a9fa8",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.125,
+     "w": 1,
+     "d": 0.25,
+     "y": 0,
+     "h": 0.75,
+     "color": "#9a9fa8",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": -0.375,
+     "w": 1,
+     "d": 0.25,
+     "y": 0,
+     "h": 1,
+     "color": "#9a9fa8",
+     "edges": "faint"
+    }
+   ]
+  },
+  {
+   "id": "rail_metal",
+   "name": {
+    "de": "Geländer Metall",
+    "en": "Metal railing"
+   },
+   "size": [
+    2.0,
+    0.06,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 0.8,
+     "y": 0.94,
+     "h": 0.06,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.5,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.4167,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.3333,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.1667,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.0833,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0833,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.1667,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.3333,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.4167,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.5,
+     "z": 0,
+     "w": 0.012,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 0.5,
+     "y": 0.04,
+     "h": 0.04,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "rail_glass",
+   "name": {
+    "de": "Geländer Glas",
+    "en": "Glass railing"
+   },
+   "size": [
+    2.0,
+    0.06,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 0.99,
+     "d": 0.35,
+     "y": 0.08,
+     "h": 0.84,
+     "color": "glass"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 0.8,
+     "y": 0.94,
+     "h": 0.06,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.49,
+     "z": 0,
+     "w": 0.02,
+     "d": 0.8,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.49,
+     "z": 0,
+     "w": 0.02,
+     "d": 0.8,
+     "y": 0,
+     "h": 0.94,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "rail_wood",
+   "name": {
+    "de": "Geländer Holz",
+    "en": "Wooden railing"
+   },
+   "size": [
+    2.0,
+    0.08,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 1,
+     "y": 0.92,
+     "h": 0.08,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.5,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.92,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.375,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.92,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.92,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.125,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.92,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.92,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.125,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.92,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.92,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.375,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.92,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.5,
+     "z": 0,
+     "w": 0.04,
+     "d": 0.6,
+     "y": 0,
+     "h": 0.92,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0,
+     "z": 0,
+     "w": 1,
+     "d": 0.5,
+     "y": 0.06,
+     "h": 0.05,
+     "color": "wood"
+    }
+   ]
+  }
+ ]
+}

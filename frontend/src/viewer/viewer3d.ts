@@ -41,6 +41,7 @@ import type { Building, Floor, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
 import { centroid, pointInPolygon, openingStyle, WALL_LAMP_Y } from "../model.ts";
 import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
+import { easeFloor, fadeMaterials, floorShare, floorTarget } from "./scene/floor-motion.ts";
 import { atTarget, stepOpening, stepShare } from "./scene/opening-motion.ts";
 import { addCameraWedge, addLampHalo, addSpotCone, hiddenInCut, type HaloPoints } from "./scene/halos.ts";
 import { sunlightPatches, sunSignature } from "./scene/sunlight.ts";
@@ -251,14 +252,8 @@ export interface ViewerStats {
   pixelRatio: number;
 }
 
-/** Extra gap between floors in the pulled-apart house view (metres). */
-const EXPLODE_GAP = 2.4;
 /** How far the roof lifts off the top floor while the floors are pulled apart. */
 const ROOF_GAP = 1.4;
-/** Opacity of the floors below the selected one. */
-const BELOW_OPACITY = 0.22;
-/** Time constant of the floor animation (ms); about 700 ms until settled. */
-const FLOOR_TAU = 140;
 /** Grid cells across the ground texture. */
 const GROUND_CELLS = 32;
 const LAMP_BODY = 0x2a3a60;
@@ -1518,7 +1513,7 @@ export class NextFloorViewer {
     // a house with a single floor shows that floor as its house view, roof included (D208)
     const house = this.floorId === null || this.floors.length === 1;
     const target = house && this.wallMode !== "cut" ? 0.94 * zoom : 0;
-    const k = 1 - Math.exp(-dt / FLOOR_TAU);
+    const k = floorShare(dt);
     const before = this.roofO;
     this.roofO += (target - this.roofO) * k;
     if (Math.abs(target - this.roofO) < 0.004) this.roofO = target;
@@ -1569,36 +1564,19 @@ export class NextFloorViewer {
     return this.floorId === null && this.floors.length > 1;
   }
 
-  /** Target height offset and opacity of every floor for the current view. */
+  /** Where every floor belongs in the current view. */
   private applyTargets(immediate: boolean): void {
-    const sel = this.floorId ? this.floorMap.get(this.floorId) : undefined;
+    const chosen = this.floorId ? this.floorMap.get(this.floorId) : undefined;
     for (const fv of this.floors) {
-      let ty = 0;
-      let to = 1;
-      if (!sel) ty = this.explode ? fv.rank * EXPLODE_GAP : 0;
-      else if (fv.rank > sel.rank) {
-        ty = 5 + fv.rank; // floors above fly away
-        to = 0;
-      } else if (fv.rank < sel.rank) {
-        // floors below: a dim reference, the house stacked up to this floor, or hidden
-        if (this.floorStack === "stacked") ty = 0;
-        else {
-          ty = -0.4;
-          to = this.floorStack === "single" ? 0 : BELOW_OPACITY;
-        }
-      }
-      fv.ty = ty;
-      fv.to = to;
-      if (immediate) {
-        fv.y = ty;
-        fv.o = to;
-      }
+      const target = floorTarget(fv.rank, chosen?.rank, this.explode, this.floorStack);
+      [fv.ty, fv.to] = [target.y, target.opacity];
+      if (immediate) [fv.y, fv.o] = [target.y, target.opacity];
       this.applyFloor(fv);
     }
     this.invalidate();
   }
 
-  /** Move a floor group to its current offset and fade its materials. */
+  /** Moves a floor group to its current offset and fades its materials. */
   private applyFloor(fv: FloorView): void {
     fv.group.position.y = fv.floor.elevation + fv.y;
     fv.group.visible = fv.o > 0.02;
@@ -1606,47 +1584,18 @@ export class NextFloorViewer {
     fv.shadowMesh.visible = fv.o > 0.98 && !this.lowQuality;
     if (Math.abs(fv.appliedO - fv.o) < 1e-3) return;
     fv.appliedO = fv.o;
-    const m = fv.materials;
-    const solid = fv.o > 0.999;
-    for (const mat of [m.floor, m.wall, m.frames, m.blinds, m.lamps]) {
-      if (mat.transparent === solid) {
-        mat.transparent = !solid;
-        mat.depthWrite = solid;
-        mat.needsUpdate = true;
-      }
-      mat.opacity = fv.o;
-    }
-    m.pattern.opacity = fv.o;
-    m.glow.opacity = fv.o;
-    m.lines.opacity = fv.o;
-    m.glass.opacity = fv.o;
-    m.glassWall.opacity = fv.o;
-    m.lamps.opacity = fv.o;
-    m.halos.opacity = fv.o;
-    m.cones.opacity = fv.o;
-    m.screens.opacity = fv.o;
+    fadeMaterials(fv.materials, fv.o);
   }
 
-  /** Advance the floor animation; returns true while something still moves. */
+  /** One frame of the floor animation; true while something still moves. */
   private stepFloors(dt: number): boolean {
     let moving = false;
-    const k = 1 - Math.exp(-dt / FLOOR_TAU);
+    const share = floorShare(dt);
     for (const fv of this.floors) {
-      const dy = fv.ty - fv.y;
-      const dO = fv.to - fv.o;
-      if (Math.abs(dy) < 0.004 && Math.abs(dO) < 0.004) {
-        if (dy !== 0 || dO !== 0) {
-          fv.y = fv.ty;
-          fv.o = fv.to;
-          this.labelsDirty = true;
-          this.applyFloor(fv);
-        }
-        continue;
-      }
-      fv.y += dy * k;
-      fv.o += dO * k;
-      moving = true;
-      this.applyFloor(fv);
+      const step = easeFloor(fv, share);
+      if (step.settled) this.labelsDirty = true;
+      if (step.moving || step.settled) this.applyFloor(fv);
+      moving ||= step.moving;
     }
     return moving;
   }

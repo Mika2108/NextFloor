@@ -1,0 +1,95 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { Vector3 } from "three";
+import { blendViews, cameraPosition, clamp, coast, copyView, ease, flightGoal, MAX_PHI, MIN_PHI, orbitView, panView, type OrbitView } from "./view.ts";
+
+const near = (a: number, b: number, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} vs ${b}`);
+const view = (extra: Partial<OrbitView> = {}): OrbitView => ({ target: new Vector3(1, 2, 3), radius: 10, theta: 0, phi: Math.PI / 2, ...extra });
+
+test("clamp keeps a value inside its limits", () => {
+  assert.equal(clamp(5, 0, 3), 3);
+  assert.equal(clamp(-1, 0, 3), 0);
+  assert.equal(clamp(2, 0, 3), 2);
+});
+
+test("easing starts at 0, ends at 1, is slow at both ends and symmetric", () => {
+  near(ease(0), 0);
+  near(ease(1), 1);
+  near(ease(0.5), 0.5);
+  assert.ok(ease(0.1) < 0.1 && ease(0.9) > 0.9);
+  near(ease(0.25) + ease(0.75), 1);
+});
+
+test("the camera sits at the radius from the target, in the direction the angles say", () => {
+  const p = cameraPosition(view());
+  near(p.distanceTo(new Vector3(1, 2, 3)), 10);
+  near(p.y, 2, 1e-9); // phi = 90°: level with the target
+  near(p.z, 13); // theta = 0: in front, along +z
+  const above = cameraPosition(view({ phi: 0 }));
+  near(above.y, 12);
+  const side = cameraPosition(view({ theta: Math.PI / 2 }));
+  near(side.x, 11);
+});
+
+test("a blend between two views runs from the first to the second", () => {
+  const a = view();
+  const b = view({ target: new Vector3(5, 6, 7), radius: 20, theta: 1, phi: 1 });
+  const start = blendViews(a, b, 0);
+  const end = blendViews(a, b, 1);
+  near(start.radius, 10);
+  near(end.radius, 20);
+  assert.ok(end.target.equals(b.target));
+  const middle = blendViews(a, b, 0.5);
+  near(middle.radius, 15);
+  near(middle.theta, 0.5);
+});
+
+test("a flight turns the short way round and keeps what it is not told to change", () => {
+  const from = view({ theta: 3 });
+  assert.ok(Math.abs(flightGoal(from, { theta: -3 }).theta - 3) < 1, "from 3 to -3 goes through π, not back through 0");
+  const goal = flightGoal(from, { radius: 4 });
+  assert.equal(goal.radius, 4);
+  assert.equal(goal.theta, 3);
+  assert.equal(goal.phi, from.phi);
+  assert.notEqual(goal.target, from.target, "the target is copied");
+});
+
+test("copying a view copies its target", () => {
+  const a = view();
+  const b = copyView(a);
+  b.target.x = 99;
+  assert.equal(a.target.x, 1);
+});
+
+test("dragging turns the view, limits the tilt, and reports the turn for inertia", () => {
+  const v = view({ phi: 1 });
+  const turn = orbitView(v, 100, 0, 500);
+  assert.ok(v.theta < 0 && turn.theta < 0, "dragging right turns the view clockwise");
+  near(turn.theta, (-100 / 500) * 3.2);
+  orbitView(v, 0, 10000, 500);
+  assert.equal(v.phi, MIN_PHI);
+  orbitView(v, 0, -10000, 500);
+  assert.equal(v.phi, MAX_PHI);
+});
+
+test("inertia fades out and then stops", () => {
+  const v = view();
+  const velocity = { theta: 0.1, phi: 0 };
+  let steps = 0;
+  while (coast(v, velocity) && steps < 1000) steps++;
+  assert.ok(steps > 20 && steps < 200);
+  assert.ok(v.theta > 0.3 && v.theta < 1.1, "keeps turning a little");
+  assert.equal(coast(v, { theta: 0, phi: 0 }), false);
+});
+
+test("panning moves the target sideways, and further when zoomed out", () => {
+  const close = view({ radius: 5 });
+  const far = view({ radius: 20 });
+  panView(close, 100, 0, 500, 50);
+  panView(far, 100, 0, 500, 50);
+  assert.ok(close.target.x < 1 && far.target.x < close.target.x, "dragging right moves the scene right, so the target left");
+  const forward = view();
+  panView(forward, 0, 100, 500, 50);
+  assert.ok(forward.target.z < 3 || forward.target.z > 3, "dragging down moves the target along the view direction");
+  near(forward.target.x, 1);
+});

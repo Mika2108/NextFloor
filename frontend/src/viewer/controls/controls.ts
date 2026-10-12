@@ -1,0 +1,237 @@
+// The orbit camera's pointer handling: turning, panning, pinch zoom, taps, holds, and handing pointers over to objects.
+// The owner calls update() each frame; it returns true while something still moves.
+
+import type { PerspectiveCamera } from "three";
+import { Vector3 } from "three";
+import { blendViews, cameraPosition, clamp, coast, copyView, flightGoal, orbitView, panView, type OrbitView } from "./view.ts";
+
+export interface ControlEvents {
+  change(): void;
+  tap(x: number, y: number): void;
+  doubleTap(x: number, y: number): void;
+  /** A press without moving for HOLD_MS; the release that follows is no tap. */
+  hold(x: number, y: number): void;
+  /** A pointer went down: return true to take it (drag an object instead of turning the view). */
+  grab?(x: number, y: number): boolean;
+  drag?(x: number, y: number): void;
+  drop?(): void;
+  /**
+   * A one-finger drag starts at (x, y) and moves by (dx, dy): return true to take it as a swipe on an object (dimming a
+   * lamp, moving a blind) rather than turning the view. Moves then report the vertical distance from the start (pixels,
+   * down is positive).
+   */
+  swipeStart?(x: number, y: number, dx: number, dy: number): boolean;
+  swipeMove?(dy: number): void;
+  swipeEnd?(): void;
+}
+
+const HOLD_MS = 500;
+const TAP_MAX_MS = 400;
+const DOUBLE_TAP_MS = 320;
+const DRAG_THRESHOLD = 6;
+
+interface PointerInfo {
+  x: number;
+  y: number;
+  button: number;
+}
+
+export class OrbitControls {
+  view: OrbitView = { target: new Vector3(), radius: 16, theta: -0.6, phi: 0.85 };
+  minRadius = 2;
+  maxRadius = 80;
+
+  private readonly pointers = new Map<number, PointerInfo>();
+  private velocity = { theta: 0, phi: 0 };
+  private flight: { from: OrbitView; to: OrbitView; start: number; duration: number } | null = null;
+  private press: { x: number; y: number; time: number; moved: boolean } | null = null;
+  private lastTap = 0;
+  private holdTimer: ReturnType<typeof setTimeout> | undefined;
+  private held = false;
+  /** An object is being dragged: moves go to events.drag and not to the camera. */
+  private grabbing = false;
+  /** A swipe on an object is going on: vertical moves go to events.swipeMove. */
+  private swiping: { startY: number } | null = null;
+  private pinch: { dist: number; mid: [number, number] } | null = null;
+  private readonly listeners: [string, EventListener][] = [];
+  private readonly el: HTMLElement;
+  private readonly camera: PerspectiveCamera;
+  private readonly events: ControlEvents;
+
+  constructor(el: HTMLElement, camera: PerspectiveCamera, events: ControlEvents) {
+    this.el = el;
+    this.camera = camera;
+    this.events = events;
+    const listen = <K extends keyof HTMLElementEventMap>(type: K, handler: (e: HTMLElementEventMap[K]) => void, options?: AddEventListenerOptions) => {
+      el.addEventListener(type, handler as EventListener, options);
+      this.listeners.push([type, handler as EventListener]);
+    };
+    listen("pointerdown", (e) => this.onDown(e));
+    listen("pointermove", (e) => this.onMove(e));
+    listen("pointerup", (e) => this.onUp(e));
+    listen("pointercancel", (e) => this.onUp(e));
+    listen("wheel", (e) => this.onWheel(e), { passive: false });
+    listen("contextmenu", (e) => e.preventDefault());
+  }
+
+  dispose(): void {
+    clearTimeout(this.holdTimer);
+    for (const [type, handler] of this.listeners) this.el.removeEventListener(type, handler);
+  }
+
+  /** A finger or the mouse holds the view, or a flight runs (an automatic orbit waits meanwhile). */
+  get active(): boolean {
+    return this.pointers.size > 0 || this.flight !== null;
+  }
+
+  get busy(): boolean {
+    return this.active;
+  }
+
+  /** Applies the view to the camera. Returns true while inertia or a flight is running. */
+  update(now: number): boolean {
+    let moving = false;
+    if (this.flight) {
+      const { from, to, start, duration } = this.flight;
+      const fraction = Math.min(1, (now - start) / duration);
+      this.view = blendViews(from, to, fraction);
+      if (fraction >= 1) this.flight = null;
+      moving = true;
+    } else if (this.pointers.size === 0) {
+      moving = coast(this.view, this.velocity);
+    }
+    this.camera.position.copy(cameraPosition(this.view));
+    this.camera.lookAt(this.view.target);
+    return moving;
+  }
+
+  flyTo(to: Partial<OrbitView>, duration = 700): void {
+    const goal = flightGoal(this.view, to);
+    const from = copyView(this.view);
+    this.velocity = { theta: 0, phi: 0 };
+    if (duration <= 0 || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      this.view = goal;
+      this.flight = null;
+    } else {
+      this.flight = { from, to: goal, start: performance.now(), duration };
+    }
+    this.events.change();
+  }
+
+  private local(e: { clientX: number; clientY: number }): [number, number] {
+    const rect = this.el.getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top];
+  }
+
+  private stopMotion(): void {
+    this.flight = null;
+    this.velocity = { theta: 0, phi: 0 };
+  }
+
+  private onDown(e: PointerEvent): void {
+    this.el.setPointerCapture(e.pointerId);
+    const first = this.pointers.size === 0;
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
+    this.stopMotion();
+    if (first && e.button === 0 && this.events.grab?.(...this.local(e))) {
+      this.grabbing = true;
+      return;
+    }
+    clearTimeout(this.holdTimer);
+    this.held = false;
+    if (this.pointers.size === 1) {
+      this.press = { x: e.clientX, y: e.clientY, time: performance.now(), moved: false };
+      const [x, y] = this.local(e);
+      this.holdTimer = setTimeout(() => {
+        if (!this.press || this.press.moved || this.pointers.size !== 1) return;
+        this.held = true;
+        this.events.hold(x, y);
+      }, HOLD_MS);
+    } else {
+      this.press = null;
+      this.pinch = this.pinchState();
+    }
+  }
+
+  private onMove(e: PointerEvent): void {
+    const pointer = this.pointers.get(e.pointerId);
+    if (!pointer) return;
+    if (this.grabbing) return void this.events.drag?.(...this.local(e));
+    if (this.swiping) return void this.events.swipeMove?.(e.clientY - this.swiping.startY);
+
+    const [dx, dy] = [e.clientX - pointer.x, e.clientY - pointer.y];
+    if (this.press && !this.press.moved && Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) > DRAG_THRESHOLD) {
+      this.press.moved = true;
+      clearTimeout(this.holdTimer);
+      const [sx, sy] = this.local({ clientX: this.press.x, clientY: this.press.y });
+      const swipe = this.pointers.size === 1 && pointer.button === 0 && !e.shiftKey && this.events.swipeStart?.(sx, sy, e.clientX - this.press.x, e.clientY - this.press.y);
+      if (swipe) {
+        this.swiping = { startY: this.press.y };
+        this.velocity = { theta: 0, phi: 0 };
+        return void this.events.swipeMove?.(e.clientY - this.press.y);
+      }
+    }
+
+    if (this.pointers.size === 1) {
+      if (!(this.press && !this.press.moved)) {
+        if (pointer.button === 1 || pointer.button === 2 || e.shiftKey) panView(this.view, dx, dy, this.el.clientHeight, this.camera.fov);
+        else this.velocity = orbitView(this.view, dx, dy, this.el.clientHeight);
+      }
+      [pointer.x, pointer.y] = [e.clientX, e.clientY];
+    } else {
+      [pointer.x, pointer.y] = [e.clientX, e.clientY];
+      const now = this.pinchState();
+      if (this.pinch && now) {
+        this.zoom(this.pinch.dist / Math.max(1, now.dist));
+        panView(this.view, now.mid[0] - this.pinch.mid[0], now.mid[1] - this.pinch.mid[1], this.el.clientHeight, this.camera.fov);
+      }
+      this.pinch = now;
+    }
+    if (!(this.pointers.size === 1 && this.press && !this.press.moved)) this.events.change();
+  }
+
+  private onUp(e: PointerEvent): void {
+    if (!this.pointers.has(e.pointerId)) return;
+    this.pointers.delete(e.pointerId);
+    if (this.grabbing) {
+      this.grabbing = false;
+      return void this.events.drop?.();
+    }
+    if (this.swiping) {
+      this.swiping = null;
+      this.press = null;
+      return void this.events.swipeEnd?.();
+    }
+    if (this.pointers.size < 2) this.pinch = null;
+    clearTimeout(this.holdTimer);
+    if (this.held) {
+      this.held = false;
+      this.press = null;
+    } else if (this.press && !this.press.moved && e.type === "pointerup" && performance.now() - this.press.time < TAP_MAX_MS) {
+      const [x, y] = this.local(e);
+      const now = performance.now();
+      const isDouble = now - this.lastTap < DOUBLE_TAP_MS;
+      this.lastTap = isDouble ? 0 : now;
+      if (isDouble) this.events.doubleTap(x, y);
+      else this.events.tap(x, y);
+    }
+    if (this.pointers.size === 0) this.press = null;
+    this.events.change();
+  }
+
+  private onWheel(e: WheelEvent): void {
+    e.preventDefault();
+    this.flight = null;
+    this.zoom(Math.exp(e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015)));
+    this.events.change();
+  }
+
+  private zoom(factor: number): void {
+    this.view.radius = clamp(this.view.radius * factor, this.minRadius, this.maxRadius);
+  }
+
+  private pinchState(): { dist: number; mid: [number, number] } | null {
+    const [a, b] = [...this.pointers.values()];
+    return b ? { dist: Math.hypot(a.x - b.x, a.y - b.y), mid: [(a.x + b.x) / 2, (a.y + b.y) / 2] } : null;
+  }
+}

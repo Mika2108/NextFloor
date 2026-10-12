@@ -1,6 +1,6 @@
-// Looks of the 3D view. Geometry keeps its neon colours; a small shader patch maps them to the chosen
-// look, so switching is instant and nothing has to be rebuilt. Signal colours (lit lamps, open windows,
-// glowing screens) are bright and saturated and stay as they are in every look.
+// The looks of the 3D view. Geometry keeps its neon colours; a small shader patch maps them to the chosen look, so switching is
+// instant and nothing has to be rebuilt. Signal colours (lit lamps, open windows, glowing screens) are bright and saturated and
+// stay as they are in every look.
 
 import { AdditiveBlending, NormalBlending, Vector3, type Material } from "three";
 import { THEMES, type Theme } from "../themes.ts";
@@ -11,71 +11,68 @@ export interface ThemeUniform {
   value: number;
 }
 
-export function themeIndex(theme: Theme): number {
-  return THEMES.indexOf(theme);
-}
+export const themeIndex = (theme: Theme): number => THEMES.indexOf(theme);
 
-/** The neon look's accent (lines, cyan surfaces): the stock cyan, or a colour of the user's choice. */
+/** The accent of the neon look (lines and cyan surfaces): the stock cyan, or a colour of the user's choice. */
 export const accentUniform = { value: new Vector3(0.22, 0.88, 1) };
 export const accentOnUniform = { value: 0 };
 
-/** "#rrggbb" to the 0–1 colour the shader uses, null for anything else. */
+/** "#rrggbb" as the 0..1 colour the shader uses; null for anything else. */
 export function parseAccent(hex: string | null | undefined): [number, number, number] | null {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex?.trim() ?? "");
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex?.trim() ?? "");
+  if (!match) return null;
+  const value = Number.parseInt(match[1], 16);
+  return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255];
 }
 
-const GLSL = `
+// The fragment shader function that turns a neon colour into the current look. Look 0 is neon itself (only an own accent
+// changes anything), 1 is blueprint, 2 is day.
+const LOOK_FUNCTION = /* glsl */ `
 uniform int uTheme;
 uniform vec3 uAccent;
 uniform int uAccentOn;
-vec3 nfThemed(vec3 c, bool line) {
-  float mx = max(c.r, max(c.g, c.b));
-  float mn = min(c.r, min(c.g, c.b));
-  float sat = mx > 0.0 ? (mx - mn) / mx : 0.0;
+vec3 nfThemed(vec3 c, bool isLine) {
+  float strongest = max(c.r, max(c.g, c.b));
+  float weakest = min(c.r, min(c.g, c.b));
+  float saturation = strongest > 0.0 ? (strongest - weakest) / strongest : 0.0;
   if (uTheme == 0) {
     // an own accent: every line and every cyan surface takes it, as bright as it was
-    if (uAccentOn == 1 && (line || (sat > 0.35 && c.r < c.g * 0.8 && c.b > c.g * 0.85 && c.g > c.b * 0.6))) return uAccent * mx;
+    bool cyanish = saturation > 0.35 && c.r < c.g * 0.8 && c.b > c.g * 0.85 && c.g > c.b * 0.6;
+    if (uAccentOn == 1 && (isLine || cyanish)) return uAccent * strongest;
     return c;
   }
   // signal colours keep their colour
-  if (!line && mx > 0.45 && sat > 0.45) return c;
-  float l = dot(c, vec3(0.299, 0.587, 0.114));
+  if (!isLine && strongest > 0.45 && saturation > 0.45) return c;
+  float luma = dot(c, vec3(0.299, 0.587, 0.114));
   if (uTheme == 1) {
-    // blueprint: white lines on shades of blue
-    if (line) return vec3(0.8, 0.9, 1.0) * min(1.0, mx * 1.15);
-    return mix(vec3(0.04, 0.13, 0.3), vec3(0.2, 0.42, 0.75), clamp(l * 5.0, 0.0, 1.0));
+    // blueprint: pale lines on shades of blue
+    if (isLine) return vec3(0.8, 0.9, 1.0) * min(1.0, strongest * 1.15);
+    return mix(vec3(0.04, 0.13, 0.3), vec3(0.2, 0.42, 0.75), clamp(luma * 5.0, 0.0, 1.0));
   }
-  // day: light surfaces with a hint of their hue, dark blue lines
-  if (line) return vec3(0.08, 0.17, 0.38) * clamp(mx * 1.4, 0.4, 1.0);
-  vec3 g = vec3(clamp(0.66 + l * 2.6, 0.0, 0.96));
-  return mix(g, g * (c / max(mx, 0.001)), 0.1);
+  // day: light surfaces with a trace of their hue, dark blue lines
+  if (isLine) return vec3(0.08, 0.17, 0.38) * clamp(strongest * 1.4, 0.4, 1.0);
+  vec3 grey = vec3(clamp(0.66 + luma * 2.6, 0.0, 0.96));
+  return mix(grey, grey * (c / max(strongest, 0.001)), 0.1);
 }
 `;
 
 /**
- * Maps a material's colours to the look in `uniform` (0 neon, 1 blueprint, 2 day). Composes with an
- * existing onBeforeCompile (e.g. the fold patch). `line`: edges are mapped as lines.
+ * Maps a material's colours to the look in `uniform` (0 neon, 1 blueprint, 2 day). Composes with an existing onBeforeCompile (the
+ * fold patch, say). With `line`, edges are mapped as lines.
  */
 export function themed<T extends Material>(material: T, uniform: ThemeUniform, line = false): T {
-  const before = material.onBeforeCompile.bind(material);
-  const key = material.customProgramCacheKey.bind(material);
+  const previous = material.onBeforeCompile.bind(material);
+  const previousKey = material.customProgramCacheKey.bind(material);
   material.onBeforeCompile = (shader, renderer) => {
-    before(shader, renderer);
-    shader.uniforms.uTheme = uniform;
-    shader.uniforms.uAccent = accentUniform;
-    shader.uniforms.uAccentOn = accentOnUniform;
+    previous(shader, renderer);
+    Object.assign(shader.uniforms, { uTheme: uniform, uAccent: accentUniform, uAccentOn: accentOnUniform });
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\n${GLSL}`)
-      .replace("#include <color_fragment>", `#include <color_fragment>\n  diffuseColor.rgb = nfThemed(diffuseColor.rgb, ${line ? "true" : "false"});`);
+      .replace("#include <common>", `#include <common>\n${LOOK_FUNCTION}`)
+      .replace("#include <color_fragment>", `#include <color_fragment>\n  diffuseColor.rgb = nfThemed(diffuseColor.rgb, ${line});`);
   };
-  material.customProgramCacheKey = () => `${key()}-themed-${line ? "l" : "s"}`;
+  material.customProgramCacheKey = () => `${previousKey()}-themed-${line ? "l" : "s"}`;
   return material;
 }
 
-/** Additive glow disappears on light backgrounds: in the day look, lines are drawn normally. */
-export function lineBlending(theme: Theme): typeof AdditiveBlending | typeof NormalBlending {
-  return theme === "day" ? NormalBlending : AdditiveBlending;
-}
+/** Additive glow vanishes on light backgrounds, so lines are drawn normally in the day look. */
+export const lineBlending = (theme: Theme): typeof AdditiveBlending | typeof NormalBlending => (theme === "day" ? NormalBlending : AdditiveBlending);

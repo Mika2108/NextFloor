@@ -41,6 +41,7 @@ import type { Building, Floor, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
 import { centroid, pointInPolygon, openingStyle, WALL_LAMP_Y } from "../model.ts";
 import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
+import { atTarget, stepOpening, stepShare } from "./scene/opening-motion.ts";
 import { addCameraWedge, addLampHalo, addSpotCone, hiddenInCut, type HaloPoints } from "./scene/halos.ts";
 import { sunlightPatches, sunSignature } from "./scene/sunlight.ts";
 import { LAMP_SIZE, HANGING_LAMPS } from "./scene/lamp-data.ts";
@@ -260,8 +261,6 @@ const BELOW_OPACITY = 0.22;
 const FLOOR_TAU = 140;
 /** Grid cells across the ground texture. */
 const GROUND_CELLS = 32;
-/** Time constant of window and blind movements (ms). */
-const OPENING_TAU = 160;
 const LAMP_BODY = 0x2a3a60;
 const LAMP_SHADE = 0x1d2946;
 /** Lamps that hang from the ceiling (hidden in the cut view). */
@@ -994,7 +993,7 @@ export class NextFloorViewer {
   }
 
   private stepFridges(dt: number): boolean {
-    const k = 1 - Math.exp(-dt / OPENING_TAU);
+    const k = stepShare(dt);
     const touched = new Set<string>();
     for (const [id, st] of this.fridges) {
       for (const [cur, to] of [["l", "tl"], ["r", "tr"]] as const) {
@@ -1655,40 +1654,16 @@ export class NextFloorViewer {
   /** Move sashes and blinds towards their targets; returns true while something still moves. */
   private stepOpenings(dt: number): boolean {
     let moving = false;
-    const k = 1 - Math.exp(-dt / OPENING_TAU);
+    const share = stepShare(dt);
     for (const fv of this.floors) {
       let changed = false;
-      for (const [id, cur] of fv.openings) {
+      for (const [id, now] of fv.openings) {
         const target = this.openingTargets.get(id) ?? CLOSED;
-        // nothing to do for an opening that rests at its target (the usual case)
-        const near = (a: number | null | undefined, b: number | null | undefined) => (a ?? null) === (b ?? null) || (typeof a === "number" && typeof b === "number" && Math.abs(a - b) < 0.003);
-        if (near(target.open, cur.open) && near(target.open2 ?? 0, cur.open2 ?? 0) && near(target.tilt, cur.tilt) && near(target.tilt2 ?? 0, cur.tilt2 ?? 0) && near(target.cover, cur.cover) && !!target.sensed === !!cur.sensed) continue;
-        const next = { ...cur, open2: cur.open2 ?? 0, tilt2: cur.tilt2 ?? 0, sensed: target.sensed };
-        let busy = false;
-        for (const key of ["open", "open2", "tilt", "tilt2"] as const) {
-          const to = target[key] ?? 0;
-          const from = cur[key] ?? 0;
-          const d = to - from;
-          if (Math.abs(d) < 0.003) next[key] = to;
-          else {
-            next[key] = from + d * k;
-            busy = true;
-          }
-        }
-        if (target.cover === null || cur.cover === null) next.cover = target.cover;
-        else {
-          const d = target.cover - cur.cover;
-          if (Math.abs(d) < 0.003) next.cover = target.cover;
-          else {
-            next.cover = cur.cover + d * k;
-            busy = true;
-          }
-        }
-        if (next.open !== cur.open || next.open2 !== (cur.open2 ?? 0) || next.tilt !== cur.tilt || next.tilt2 !== (cur.tilt2 ?? 0) || next.cover !== cur.cover || !!next.sensed !== !!cur.sensed) {
-          fv.openings.set(id, next);
-          changed = true;
-        }
-        moving ||= busy;
+        if (atTarget(now, target)) continue;
+        const step = stepOpening(now, target, share);
+        fv.openings.set(id, step.state);
+        changed = true;
+        moving ||= step.moving;
       }
       if (changed) {
         this.buildOpenings(fv);

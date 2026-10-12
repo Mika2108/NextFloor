@@ -74,8 +74,8 @@ test("names fall back from the language to English to anything to the id", () =>
 });
 
 test("built-in packs are English outside German, other packs keep their name", () => {
-  assert.equal(packName({ id: "nextfloor.garten", name: "Garten & Terrasse" }, "en"), "Garden & Terrace");
-  assert.equal(packName({ id: "nextfloor.garten", name: "Garten & Terrasse" }, "de-CH"), "Garten & Terrasse");
+  assert.equal(packName({ id: "nextfloor.garten", name: "Garten & Terrasse" }, "en"), "Garden & Terrace (older)");
+  assert.equal(packName({ id: "nextfloor.garten", name: "Garten & Terrasse (älter)" }, "de-CH"), "Garten & Terrasse (älter)");
   assert.equal(packName({ id: "someone.else", name: "Mine" }, "en"), "Mine");
 });
 

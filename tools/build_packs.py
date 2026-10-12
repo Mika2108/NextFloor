@@ -1063,7 +1063,7 @@ pack(
 # ------------------------------------------------------------------ Garten & Terrasse
 pack(
     "nextfloor.garten",
-    "Garten & Terrasse",
+    "Garten & Terrasse (älter)",
     "Lounge, Grill, Pool, Whirlpool, Trampolin, Gewächshaus, Hochbeet, Gartenhaus, Mähroboter",
     [
         item(
@@ -1352,7 +1352,7 @@ pack(
 # ------------------------------------------------------------------ Fitness
 pack(
     "nextfloor.fitness",
-    "Fitness",
+    "Fitness (älter)",
     "Laufband, Ergometer, Rudergerät, Hantelbank, Kraftstation, Yogamatte",
     [
         item(

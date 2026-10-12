@@ -14,3 +14,4 @@ private/
 # owned 3D models never go into the repository
 *.glb
 nextfloor_meshes/
+preview/.tutorial-state.json

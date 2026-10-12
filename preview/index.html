@@ -17,6 +17,7 @@
     <nextfloor-panel></nextfloor-panel>
     <script src="./basic-types.js"></script>
     <script src="./pack-ids.js"></script>
+    <script src="./pack-names.js"></script>
     <script type="module">
       // Mock of the Home Assistant frontend object with invented demo data.
       import { DEMO_AREAS, DEMO_BUILDING, DEMO_FLOORS, DEMO_PACK, DEMO_ENTITIES, DEMO_STATES, DEMO_PICTURES } from "./demo-data.js";
@@ -35,6 +36,9 @@ const params = new URLSearchParams(location.search);
         localStorage.setItem("nextfloor.flows", params.has("flows") ? "1" : "0");
       } catch {}
       let building = params.has("empty") ? { version: 1, floors: [], settings: { wall_exterior: 0.24, wall_interior: 0.12, grid: 0.05 } } : DEMO_BUILDING;
+      // ?state=<url of a plan as JSON> starts from that plan (the tutorial recorder hands the end of one episode to the next)
+      if (params.has("state")) building = await (await fetch(params.get("state"))).json();
+      window.nfDemoState = () => structuredClone(building);
       // ?map and ?north=180 switch the real map and the compass on for a look (the demo ships with both off)
       if (params.has("map") || params.has("north")) {
         building = structuredClone(building);
@@ -80,7 +84,7 @@ const params = new URLSearchParams(location.search);
         for (const id of window.PACK_IDS) {
           try {
             const pack = await (await fetch(`../custom_components/nextfloor/packs/${id}.json`)).json();
-            sets.push({ id: `pack:${id.replace("nextfloor.", "")}`, label: names({ en: pack.name, de: pack.name }), items: pack.items.map((i) => ({ type: `pack:${pack.id}:${i.id}`, size: i.size, name: names(i.name) })) });
+            sets.push({ id: `pack:${id.replace("nextfloor.", "")}`, label: lang === "en" ? (window.PACK_EN?.[pack.id] ?? pack.name) : pack.name, items: pack.items.map((i) => ({ type: `pack:${pack.id}:${i.id}`, size: i.size, name: names(i.name) })) });
           } catch {}
         }
         const current = sets.find((x) => x.id === params.get("set")) ?? sets[0];

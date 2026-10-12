@@ -1,10 +1,17 @@
 # Changelog
 
-All notable changes to NextFloor. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
+All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
 ## 0.6.0
 
+### Added
+
 - **Upload 3D models in the app:** on the Extensions page every item that takes a model has an "Add a model" button. Choose the `.glb`, turn the front towards you, tick the body paint (guessed for you), pick the level of detail, check the preview and store it on your Home Assistant. NextFloor does the work of `tools/prepare-model.mjs` itself: it merges the parts, makes the model lighter, writes plain glTF without textures and marks the paint. Files that are compressed (Draco, Meshopt) are refused with a hint. You can replace and remove models there too.
+
+### Changed
+
+- The editor, the side panel, the dashboard card and parts of the 3D view were reorganised internally into smaller, tested modules. Behaviour and look are unchanged.
+- The README is shorter, with a feature table and a screenshot gallery.
 
 ## 0.5.0
 

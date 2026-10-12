@@ -7,7 +7,7 @@ import "./components/room-panel.ts";
 import "./components/view3d.ts";
 import { confirmEntities } from "./devices.ts";
 import type { HeatMode } from "./heatmap.ts";
-import { languageReady, loadLanguage, translate, type I18nKey } from "./i18n.ts";
+import { translate, type I18nKey } from "./i18n.ts";
 import { loadEditor } from "./load-editor.ts";
 import type { Building, Floor } from "./model.ts";
 import { changeFurniture, changePlacement, dragDevice, dragFurniture, turned, withoutFurniture, withoutPlacement } from "./panel/edits.ts";
@@ -93,7 +93,6 @@ export class NextFloorPanel extends LitElement {
       this.style.colorScheme = colorSchemeOf(this.hass);
       this.data.setHass(this.hass);
       // a language beyond German and English: its texts are fetched first, and then everything renders
-      if (!languageReady(this.hass.language)) void loadLanguage(this.hass.language).then(() => this.requestUpdate());
     }
     // a floor that no longer exists (the plan was edited elsewhere) closes
     const building = this.data.building;
@@ -181,7 +180,6 @@ export class NextFloorPanel extends LitElement {
   }
 
   protected render() {
-    if (this.hass && !languageReady(this.hass.language)) return nothing;
     const building = this.data.building;
     const cleanView = this._prefs.clean && this._mode === "view";
     let body: TemplateResult | typeof nothing = nothing;

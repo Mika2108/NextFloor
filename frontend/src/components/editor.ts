@@ -14,7 +14,7 @@ import {
 } from "../model.ts";
 import { furnishRoom, type PackageId } from "../packages.ts";
 import { generateWalls, locateOpening, openingHost, type Wall } from "../geometry/walls.ts";
-import { formatNumber, languageReady, loadLanguage, translate, type I18nKey } from "../i18n.ts";
+import { formatNumber, translate, type I18nKey } from "../i18n.ts";
 import {
   bounds,
   centroid,
@@ -484,7 +484,6 @@ export class NfEditor extends LitElement {
   protected willUpdate(changed: PropertyValues): void {
     // this bundle keeps its own pack registry – and its own language table, so it fetches the language itself
     if (changed.has("packs")) setPacks(this.packs ?? []);
-    if (changed.has("hass") && this.hass && !languageReady(this.hass.language)) void loadLanguage(this.hass.language).then(() => this.requestUpdate());
     if (changed.has("_doc") && this._split) this.queue3d();
     if (changed.has("_split") && this._split) this._doc3d = this._doc;
     if (changed.has("_tool") && this.houseTool && !this._split && !this.narrow) this._split = true;

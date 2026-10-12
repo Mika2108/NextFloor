@@ -3,13 +3,13 @@ name: Online demo
 # Publishes the preview (invented demo data, mock Home Assistant) as the online demo on GitHub Pages.
 # Only the preview page, its demo data and the built bundles go online, nothing from private/.
 on:
-  release:
-    types: [published]
+  # not on releases: the github-pages environment only accepts the main branch, and every push to main that changes the demo deploys it
   push:
     branches: [main]
     paths:
       - "site/**"
       - "preview/**"
+      - "tools/make_showcase_types.mjs"
       - "custom_components/nextfloor/frontend/**"
       - "custom_components/nextfloor/packs/**"
       - ".github/workflows/pages.yml"
@@ -36,7 +36,7 @@ jobs:
         run: |
           mkdir -p _site/preview _site/custom_components/nextfloor
           cp site/index.html _site/
-          cp preview/index.html preview/demo-data.js _site/preview/
+          cp preview/index.html preview/demo-data.js preview/basic-types.js _site/preview/
           cp -r custom_components/nextfloor/frontend _site/custom_components/nextfloor/
           cp -r custom_components/nextfloor/packs _site/custom_components/nextfloor/
           touch _site/.nojekyll

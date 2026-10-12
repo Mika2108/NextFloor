@@ -9,6 +9,7 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 <p align="center">
 <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=therealMRBK&repository=NextFloor&category=integration"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open in HACS"></a>
 <a href="https://therealmrbk.github.io/NextFloor/"><img src="https://img.shields.io/badge/%E2%96%B6-Online%20demo-00b4d8?style=for-the-badge" alt="Online demo"></a>
+<a href="https://therealmrbk.github.io/NextFloor/preview/index.html?showcase&lang=en"><img src="https://img.shields.io/badge/%E2%96%A6-All%20models-8a63d2?style=for-the-badge" alt="All models"></a>
 </p>
 
 <p align="center">

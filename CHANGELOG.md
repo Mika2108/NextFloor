@@ -2,6 +2,21 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## 0.6.3
+
+### Added
+
+- **Model showcase in the online demo:** every model of NextFloor, the basic ones and those of all packs, can be looked at live in a room of their own, ten at a time, with the names listed in the order they stand. Open the demo and choose "All models" (bottom right), or use `?showcase`.
+
+### Changed
+
+- **Languages:** NextFloor now comes in German and English only; Home Assistant instances in any other language show English. The 14 further language files were removed.
+
+### Fixed
+
+- The online demo no longer fails to deploy on a release (it deploys when the demo changes on `main`).
+- A formatting slip in the Python code that made the checks fail.
+
 ## 0.6.2
 
 ### Added

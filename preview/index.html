@@ -15,6 +15,7 @@
   </head>
   <body>
     <nextfloor-panel></nextfloor-panel>
+    <script src="./basic-types.js"></script>
     <script type="module">
       // Mock of the Home Assistant frontend object with invented demo data.
       import { DEMO_AREAS, DEMO_BUILDING, DEMO_FLOORS, DEMO_PACK, DEMO_ENTITIES, DEMO_STATES, DEMO_PICTURES } from "./demo-data.js";
@@ -60,6 +61,74 @@ const params = new URLSearchParams(location.search);
         eg.furniture = furniture;
         window.nfShowcase = { cx: width / 2, cz: depth / 2, width, depth };
         building = { ...DEMO_BUILDING, floors: [eg], settings: { ...DEMO_BUILDING.settings, roof: { type: "none" } } };
+      }
+      // model showcase (?showcase): every model of NextFloor, a page of ten at a time, to look at them live
+      if (params.has("showcase")) {
+        const lang = params.get("lang") === "en" ? "en" : "de";
+        const text = { de: { title: "Alle Modelle", back: "Zur Demo", prev: "‹ zurück", next: "weiter ›", set: "Gruppe", order: "Reihenfolge im Raum: von links nach rechts, vorn nach hinten" }, en: { title: "All models", back: "Back to the demo", prev: "‹ previous", next: "next ›", set: "Group", order: "Order in the room: left to right, front to back" } }[lang];
+        const names = (n) => n?.[lang] ?? n?.en ?? Object.values(n ?? {})[0] ?? "";
+        const sets = [
+          ...window.BASIC_TYPES.map((g) => ({ id: `basic:${g.id}`, label: `${names(g.name)}`, items: g.items.map((i) => ({ type: i.type, size: i.size, name: names(i.name) })) })),
+        ];
+        for (const key of ["bad", "energie", "fahrzeuge", "ikea", "fitness", "garten", "kino", "kueche", "schlafen", "technik", "wohnen"]) {
+          try {
+            const pack = await (await fetch(`../custom_components/nextfloor/packs/nextfloor.${key}.json`)).json();
+            sets.push({ id: `pack:${key}`, label: names({ en: pack.name, de: pack.name }), items: pack.items.map((i) => ({ type: `pack:${pack.id}:${i.id}`, size: i.size, name: names(i.name) })) });
+          } catch {}
+        }
+        const current = sets.find((x) => x.id === params.get("set")) ?? sets[0];
+        const perPage = 10;
+        const pages = Math.max(1, Math.ceil(current.items.length / perPage));
+        const page = Math.min(pages, Math.max(1, Number(params.get("page")) || 1));
+        const shown = current.items.slice((page - 1) * perPage, page * perPage);
+        const eg = structuredClone(DEMO_BUILDING.floors[0]);
+        const rowWidth = 8;
+        let x = 0.6, z = 0.6, rowDepth = 0, maxX = 0;
+        const furniture = [];
+        shown.forEach((it, i) => {
+          const [w, d, h] = it.size;
+          if (x + w > rowWidth && x > 0.6) { x = 0.6; z += rowDepth + 0.8; rowDepth = 0; }
+          furniture.push({ id: `show${i}`, type: it.type, x: x + w / 2, z: z + d / 2, w, d, h, rotation: 0, variant: null });
+          x += w + 0.7; rowDepth = Math.max(rowDepth, d); maxX = Math.max(maxX, x);
+        });
+        const width = Math.max(maxX + 0.2, 4), depth = z + rowDepth + 0.6;
+        eg.rooms = [{ ...eg.rooms[0], id: "room_show", name: text.title, area_id: null, points: [[0, 0], [width, 0], [width, depth], [0, depth]] }];
+        for (const key of ["openings", "placements", "outdoor", "walls"]) eg[key] = [];
+        eg.furniture = furniture;
+        building = { ...DEMO_BUILDING, floors: [eg], settings: { ...DEMO_BUILDING.settings, roof: { type: "none" } } };
+        const go = (set, n) => { const q = new URLSearchParams(location.search); q.set("set", set); q.set("page", String(n)); location.search = q.toString(); };
+        const bar = document.createElement("div");
+        bar.style.cssText = "position:fixed;left:12px;bottom:12px;z-index:50;max-width:min(360px,calc(100vw - 24px));padding:12px 14px;border-radius:14px;background:rgba(20,22,28,.92);color:#e8eaf0;font:13px Roboto,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45)";
+        const select = Object.assign(document.createElement("select"), { innerHTML: sets.map((x) => `<option value="${x.id}" ${x === current ? "selected" : ""}>${x.label} (${x.items.length})</option>`).join("") });
+        select.style.cssText = "width:100%;margin:6px 0;padding:6px;border-radius:8px;background:#2a2d36;color:inherit;border:1px solid #444";
+        select.onchange = () => go(select.value, 1);
+        bar.innerHTML = `<b style="font-size:15px">${text.title}</b> <span style="opacity:.6">· ${text.set}</span>`;
+        bar.append(select);
+        const list = Object.assign(document.createElement("ol"), { innerHTML: shown.map((it) => `<li>${it.name}</li>`).join("") });
+        list.style.cssText = "margin:6px 0 8px 18px;padding:0;columns:2;line-height:1.5";
+        const note = Object.assign(document.createElement("div"), { textContent: text.order });
+        note.style.cssText = "opacity:.55;font-size:11px;margin-bottom:8px";
+        const nav = document.createElement("div");
+        nav.style.cssText = "display:flex;gap:8px;align-items:center";
+        const button = (label, disabled, onClick) => Object.assign(document.createElement("button"), { textContent: label, disabled, onclick: onClick, style: "padding:6px 12px;border-radius:8px;border:0;background:#03a9f4;color:#fff;cursor:pointer;opacity:" + (disabled ? ".35" : "1") });
+        const link = Object.assign(document.createElement("a"), { textContent: text.back, href: `?lang=${lang}`, style: "margin-left:auto;color:#7fd0ff" });
+        nav.append(button(text.prev, page <= 1, () => go(current.id, page - 1)), Object.assign(document.createElement("span"), { textContent: `${page} / ${pages}` }), button(text.next, page >= pages, () => go(current.id, page + 1)), link);
+        bar.append(list, note, nav);
+        // look into the room from above: the floor opened, the walls cut away
+        const open = setInterval(() => {
+          const panel = document.querySelector("nextfloor-panel");
+          if (!panel?.data?.building) return;
+          clearInterval(open);
+          panel._floorId = eg.id;
+          panel._wallMode = "cut";
+        }, 200);
+        addEventListener("DOMContentLoaded", () => document.body.append(bar));
+        if (document.readyState !== "loading") document.body.append(bar);
+      }
+      if (!params.has("showcase") && !params.has("pack") && !params.has("cars") && !params.has("noshowcase")) {
+        const link = Object.assign(document.createElement("a"), { href: `?showcase&lang=${params.get("lang") === "en" ? "en" : "de"}`, textContent: params.get("lang") === "en" ? "▦ All models" : "▦ Alle Modelle ansehen" });
+        link.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:40;padding:8px 14px;border-radius:999px;background:rgba(20,22,28,.9);color:#7fd0ff;font:13px Roboto,sans-serif;text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,.4)";
+        document.body.append(link);
       }
       let revision = 1;
       const images = { ...DEMO_PICTURES };

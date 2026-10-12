@@ -10,7 +10,6 @@ export type { OpeningState } from "../openings.ts";
 export type { SkyView, SkyWeather } from "../live-weather.ts";
 export type { EnergyArc, PlanPoint, SparkField } from "../live-energy.ts";
 export type { SoundSpot } from "../live-sound.ts";
-export type { TrailPoint } from "../live-trail.ts";
 
 export type Quality = "auto" | "low" | "high";
 export type WallMode = "auto" | "cut";
@@ -73,8 +72,6 @@ export interface DeviceMarker {
   /** The text shows on the floor as well (a marker set to "always"); otherwise only in its room or while active. */
   full?: boolean;
   unavailable: boolean;
-  /** Cameras: no field-of-view wedge on the floor when false; on by default. */
-  cone?: boolean;
   /** A light cone on the floor for lights that are on. */
   glow: { color: [number, number, number]; level: number } | null;
   /** The power drawn (W), when the device reports it. */
@@ -110,14 +107,6 @@ export interface DeviceMarker {
   variant?: string | null;
   /** The formatted power, for example "85 W". */
   powerText?: string;
-  /** A camera drawn in 3D (wall or ceiling). Its field of view lies on the floor, red while motion is seen. */
-  model?: "camera_wall" | "camera_ceiling";
-  motion?: boolean;
-  /** A camera: opening angle (degrees) and reach (m) of its field of view; 90° and 4.5 m by default (a dome: 360° and 3 m). */
-  fov?: number;
-  reach?: number;
-  /** A camera: degrees below the horizon it looks (for the look through it). */
-  tilt?: number;
 }
 
 /** A ray from the camera through the pointer, in building coordinates (heights above the ground). */

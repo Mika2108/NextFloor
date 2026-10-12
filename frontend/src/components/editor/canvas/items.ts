@@ -63,23 +63,7 @@ export function furnitureLayer(ctx: CanvasContext, floor: Floor, selectedId: str
   return svg`<g>${floor.furniture.map(one)}</g>`;
 }
 
-/** A camera's field of view: a wedge (a full circle for a dome). When selected, a handle at the far edge aims it and sets its reach. */
-function cameraWedge(ctx: CanvasContext, placed: Placement, selected: boolean): TemplateResult {
-  const dome = placed.mount === "ceiling";
-  const fov = placed.fov ?? (dome ? 360 : 90);
-  const reach = placed.reach ?? (dome ? 3 : 4.5);
-  const heading = (placed.rotation ?? 0) * RAD;
-  const pointAt = (offset: number, distance: number) => ctx.toScreen([placed.x - Math.sin(heading + offset) * distance, placed.z + Math.cos(heading + offset) * distance]);
-  const [cx, cy] = ctx.toScreen([placed.x, placed.z]);
-  const half = (Math.min(fov, 359.9) * RAD) / 2;
-  const [left, right, ahead] = [pointAt(-half, reach), pointAt(half, reach), pointAt(0, reach)];
-  const radius = reach * ctx.scale;
-  const shape = fov >= 360 ? svg`<circle cx=${cx} cy=${cy} r=${radius} />` : svg`<path d=${`M${cx} ${cy}L${left[0]} ${left[1]}A${radius} ${radius} 0 ${half > Math.PI / 2 ? 1 : 0} 1 ${right[0]} ${right[1]}Z`} />`;
-  const aim = selected && ctx.host.admin && !placed.locked ? turnHandle("data-aim", placed.entity_id, [cx, cy], ahead) : nothing;
-  return svg`<g class="nf-wedge ${selected ? "nf-wedge-sel" : ""}">${shape}${aim}</g>`;
-}
-
-/** The device pins of the floor, cameras with their field of view. */
+/** The device pins of the floor. */
 export function devicesLayer(ctx: CanvasContext, floor: Floor, selectedId: string | null): Layer {
   const { host } = ctx;
   const one = (placed: Placement) => {
@@ -88,7 +72,7 @@ export function devicesLayer(ctx: CanvasContext, floor: Floor, selectedId: strin
     const [x, y] = ctx.toScreen([placed.x, placed.z]);
     const on = host.hass?.states[placed.entity_id]?.state === "on";
     const selected = placed.entity_id === selectedId;
-    return svg`${kind === "camera" ? cameraWedge(ctx, placed, selected) : nothing}<g data-device=${placed.entity_id} class=${`nf-device${on ? " nf-device-on" : ""}${selected ? " nf-device-sel" : ""}`} transform="translate(${x} ${y})">
+    return svg`<g data-device=${placed.entity_id} class=${`nf-device${on ? " nf-device-on" : ""}${selected ? " nf-device-sel" : ""}`} transform="translate(${x} ${y})">
         <title>${entityName(host.hass, placed.entity_id)}</title>
         <circle r="18" class="nf-hit" /><circle r="12" />
         <path d=${iconPath(kind)} transform="translate(-7.2 -7.2) scale(0.6)" />

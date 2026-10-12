@@ -4,7 +4,7 @@
 import type { LampMount } from "../model.ts";
 import type { HassEntity, HomeAssistant } from "../types.ts";
 
-export type DeviceKind = "light" | "switch" | "fan" | "cover" | "climate" | "media" | "lock" | "sensor" | "binary" | "camera" | "scene" | "script";
+export type DeviceKind = "light" | "switch" | "fan" | "cover" | "climate" | "media" | "lock" | "sensor" | "binary" | "scene" | "script";
 
 /** The Home Assistant domain, i.e. the part of the id before the dot. */
 export const domainOf = (entityId: string): string => entityId.slice(0, entityId.indexOf("."));
@@ -20,7 +20,6 @@ const KIND_OF_DOMAIN: Record<string, DeviceKind> = {
   lock: "lock",
   sensor: "sensor",
   binary_sensor: "binary",
-  camera: "camera",
   scene: "scene",
   script: "script",
 };
@@ -28,7 +27,7 @@ const KIND_OF_DOMAIN: Record<string, DeviceKind> = {
 export const kindOf = (entityId: string): DeviceKind | null => KIND_OF_DOMAIN[domainOf(entityId)] ?? null;
 
 /** The order kinds are listed in. */
-export const KIND_ORDER: DeviceKind[] = ["light", "cover", "climate", "media", "switch", "fan", "lock", "binary", "sensor", "camera", "scene", "script"];
+export const KIND_ORDER: DeviceKind[] = ["light", "cover", "climate", "media", "switch", "fan", "lock", "binary", "sensor", "scene", "script"];
 
 /** Kinds a tap on the marker can switch. */
 export const TOGGLE_KINDS = new Set<DeviceKind>(["light", "switch", "fan"]);
@@ -102,7 +101,6 @@ export function lightGlow(st: HassEntity | undefined, colorFrom?: HassEntity): {
 
 /** Default height of a marker above the floor, in metres. */
 export function defaultHeight(kind: DeviceKind, floorHeight: number, mount: LampMount | null = null): number {
-  if (kind === "camera") return mount === "ceiling" ? Math.max(0.5, floorHeight - 0.05) : 2.2; // under the ceiling, or high on a wall
   if (kind === "light" && mount === "floor") return 1.95;
   if (kind === "light" && mount === "table") return 1.25;
   if (kind === "light" && mount === "wall") return 1.95;

@@ -260,7 +260,6 @@ export const DEMO_STATES = Object.fromEntries(DEVICES.map((d) => [d.state.entity
 const place = (entity_id, x, z) => ({ entity_id, x, z, y: null });
 DEMO_BUILDING.floors[0].placements = [
   place("light.wohnzimmer_decke", 3.6, 2.6),
-  { ...place("camera.wohnzimmer", 0.2, 0.2), mount: "wall", rotation: 315 },
   { entity_id: "light.stehlampe", x: 5.3, z: 0.7, y: null, mount: "floor" },
   place("cover.wohnzimmer", 1.6, 0.4),
   place("climate.wohnzimmer", 0.5, 2.2),

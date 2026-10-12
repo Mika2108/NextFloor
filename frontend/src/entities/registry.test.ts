@@ -54,10 +54,10 @@ test("a binary sensor without a class shows only when it was given an area by ha
 
 test("entities without an area are offered separately, including ones missing from the registry", () => {
   const hass = hassOf(
-    [entity("light.template", "on"), entity("sensor.counter", "5", { unit_of_measurement: "pcs" }), entity("camera.usb", "idle"), entity("sensor.rssi", "-60", { device_class: "signal_strength", unit_of_measurement: "dBm" }), entity("scene.movie", "off")],
+    [entity("light.template", "on"), entity("sensor.counter", "5", { unit_of_measurement: "pcs" }), entity("sensor.rssi", "-60", { device_class: "signal_strength", unit_of_measurement: "dBm" }), entity("scene.movie", "off")],
     { "light.template": {}, "sensor.counter": {}, "sensor.rssi": {}, "scene.movie": {} },
   );
-  assert.deepEqual(unassignedEntities(hass), ["light.template", "sensor.counter", "camera.usb"]);
+  assert.deepEqual(unassignedEntities(hass), ["light.template", "sensor.counter"]);
 });
 
 test("other areas are listed by name with their placeable entities only", () => {

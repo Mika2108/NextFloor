@@ -1,8 +1,7 @@
-// Energy and building technology: inverters, batteries, wallboxes, meters, the grid cabinet, and security cameras.
+// Energy and building technology: inverters, batteries, wallboxes, meters, the grid cabinet.
 
-import { DEG, type GeoBuffer, LineBuffer } from "../geo.ts";
-import { Builder, type Plan } from "./builder.ts";
-import { C, EDGE_FAINT, EDGE_FURN, EDGE_GLOW, M, material } from "./palette.ts";
+import { Builder } from "./builder.ts";
+import { EDGE_FAINT, EDGE_FURN, EDGE_GLOW, M } from "./palette.ts";
 
 /**
  * A solar inverter on the wall (from 1.1 m): a flat box with a display and a status line. "slim" is a tall narrow one with a
@@ -90,29 +89,4 @@ export function homeBattery(b: Builder, w: number, d: number, h: number, variant
     const y = 0.06 + h * 0.18 + k * ((h - 0.3) / 5);
     b.seg(-w * 0.04, y, d / 2 + 0.003, w * 0.04, y, d / 2 + 0.003, EDGE_GLOW);
   }
-}
-
-/**
- * A security camera into the lamp buffer: on a wall a small body with a lens looking along +z (turned by `rotation`), on the
- * ceiling a dome hanging at the ceiling height `y`.
- */
-export function pushCameraModel(buf: GeoBuffer, model: "camera_wall" | "camera_ceiling", x: number, y: number, z: number, rotation: number): void {
-  const [c, s] = [Math.cos(rotation * DEG), Math.sin(rotation * DEG)];
-  const plan: Plan = (lx, lz) => [x + lx * c - lz * s, z + lx * s + lz * c];
-  const b = new Builder(buf, new LineBuffer(), plan);
-  const body = material(0x1a2640, 0x243660);
-  const lens = material(0x0b111f, 0x1a2640); // a loft: lens-dark sides, body-coloured top
-  if (model === "camera_ceiling") {
-    // a dome: a flat base and a half-dome below it
-    b.cylinder(0, 0, 0.07, y - 0.03, y, body, 12);
-    b.loft([-0.05, 0.05, -0.05, 0.05], [-0.025, 0.025, -0.025, 0.025], y - 0.1, y - 0.03, lens);
-    b.cylinder(0, 0, 0.012, y - 0.075, y - 0.06, M.accent, 6);
-    return;
-  }
-  // a wall camera: the bracket at the wall (-z), the body pointing into the room (+z), the lens in front
-  b.block({ x: [-0.02, 0.02], y: [y - 0.02, y + 0.02], z: [-0.06, -0.03] }, body);
-  b.block({ x: [-0.01, 0.01], y: [y - 0.01, y + 0.06], z: [-0.05, -0.03] }, body);
-  b.loft([-0.035, 0.035, -0.03, 0.09], [-0.04, 0.04, -0.03, 0.09], y + 0.02, y + 0.09, body);
-  b.lyingCylinder("z", 0, 0.1, y + 0.03, y + 0.08, 0.03, 0.05, material(0x0b111f, C.accent), 10);
-  b.block({ x: [-0.006, 0.006], y: [y + 0.075, y + 0.085], z: [0.085, 0.09] }, material(0xff3b4f));
 }

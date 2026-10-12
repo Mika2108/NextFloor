@@ -37,7 +37,6 @@ export class NextFloorCard extends LitElement {
     _heat: { state: true },
     _explode: { state: true },
     _fullscreen: { state: true },
-    _cameraWall: { state: true },
     _clean: { state: true },
     _night: { state: true },
     _orbit: { state: true },
@@ -55,7 +54,6 @@ export class NextFloorCard extends LitElement {
   private declare _heat: HeatMode | null;
   private declare _explode: boolean | null;
   private declare _fullscreen: boolean;
-  private declare _cameraWall: boolean;
   /** The clean view: only the stage (option controls_hidden, the eye button, or the hide-after timer). */
   private declare _clean: boolean;
   /** Kiosk: the night dimming is on, and the screensaver turn runs (after an idle return). */
@@ -82,7 +80,6 @@ export class NextFloorCard extends LitElement {
     this._heat = null;
     this._explode = null;
     this._fullscreen = false;
-    this._cameraWall = false;
     this._clean = false;
     this._night = false;
     this._orbit = false;
@@ -209,17 +206,15 @@ export class NextFloorCard extends LitElement {
     return c === true || (Array.isArray(c) && c.includes(control));
   }
 
-  /** The bar of switches: back, cameras, wall mode, floor stacking, heat map. */
+  /** The bar of switches: back, wall mode, floor stacking, heat map. */
   private renderBar(s: Stage): TemplateResult {
     const b = this.data.building!;
-    const c = this._config;
     const t = this.t;
     const heats = (["temperature", "humidity", "co2"] as const).filter((m) => this.shows(m));
     const group = (label: string | undefined, buttons: [boolean, () => void, string][]) =>
       html`<div class="nf-seg" role=${label ? "group" : nothing} aria-label=${label ?? nothing}>${buttons.map(([on, act, text]) => html`<button aria-pressed=${on} @click=${act}>${text}</button>`)}</div>`;
     return html`<div class="nf-card-controls">
       ${s.canGoBack ? html`<button class="nf-chip" @click=${() => this.back()}>${t("back")}</button>` : nothing}
-      ${c?.camera_wall ? html`<button class="nf-chip" aria-pressed=${this._cameraWall} title=${t("camera_wall_hint")} @click=${() => (this._cameraWall = !this._cameraWall)}>${t("cameras_short")}</button>` : nothing}
       ${this.shows("walls") ? group(undefined, [[s.walls === "auto", () => (this._walls = "auto"), t("walls_auto")], [s.walls === "cut", () => (this._walls = "cut"), t("walls_cut")]]) : nothing}
       ${this.shows("floors") && b.floors.length > 1 && !s.floorId
         ? group(undefined, [[s.explode, () => (this._explode = true), t("floors_apart")], [!s.explode, () => (this._explode = false), t("floors_stacked")]])
@@ -287,10 +282,6 @@ export class NextFloorCard extends LitElement {
       .alerts=${c?.alerts !== false}
       .alertJump=${!!c?.alert_jump}
       .scenes=${c?.scenes !== false}
-      ?trail=${!!c?.motion_trail}
-      .cameraWall=${this._cameraWall}
-      @camera-wall-close=${() => (this._cameraWall = false)}
-      @camera-wall-open=${() => (this._cameraWall = true)}
       .clean=${this._clean}
       .cleanButton=${eye}
       @clean-toggle=${clean}
@@ -318,7 +309,6 @@ export class NextFloorCard extends LitElement {
   private renderRoomPanel(): TemplateResult {
     const b = this.data.building!;
     return html`<nf-room-panel
-      @camera-look=${(e: CustomEvent<{ entity: string }>) => this.view3d()?.lookThrough(e.detail.entity)}
       class="nf-card-panel"
       .hass=${this.hass}
       .room=${b.floors.flatMap((f) => f.rooms).find((r) => r.id === this._roomId) ?? null}

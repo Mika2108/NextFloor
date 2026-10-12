@@ -45,7 +45,6 @@ export class NfQuickMenu extends LitElement {
     presets: { attribute: false },
     confirmSwitch: { type: Boolean },
     low: { type: Boolean, reflect: true },
-    _tick: { state: true },
   };
 
   declare hass: HomeAssistant;
@@ -56,38 +55,8 @@ export class NfQuickMenu extends LitElement {
   declare presets: { id: string; label: string; type: string; content: string }[];
   /** Ask before the power button switches. */
   declare confirmSwitch: boolean;
-  /** The cameras is unlocked (otherwise the look-through button shows a lock). */
   /** Tablet level: no blur behind the menu. */
   declare low: boolean;
-  /** Bumped every few seconds while a camera menu is open, so its snapshot refreshes. */
-  private declare _tick: number;
-  private tickTimer: ReturnType<typeof setInterval> | undefined;
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    this._tick = 0;
-    this.tickTimer = setInterval(() => {
-      if (kindOf(this.entity) === "camera" && !document.hidden) this._tick++;
-    }, 3000);
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    clearInterval(this.tickTimer);
-  }
-
-  /** Snapshot of a camera, refreshed while the menu is open; a tap opens the live view. */
-  private renderCamera(st: HassEntity) {
-    const picture = st.attributes.entity_picture as string | undefined;
-    const src = picture ? (picture.startsWith("data:") ? picture : `${picture}${picture.includes("?") ? "&" : "?"}nf=${this._tick}`) : null;
-    return html`<button class="qm-camera" title=${this.t("camera_live")} @click=${() => this.details()}>
-        ${src ? html`<img src=${src} alt=${entityName(this.hass, this.entity)} />` : html`<span class="qm-note">${stateText(this.hass, st)}</span>`}
-      </button>
-      <button class="qm-details qm-look" @click=${() => this.dispatchEvent(new CustomEvent("camera-look", { detail: { entity: this.entity }, bubbles: true, composed: true }))}>
-        ${this.t("through_camera")}
-      </button>`;
-  }
-
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
     return translate(this.hass, key, vars);
   }
@@ -245,9 +214,7 @@ export class NfQuickMenu extends LitElement {
         ? this.renderLight(st)
         : kind === "cover"
           ? this.renderCover(st)
-          : kind === "camera"
-            ? this.renderCamera(st)
-            : this.renderToggle(st);
+          : this.renderToggle(st);
     return html`<div class="qm" role="dialog" aria-label=${entityName(this.hass, this.entity)}>
       <div class="qm-title">${entityName(this.hass, this.entity)}</div>
       ${body}
@@ -286,26 +253,6 @@ export class NfQuickMenu extends LitElement {
       border-color: var(--nf-accent, var(--nf-accent));
       color: var(--nf-accent, var(--nf-accent));
     }
-      .qm-camera {
-        display: block;
-        width: 100%;
-        padding: 0;
-        margin: 6px 0 8px;
-        border: 0;
-        border-radius: 12px;
-        overflow: hidden;
-        background: #000;
-        cursor: pointer;
-      }
-      .qm-camera img {
-        display: block;
-        width: 100%;
-        aspect-ratio: 16 / 9;
-        object-fit: cover;
-      }
-      .qm:has(.qm-camera) {
-        width: 300px;
-      }
       .qm {
         width: 232px;
         padding: 12px 14px 10px;

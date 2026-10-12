@@ -47,7 +47,6 @@ import { energyPicture, houseHub, type EnergyPicture } from "../live/energy-flow
 import { renderLhCards, liveCardStyles, unstackLhCards, type LiveCard } from "../live/cards.ts";
 import { readCar, type CarInfo } from "../live/car.ts";
 import { mediaNow, multiroom, type MediaNow } from "../live/media.ts";
-import { cameraSpots, cameraUrls, DETECT_ICON, detections, motionSensors, motionTrail, viewFromCamera, type TrailSpot } from "../live/cameras.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { searchIndex, searchItems, type SearchItem } from "../search.ts";
 import { coverPositionable, lightAbilities } from "./quick-menu.ts";
@@ -86,8 +85,6 @@ export class NfView3d extends LitElement {
     furnish: { type: Boolean },
     surfaceGrab: { attribute: false },
     furnishTypes: { attribute: false },
-    trail: { type: Boolean },
-    cameraWall: { attribute: false },
     weather: { type: Boolean },
     weatherEntityId: { attribute: false },
     selectedFurniture: { attribute: false },
@@ -102,11 +99,8 @@ export class NfView3d extends LitElement {
     _liveEnergy: { state: true },
     _liveCards: { state: true },
     _liveCardOn: { state: true },
-    _liveLive: { state: true },
-    _liveTrail: { state: true },
     _swipe: { state: true },
     _menu: { state: true },
-    _through: { state: true },
     _blend: { state: true },
     _wallBig: { state: true },
     _find: { state: true },
@@ -167,10 +161,6 @@ export class NfView3d extends LitElement {
   declare surfaceGrab: SurfaceGrab | null;
   /** Editor: only these furniture types can be moved in 3D (null: all). */
   declare furnishTypes: readonly string[] | null;
-  /** Motion trail: where motion was reported in the last half hour, with times. */
-  declare trail: boolean;
-  /** The camera wall: every placed camera's live picture at once. */
-  declare cameraWall: boolean;
   /** Weather outside: rain, snow, fog and clouds from a weather entity, sun and moon from sun.sun. */
   declare weather: boolean;
   /** The weather entity to use (null: the first one). */
@@ -179,8 +169,6 @@ export class NfView3d extends LitElement {
   private cloud = 0;
   /** Entities that ask before a tap switches them. */
   private confirmSet = new Set<string>();
-  /** History rows of the trail's sensors (fetched while the trail is shown, again every minute). */
-  private trailTimer: ReturnType<typeof setInterval> | undefined;
   declare selectedFurniture: string | null;
   declare selectedDevice: string | null;
   /** How much daylight there is (0 = night, 1 = day), from sun.sun. */
@@ -197,11 +185,9 @@ export class NfView3d extends LitElement {
   /** Quick menu at a device (long press). */
   private declare _menu: { entity: string; x: number; y: number; car?: CarState } | null;
   /** Looking through a camera: its live picture lies over the 3D view; `back` is the view to return to. */
-  private declare _through: { entity: string; back: ReturnType<NextFloorViewer["getView"]> } | null;
   /** Camera wall: the camera shown big (null: all tiles). */
   private declare _wallBig: string | null;
   /** The look-through was started from the camera wall: going back reopens the wall. */
-  private throughWall = false;
   /** Camera wall, big picture: Home Assistant's own stream player (a picture-entity card in live view), one at a time. */
   private live: { id: string; el: (HTMLElement & { hass?: unknown }) | null; failed: boolean } | null = null;
   /** How strongly the camera picture covers the 3D view (0 = only 3D, 1 = only the picture). */
@@ -272,10 +258,6 @@ export class NfView3d extends LitElement {
   private declare _liveCards: LiveCard[];
   /** The floating cards show (the viewer's choice, kept in the browser). */
   private declare _liveCardOn: boolean;
-  /** The camera's live picture shows (the flight into it has arrived). */
-  private declare _liveLive: boolean;
-  /** Motion of the last half hour (cameras's trail). */
-  private declare _liveTrail: TrailSpot[];
 
   private viewer: NextFloorViewer | null = null;
   private starting = false;
@@ -292,10 +274,7 @@ export class NfView3d extends LitElement {
   /** Entities whose state changes redraw markers, cables, people and floor labels. */
   private watched: string[] = [];
   /** Screens showing a camera: their snapshots are refreshed every few seconds (a changing query parameter). */
-  private cameraTick = 0;
-  private cameraTimer: ReturnType<typeof setInterval> | undefined;
   /** The look through a camera itself opens this floor: that floor change must not end it. */
-  private throughFloor: string | null = null;
 
   constructor() {
     super();
@@ -310,15 +289,12 @@ export class NfView3d extends LitElement {
     this.theme = "neon";
     this.accent = null;
     this.furnish = false;
-    this.trail = false;
     this.weather = true;
     this.weatherEntityId = null;
     this.showEnergy = true;
     this.flows = null;
     this._liveEnergy = null;
     this._liveCards = [];
-    this._liveLive = false;
-    this._liveTrail = [];
     this._liveCardOn = localStorage.getItem("nextfloor.cards") !== "0";
     this.selectedFurniture = null;
     this.selectedDevice = null;
@@ -330,7 +306,6 @@ export class NfView3d extends LitElement {
     this._energy = null;
     this._swipe = null;
     this._menu = null;
-    this._through = null;
     this._wallBig = null;
     this._blend = 0.6;
     this._find = null;
@@ -360,7 +335,6 @@ export class NfView3d extends LitElement {
     this.dimmed = false;
     this.autoOrbit = false;
     this.startView = null;
-    this.cameraWall = false;
     this.holograms = null;
     try {
       this._flows = localStorage.getItem("nextfloor.flows") === "1";
@@ -383,11 +357,7 @@ export class NfView3d extends LitElement {
     this.resizeObs = null;
     clearInterval(this.alertTimer);
     this.alertTimer = undefined;
-    clearInterval(this.cameraTimer);
-    this.cameraTimer = undefined;
     this.live = null;
-    clearInterval(this.trailTimer);
-    this.trailTimer = undefined;
     this.viewer?.dispose();
     this.viewer = null;
   }
@@ -481,11 +451,6 @@ export class NfView3d extends LitElement {
     if (this._central && ((changed.has("roomId") && changed.get("roomId") !== undefined) || (changed.has("floorId") && changed.get("floorId") !== undefined))) this._central = false;
     const v = this.viewer;
     if (!v) return;
-    // a room or floor chosen elsewhere ends the look through a camera (the view is theirs now)
-    if (this._through && (changed.has("roomId") || changed.has("floorId"))) {
-      if (this.floorId === this.throughFloor) this.throughFloor = null;
-      else this._through = null;
-    }
     // packs arrive with the building (or after an import): the viewer rebuilds pack furniture
     if (this.shownPacks !== packsVersion()) {
       this.shownPacks = packsVersion();
@@ -529,7 +494,6 @@ export class NfView3d extends LitElement {
     }
     if (changed.has("selectedFurniture")) v.selectFurniture(this.selectedFurniture);
     if (changed.has("selectedDevice")) v.setSelectedDevice(this.selectedDevice);
-    if (changed.has("trail")) this.watchTrail();
     if (changed.has("weather") || changed.has("weatherEntityId")) this.syncDevices(true);
     if (changed.has("quality") && changed.get("quality") !== undefined) {
       v.setQuality(this.quality);
@@ -562,7 +526,6 @@ export class NfView3d extends LitElement {
         furnitureLinks: this.furnitureLinks,
         needsRoomSensors: this.heatMode !== "none" || this.roomLabels,
         alertSources: this.alertSrc,
-        trail: this.trail,
         weatherEntityId: this.weatherEntityId,
       });
       force = true;
@@ -579,8 +542,6 @@ export class NfView3d extends LitElement {
     // a placed power sensor shows its value as state text already, so only devices get a watt badge
     const byDevice = new Map(consumers.filter((c) => c.id !== c.powerEntity).map((c) => [c.id, c.power]));
     this.confirmSet = confirmEntities(hass, b.floors);
-    // the motion trail's spots carry a pin with how long ago it was; the same sensor again stacks its pins
-    const trail = this.trail && !this.dimmed ? this._liveTrail : [];
     // under NextFloor's cards (a playing speaker, a car in its spot) the device's own pin steps aside
     const carded = new Set(this.liveCardsOn ? this._liveCards.flatMap((c) => (c.kind === "media" ? [c.media.entity] : c.kind === "car" ? [c.spot] : [])) : []);
     v.setDevices([
@@ -594,23 +555,6 @@ export class NfView3d extends LitElement {
         const under = carded.has(m.id) || (!!m.furnitureId && carded.has(m.furnitureId));
         return { ...marker, pin: this.showPin(marker) && !under, full: m.show === "always", caption };
       }),
-      // the cameras: what a camera detects right now stands in front of it as a pin
-      ...(!this.dimmed ? this.liveDetectionPins(hass, b) : []),
-      ...trail.map((p, i) => ({
-        id: `trail:${i}`,
-        floorId: p.at.floorId ?? b.floors[0]?.id ?? "",
-        roomId: null,
-        x: p.at.x,
-        z: p.at.z,
-        y: 0.3 + 0.4 * trail.slice(0, i).filter((q) => q.entity === p.entity).length,
-        icon: STEPS_ICON,
-        name: entityName(hass, p.entity),
-        text: agoText(hass, p.t),
-        active: i === trail.length - 1,
-        unavailable: false,
-        glow: null,
-        pin: true,
-      })),
     ]);
     v.setPickTargets(furniture.targets, this.openingTargets());
     v.setScreens(furniture.screens);
@@ -682,34 +626,6 @@ export class NfView3d extends LitElement {
     // a new object would make Lit render again; only changed values do
     if (JSON.stringify(energy) !== JSON.stringify(this._energy)) this._energy = energy;
   }
-
-  /** NextFloor: what each camera detects right now (person, vehicle, animal) as a pin in front of it. */
-  private liveDetectionPins(hass: HomeAssistant, b: Building) {
-    const out: DeviceMarker[] = [];
-    for (const cam of cameraSpots(hass, b)) {
-      const seen = detections(hass, cam.entity);
-      const a = (cam.rotation * Math.PI) / 180;
-      seen.forEach((kind, n) => {
-        out.push({
-          id: `detect:${cam.entity}:${kind}`,
-          floorId: cam.floorId,
-          roomId: null,
-          x: cam.x + (cam.dome ? 0 : -Math.sin(a) * 1.2),
-          z: cam.z + (cam.dome ? 0 : Math.cos(a) * 1.2),
-          y: 1.4 + 0.45 * n,
-          icon: LH_DETECT_ICONS[kind],
-          name: cam.name,
-          text: translate(hass, `detect_${kind === "vehicle" ? "car" : kind}` as I18nKey),
-          active: true,
-          unavailable: false,
-          glow: null,
-          pin: true,
-        });
-      });
-    }
-    return out;
-  }
-
 
   /** New warnings start the pulse (and a jump to the room when wanted); none stops it. */
   private setAlerts(alerts: Alert[]): void {
@@ -926,53 +842,7 @@ export class NfView3d extends LitElement {
         });
       }
     }
-    this.watchCameras(!!this._through || this.cameraWall);
     return { markers, consumers, screens, targets };
-  }
-
-  /** While the trail is shown, the sensors' history of the last half hour is fetched, again every minute. */
-  private watchTrail(): void {
-    // NextFloor's motion trail: the motion of the last half hour, fetched again every minute
-    clearInterval(this.trailTimer);
-    this.trailTimer = undefined;
-    if (!this.trail) {
-      this._liveTrail = [];
-      this.viewer?.setLiveTrail([]);
-      this.syncDevices(true);
-      return;
-    }
-    const load = async () => {
-      const hass = this.hass;
-      const b = this.building;
-      if (!hass || !b || document.hidden) return;
-      try {
-        this._liveTrail = await motionTrail(hass, motionSensors(hass, b));
-      } catch {
-        this._liveTrail = [];
-      }
-      const n = this._liveTrail.length;
-      const t0 = n ? this._liveTrail[0].t : 0, t1 = n ? this._liveTrail[n - 1].t : 1;
-      this.viewer?.setLiveTrail(this._liveTrail.map((p) => ({ at: p.at, age: t1 > t0 ? (p.t - t0) / (t1 - t0) : 1 })));
-      this.syncDevices(true);
-    };
-    void load();
-    this.trailTimer = setInterval(() => void load(), 60000);
-  }
-
-
-  /** While a screen shows a camera, its snapshot is fetched again every few seconds (slower on the tablet level). */
-  private watchCameras(on: boolean): void {
-    if (on && !this.cameraTimer) {
-      this.cameraTimer = setInterval(() => {
-        if (document.hidden) return;
-        this.cameraTick++;
-        this.syncDevices(true);
-        if (this._through || this.cameraWall) this.requestUpdate();
-      }, this._low ? 10000 : 5000);
-    } else if (!on && this.cameraTimer) {
-      clearInterval(this.cameraTimer);
-      this.cameraTimer = undefined;
-    }
   }
 
   /**
@@ -1148,7 +1018,7 @@ export class NfView3d extends LitElement {
     // the device's own setting wins over the marker mode (except "none", which hides every marker)
     if (m.show === "never" || this.markerMode === "none") return false;
     if (m.show === "always" || this.markerMode === "all") return true;
-    if (m.lamp || m.model) return false;
+    if (m.lamp) return false;
     const kind = kindOf(m.id);
     if (kind === "light") return false;
     if (m.fromFurniture) return (m.power ?? 0) >= 1 || (kind === "media" && m.active) || (!!m.energyDevice && !!m.text);
@@ -1226,7 +1096,7 @@ export class NfView3d extends LitElement {
   /** Long press: the quick menu at the device, or the details for devices without one. */
   private onDeviceHold(entityId: string, x: number, y: number): void {
     const kind = kindOf(entityId);
-    if (kind === "light" || kind === "cover" || kind === "switch" || kind === "fan" || kind === "lock" || kind === "camera") this._menu = { entity: entityId, x, y };
+    if (kind === "light" || kind === "cover" || kind === "switch" || kind === "fan" || kind === "lock") this._menu = { entity: entityId, x, y };
     else openMoreInfo(this, entityId);
   }
 
@@ -1481,102 +1351,6 @@ export class NfView3d extends LitElement {
     </div>`;
   }
 
-  /** Look through a placed camera: the view flies into it and its live picture lies over the 3D view. */
-  lookThrough(entityId: string): void {
-    // NextFloor's cameras: fly to where the camera hangs, along its view, then its live picture fades in
-    const v = this.viewer;
-    const b = this.building;
-    const hass = this.hass;
-    if (!v || !b || !hass) return;
-    const cam = cameraSpots(hass, b).find((c) => c.entity === entityId);
-    if (!cam) return;
-    this._menu = null;
-    this._liveLive = false;
-    this._through = { entity: entityId, back: this._through?.back ?? v.getView() };
-    this.watchCameras(true);
-    const fly = () => {
-      if (this._through?.entity !== entityId) return;
-      this.viewer?.liveFlyInto(cam.floorId, viewFromCamera(cam, 0));
-      setTimeout(() => {
-        if (this._through?.entity === entityId) this._liveLive = true;
-      }, 1150);
-    };
-    if (this.floorId !== cam.floorId) {
-      this.throughFloor = cam.floorId;
-      this.fire("floor-tap", { floorId: cam.floorId });
-      setTimeout(fly, 450);
-    } else fly();
-  }
-
-
-  private endThrough(): void {
-    const t = this._through;
-    if (!t) return;
-    this._through = null;
-    this._liveLive = false;
-    this.viewer?.flyTo(t.back, 1000);
-    if (this.throughWall) {
-      this.throughWall = false;
-      this.dispatchEvent(new CustomEvent("camera-wall-open", { bubbles: true, composed: true }));
-    }
-  }
-
-
-  /** Kameras: the camera wall – every placed camera's picture, refreshed every few seconds; a tap looks through it. */
-  /** NextFloor: all cameras of the plan live side by side; a tap flies into one. */
-  private renderCameraWall() {
-    if (!this.cameraWall || !this.hass || !this.building) return nothing;
-    const hass = this.hass;
-    const cams = cameraSpots(hass, this.building);
-    this.watchCameras(true);
-    const close = () => this.dispatchEvent(new CustomEvent("camera-wall-close", { bubbles: true, composed: true }));
-    return html`<div class="live-wall">
-      <div class="live-wall-head">
-        <b>${translate(hass, "camera_wall_title")}</b><span>· ${cams.length}</span><span class="live-spacer"></span>
-        <button class="nf-chip" aria-label="✕" @click=${close}>✕</button>
-      </div>
-      <div class="live-wall-grid">
-        ${cams.map((c) => {
-          // the wall shows snapshots (a few streams at once would load the house); the stream comes with a tap
-          const { snapshot } = cameraUrls(hass, c.entity, this.cameraTick * 5000);
-          const seen = detections(hass, c.entity);
-          return html`<button
-            class="live-wall-cam ${seen.length ? "live-seen" : ""}"
-            @click=${() => {
-              this.throughWall = true;
-              close();
-              this.lookThrough(c.entity);
-            }}
-          >
-            ${snapshot ? html`<img src=${snapshot} alt="" />` : html`<div class="live-wall-none">${translate(hass, "state_unavailable")}</div>`}
-            <span class="live-wall-name">${c.name} ${seen.map((d) => DETECT_ICON[d]).join(" ")}</span>
-          </button>`;
-        })}
-      </div>
-    </div>`;
-  }
-
-
-  /** NextFloor: the camera's live picture over the stage once the flight has arrived, with what it detects. */
-  private renderThrough() {
-    const t = this._through;
-    if (!t || !this.hass) return nothing;
-    const hass = this.hass;
-    const urls = cameraUrls(hass, t.entity, this.cameraTick * 5000);
-    const seen = detections(hass, t.entity);
-    return html`<div class="live-through ${this._liveLive ? "live-live" : ""}">
-      ${this._liveLive && (urls.stream || urls.snapshot) ? html`<img class="live-through-img" src=${urls.stream ?? urls.snapshot!} alt="" @error=${(e: Event) => urls.snapshot && ((e.target as HTMLImageElement).src = urls.snapshot)} />` : nothing}
-      <div class="live-through-bar">
-        <span class="live-rec">●</span>
-        <b>${entityName(hass, t.entity)}</b>
-        ${seen.map((d) => html`<span class="live-detect">${DETECT_ICON[d]} ${translate(hass, `detect_${d === "vehicle" ? "car" : d}` as I18nKey)}</span>`)}
-        <span class="live-spacer"></span>
-        <button class="nf-chip" @click=${() => this.endThrough()}>${translate(hass, "through_back")}</button>
-      </div>
-    </div>`;
-  }
-
-
   private renderMenu() {
     const m = this._menu;
     if (!m || !this.hass) return nothing;
@@ -1595,13 +1369,12 @@ export class NfView3d extends LitElement {
         .presets=${[]}
         ?confirmSwitch=${this.confirmSet.has(m.entity)}
         @close=${() => (this._menu = null)}
-        @camera-look=${(e: CustomEvent<{ entity: string }>) => this.lookThrough(e.detail.entity)}
       ></nf-quick-menu>`;
   }
 
   private onDeviceTap(entityId: string, x = 0, y = 0): void {
-    // trail pins and lamps without a light are drawn, but nothing of Home Assistant stands behind them
-    if (entityId.startsWith("trail:") || entityId.startsWith("lamp:")) return;
+    // lamps without a light are drawn, but nothing of Home Assistant stands behind them
+    if (entityId.startsWith("lamp:")) return;
     // the street end of the grid cable opens the grid sensor: the balance's, else the meter's (#223)
     if (entityId === "grid") {
       const b = this.building;
@@ -1609,14 +1382,9 @@ export class NfView3d extends LitElement {
       if (sensor) openMoreInfo(this, sensor);
       return;
     }
-    // a detection pin opens its sensor
-    if (entityId.startsWith("detect:")) {
-      openMoreInfo(this, entityId.slice(7));
-      return;
-    }
     const kind = kindOf(entityId);
-    // blinds have no single on/off: a tap opens their quick menu (up, positions, stop, down); a camera shows its picture
-    if (kind === "cover" || kind === "camera") {
+    // blinds have no single on/off: a tap opens their quick menu (up, positions, stop, down)
+    if (kind === "cover") {
       this._menu = { entity: entityId, x, y };
       return;
     }
@@ -1637,7 +1405,6 @@ export class NfView3d extends LitElement {
   }
 
   resetView(): void {
-    this._through = null;
     this.viewer?.resetView();
   }
 
@@ -1795,11 +1562,11 @@ export class NfView3d extends LitElement {
     const stage = STAGE[this.theme] ?? STAGE.neon;
     const style = `--nf-sky:${mix(stage.night[0], stage.day[0])};--nf-ground:${mix(stage.night[1], stage.day[1])}`;
     return html`<div
-      class="nf-stage ${this.roomLabels ? "" : "nf-no-room-names"} ${this._low ? "nf-low" : ""} ${this.panelOpen ? "nf-panel-open" : ""} ${this._alerts.length ? "nf-has-alerts" : ""} ${this._through ? "nf-through-on" : ""} ${this._narrowStage ? "nf-narrow" : ""}"
+      class="nf-stage ${this.roomLabels ? "" : "nf-no-room-names"} ${this._low ? "nf-low" : ""} ${this.panelOpen ? "nf-panel-open" : ""} ${this._alerts.length ? "nf-has-alerts" : ""} ${this._narrowStage ? "nf-narrow" : ""}"
       style=${style}
     >
-      ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen || this._through || this.cameraWall ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()}
-      ${this.renderAlerts()} ${this.clean ? nothing : html`${this.renderThumbs()} ${this.renderScenes()} ${this.renderFind()} ${this.renderCentral()}`} ${this.renderSwipe()} ${this.renderThrough()} ${this.renderCameraWall()}
+      ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()}
+      ${this.renderAlerts()} ${this.clean ? nothing : html`${this.renderThumbs()} ${this.renderScenes()} ${this.renderFind()} ${this.renderCentral()}`} ${this.renderSwipe()}
       ${this.renderMenu()} ${this.renderEye()}
       ${this.showStats && this._stats
         ? html`<span class="nf-stats"
@@ -1994,17 +1761,6 @@ export class NfView3d extends LitElement {
         height: 24px;
         border-radius: 50%;
         background: color-mix(in srgb, var(--nf-soft) 14%, transparent);
-      }
-      .nf-dev[data-entity^="trail:"] {
-        padding: 2px 4px 2px 2px;
-        font-size: 11px;
-        border-color: color-mix(in srgb, var(--nf-accent) 50%, transparent);
-      }
-      .nf-dev[data-entity^="trail:"] .nf-dev-icon {
-        color: var(--nf-accent);
-      }
-      .nf-dev[data-entity^="trail:"] .nf-dev-text {
-        display: inline;
       }
       .nf-dev-text {
         display: none;
@@ -2825,19 +2581,3 @@ function markerHeight(f: Furniture): number {
   return f.h + 0.35;
 }
 
-/** Footprints: the icon of a motion trail spot. */
-const STEPS_ICON =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 3c1.7 0 2.8 1.9 2.8 4.3S9.7 11 8 11 5.2 9.7 5.2 7.3 6.3 3 8 3m-1.8 9.5h3.6l-.6 3.4c-.2 1.2-1.1 2.1-2.2 2.1-1.2 0-1.9-1.1-1.7-2.3zM16 7c1.7 0 2.8 1.9 2.8 4.3S17.7 15 16 15s-2.8-1.3-2.8-3.7S14.3 7 16 7m-1.8 9.5h3.6l.9 2.4c.4 1.2-.4 2.1-1.6 2.1-1.1 0-2-.9-2.2-2.1z"/></svg>';
-
-/** How long ago a motion was, short ("jetzt", "vor 4 min"). */
-function agoText(hass: HomeAssistant, t: number): string {
-  const min = Math.max(0, Math.round((Date.now() / 1000 - t) / 60));
-  return min < 1 ? translate(hass, "live_now") : translate(hass, "live_minutes_ago", { n: min });
-}
-
-/** Pins of what a camera detects: a person, a vehicle, an animal. */
-const LH_DETECT_ICONS: Record<"person" | "vehicle" | "animal", string> = {
-  person: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2.6"/><path d="M8.5 9.5h7l-1 6h-1.4L12.6 22h-1.2l-.5-6.5H9.5z"/></svg>',
-  vehicle: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M5 11l1.6-4.2C6.9 6 7.6 5.5 8.4 5.5h7.2c.8 0 1.5.5 1.8 1.3L19 11h1v6h-2v1.5h-2.5V17h-7v1.5H6V17H4v-6zm2.4 0h9.2l-1-2.9H8.4zM7 14.8a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6m10 0a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6"/></svg>',
-  animal: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="6.5" cy="9" r="2"/><circle cx="17.5" cy="9" r="2"/><circle cx="9.5" cy="5" r="2"/><circle cx="14.5" cy="5" r="2"/><path d="M12 11c3 0 5.5 3.5 5.5 6.2 0 2-1.6 2.8-3.4 2.3-1.3-.4-2.9-.4-4.2 0-1.8.5-3.4-.3-3.4-2.3C6.5 14.5 9 11 12 11"/></svg>',
-};

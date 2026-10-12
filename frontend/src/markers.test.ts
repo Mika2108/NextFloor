@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildMarkers, cameraMotion, cameraMotionSensors, detectionKind, placedEntities, scaleGlow, stateText, toggleEntity } from "./markers.ts";
+import { buildMarkers, placedEntities, scaleGlow, stateText, toggleEntity } from "./markers.ts";
 import { emptyBuilding, newFloor } from "./model.ts";
 import type { HassEntity, HomeAssistant } from "./types.ts";
 
@@ -29,14 +29,6 @@ test("covers show their position, except while they move", () => {
   const hass = hassOf([]);
   assert.equal(stateText(hass, state("cover.a", "open", { current_position: 30 })), "30 %");
   assert.notEqual(stateText(hass, state("cover.a", "opening", { current_position: 30 })), "30 %");
-});
-
-test("binary sensors say open/closed for doors and windows, detected/clear for the rest", () => {
-  const hass = hassOf([]);
-  assert.equal(stateText(hass, state("binary_sensor.a", "on", { device_class: "door" })), "Open");
-  assert.equal(stateText(hass, state("binary_sensor.a", "off", { device_class: "window" })), "Closed");
-  assert.equal(stateText(hass, state("binary_sensor.a", "on", { device_class: "motion" })), "Detected");
-  assert.equal(stateText(hass, state("binary_sensor.a", "off")), "Clear");
 });
 
 test("a sensor prints its value with its unit, and a word state stays a word", () => {
@@ -90,33 +82,6 @@ test("markers: placed entities that exist get one, with their room and a default
   assert.equal(markers[1].y, 1.7);
   assert.equal(markers[1].name, "Own name");
   assert.deepEqual(placedEntities(building), ["light.a", "light.gone", "sensor.t"]);
-});
-
-test("detection kinds come from the sensor id and name", () => {
-  const hass = hassOf([state("binary_sensor.drive_dog_visible", "off", { friendly_name: "Hund im Garten" }), state("binary_sensor.x", "off", { friendly_name: "Person at gate" })]);
-  assert.equal(detectionKind(hass, "binary_sensor.x"), "person");
-  assert.equal(detectionKind(hass, "binary_sensor.drive_dog_visible"), "pet");
-  assert.equal(detectionKind(hass, "binary_sensor.driveway_car_occupancy"), "car");
-  assert.equal(detectionKind(hass, "binary_sensor.shed_motion"), "motion");
-});
-
-test("camera motion looks at the sensors of the camera's own device", () => {
-  const hass = hassOf(
-    [state("camera.front", "idle"), state("binary_sensor.front_motion", "on", { device_class: "motion" }), state("binary_sensor.front_door", "on", { device_class: "door" }), state("binary_sensor.other_motion", "on", { device_class: "motion" })],
-    {
-      entities: {
-        "camera.front": { entity_id: "camera.front", device_id: "d1" },
-        "binary_sensor.front_motion": { entity_id: "binary_sensor.front_motion", device_id: "d1" },
-        "binary_sensor.front_door": { entity_id: "binary_sensor.front_door", device_id: "d1" },
-        "binary_sensor.other_motion": { entity_id: "binary_sensor.other_motion", device_id: "d2" },
-      },
-    },
-  );
-  assert.deepEqual(cameraMotionSensors(hass, "camera.front"), ["binary_sensor.front_motion"]);
-  assert.equal(cameraMotion(hass, "camera.front"), true);
-  hass.states["binary_sensor.front_motion"].state = "off";
-  assert.equal(cameraMotion(hass, "camera.front"), false);
-  assert.deepEqual(cameraMotionSensors(hass, "camera.unknown"), []);
 });
 
 test("toggling uses the service of the entity's own domain", async () => {

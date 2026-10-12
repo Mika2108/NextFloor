@@ -34,7 +34,7 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 | 💡 **Live 3D** | Tap to switch, swipe to dim, long press for colours. Blinds, windows and doors follow their entities; a room panel lists everything in the room. |
 | 🛋️ **Furniture & vehicles** | 40 basic models and 14 packs with over 160 more, popular IKEA sizes, Tesla models in their paint colours. |
 | ⚡ **Energy & weather** | Solar fields and power flow, rain, snow, fog, sun and moon, sunlight through the windows. |
-| 📺 **Media & cameras** | TV screens with cover and ambilight, a camera wall, flights into live streams, a motion trail. |
+| 📺 **Media** | TV screens with cover and ambilight, speakers with their cover and controls. |
 | 🖥️ **Wall tablet ready** | Alerts for smoke, gas, water and open windows, kiosk mode with night dimming, a light quality level for Fire tablets. |
 | 🎨 **Fits your theme** | Takes colours, font and corner radius from Home Assistant; three looks (*Neon*, *Blueprint*, *Day*) and a heatmap. |
 | 🧩 **Dashboard card** | `custom:nextfloor-card` with a visual editor. |
@@ -45,7 +45,7 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 <table>
 <tr><td align="center" width="33%"><a href="docs/images/view-room.jpg"><img src="docs/images/view-room.jpg" alt="Live room view with its panel"></a><br><sub>Live room view with its panel</sub></td><td align="center" width="33%"><a href="docs/images/editor.jpg"><img src="docs/images/editor.jpg" alt="Plan editor with 3D beside it"></a><br><sub>Plan editor with 3D beside it</sub></td><td align="center" width="33%"><a href="docs/images/view-stacked.jpg"><img src="docs/images/view-stacked.jpg" alt="Floors stacked"></a><br><sub>Floors stacked</sub></td></tr>
 <tr><td align="center" width="33%"><a href="docs/images/view-energy.jpg"><img src="docs/images/view-energy.jpg" alt="Energy flow"></a><br><sub>Energy flow</sub></td><td align="center" width="33%"><a href="docs/images/view-weather-rain.jpg"><img src="docs/images/view-weather-rain.jpg" alt="Weather outside"></a><br><sub>Weather outside</sub></td><td align="center" width="33%"><a href="docs/images/view-media.jpg"><img src="docs/images/view-media.jpg" alt="TV screens"></a><br><sub>TV screens</sub></td></tr>
-<tr><td align="center" width="33%"><a href="docs/images/view-cameras.jpg"><img src="docs/images/view-cameras.jpg" alt="Camera wall"></a><br><sub>Camera wall</sub></td><td align="center" width="33%"><a href="docs/images/view-trail.jpg"><img src="docs/images/view-trail.jpg" alt="Motion trail"></a><br><sub>Motion trail</sub></td><td align="center" width="33%"><a href="docs/images/tablet.jpg"><img src="docs/images/tablet.jpg" alt="Wall tablet"></a><br><sub>Wall tablet</sub></td></tr>
+<tr><td align="center" width="33%"><a href="docs/images/view-heat.jpg"><img src="docs/images/view-heat.jpg" alt="Heat map"></a><br><sub>Heat map</sub></td><td align="center" width="33%"><a href="docs/images/view-cut.jpg"><img src="docs/images/view-cut.jpg" alt="Cut-away walls"></a><br><sub>Cut-away walls</sub></td><td align="center" width="33%"><a href="docs/images/tablet.jpg"><img src="docs/images/tablet.jpg" alt="Wall tablet"></a><br><sub>Wall tablet</sub></td></tr>
 <tr><td align="center" width="33%"><a href="docs/images/editor-furniture.jpg"><img src="docs/images/editor-furniture.jpg" alt="Furniture library"></a><br><sub>Furniture library</sub></td><td align="center" width="33%"><a href="docs/images/furniture-ikea.jpg"><img src="docs/images/furniture-ikea.jpg" alt="IKEA sizes"></a><br><sub>IKEA sizes</sub></td><td align="center" width="33%"><a href="docs/images/vehicles-tesla.jpg"><img src="docs/images/vehicles-tesla.jpg" alt="Tesla models"></a><br><sub>Tesla models</sub></td></tr>
 </table>
 
@@ -99,8 +99,6 @@ flows: true             # optional: power flow lines always on (true) or off (fa
 holograms: true         # optional: live cards (energy balance, car, media) always on or off; leave out for a switch
 weather: true           # optional: weather outside
 weather_entity: weather.home   # optional: which weather entity (default: as set in the plan)
-camera_wall: false      # optional: a "Cameras" button that opens the camera wall
-motion_trail: false     # optional: motion of the last 30 minutes
 idle_return: 0          # optional: kiosk, seconds without a touch until the start view returns
 night: "off"            # optional: kiosk, dim at night: off | sun | "22:00-06:00"
 idle_orbit: false       # optional: kiosk, slow camera turn after the idle return

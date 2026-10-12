@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { box, floorWith } from "../entities/fixtures.ts";
 import type { Building, Furniture, Placement } from "../model.ts";
-import { changeFurniture, changePlacement, dragDevice, dragFurniture, parseTyped, rounded, turned, turnStepFor, withoutFurniture, withoutPlacement } from "./edits.ts";
+import { changeFurniture, changePlacement, dragDevice, dragFurniture, parseTyped, rounded, turned, withoutFurniture, withoutPlacement } from "./edits.ts";
 
 const sofa = (extra: Partial<Furniture> = {}): Furniture => ({ id: "s", type: "sofa", x: 1, z: 1, rotation: 0, w: 2, d: 0.9, h: 0.8, variant: null, ...extra });
 const lamp = (extra: Partial<Placement> = {}): Placement => ({ entity_id: "light.a", x: 1, z: 1, y: null, ...extra });
@@ -57,9 +57,6 @@ test("turning wraps around, in both directions", () => {
   assert.equal(turned(350, 45), 35);
   assert.equal(turned(10, -45), 325);
   assert.equal(turned(0, 0), 0);
-  assert.equal(turnStepFor("camera"), 15);
-  assert.equal(turnStepFor("light"), 45);
-  assert.equal(turnStepFor(null), 45);
 });
 
 test("typed numbers accept a decimal comma, and rounding keeps what a field shows short", () => {

@@ -14,8 +14,6 @@ export interface CardConfig {
   walls?: WallMode;
   /** Pull floors apart in the house view (default true). */
   explode?: boolean;
-  /** A "Cameras" button that opens the camera wall, every camera's live picture. */
-  camera_wall?: boolean;
   /** The roof lifts and fades while zooming in (default true); false keeps it on the house. */
   roof_fade?: boolean;
   quality?: Quality;
@@ -68,8 +66,6 @@ export interface CardConfig {
   alert_jump?: boolean;
   /** Scene and script chips of the selected room (default true). */
   scenes?: boolean;
-  /** Motion trail: where motion was reported in the last half hour, with times (default off). */
-  motion_trail?: boolean;
   /** Weather outside the house: rain, snow, fog, clouds, sun and moon (default on). */
   weather?: boolean;
   /** The weather entity to use (default: the first one). */

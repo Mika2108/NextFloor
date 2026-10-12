@@ -10,6 +10,7 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 ### Changed
 
+- **Cameras are gone:** the camera wall, flying into a camera's live picture, the motion trail, detection pins, the field-of-view wedge and the camera device kind were removed. Placed `camera.*` entities are no longer shown.
 - **Extensions tab:** it now only holds the upload of your own 3D models and the project links. The feature list and the furniture pack list are gone, and so is the hint box in the furniture library.
 
 ## 0.7.0

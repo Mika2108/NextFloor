@@ -74,9 +74,6 @@ const shots = [
   { name: "view-weather-snow", query: "?weather=snowy&night", width: 1280, height: 800 },
   { name: "view-energy", query: "?pv=5400&flows", width: 1280, height: 800, click: "Erdgeschoss" },
   { name: "view-media", query: "", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
-  { name: "view-cameras", query: "", width: 1280, height: 800, click: "Kameras" },
-  { name: "view-camera-through", query: "", width: 1280, height: 800, click: "Erdgeschoss", viewScript: "v.lookThrough('camera.wohnzimmer');" },
-  { name: "view-trail", query: "", width: 1280, height: 800, click: "Erdgeschoss", then: "Spur" },
   // the editor and the extensions page
   { name: "editor", query: "", width: 1500, height: 950, editor: true, editorScript: "e.fit();" },
   { name: "editor-furniture", query: "", width: 1500, height: 950, editor: true, click: "Möbel" },

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { DeviceKind } from "./devices.ts";
 import { iconPath, iconSvg, mdiIcon } from "./icons.ts";
 
-const KINDS: DeviceKind[] = ["light", "switch", "fan", "cover", "climate", "media", "lock", "sensor", "binary", "camera", "scene", "script"];
+const KINDS: DeviceKind[] = ["light", "switch", "fan", "cover", "climate", "media", "lock", "sensor", "binary", "scene", "script"];
 
 test("every kind of device has a path and an svg that contains it", () => {
   for (const kind of KINDS) {

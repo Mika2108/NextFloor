@@ -280,17 +280,6 @@ TVs, media walls, the wall unit with a TV (the wall unit without a TV is a lamp:
 
 "Automatic" means NextFloor finds the matching entity in the area by itself.
 
-### 4.13 Cameras
-
-Place cameras like any device. Then:
-
-- **Mount:** wall, looking along its rotation, or ceiling as a dome that sees all round.
-- In the plan a **wedge** shows where the camera looks. The **handle at its tip** turns the camera and sets its reach at the same time.
-- **Show the field of view in 3D** can be switched off per camera. In 3D the wedge ends at the first wall: an indoor camera does not see through the wall into the next room.
-- **Field of view (°)**, **Reach (m)** and **Tilt down (°)** can be typed in as numbers.
-
-In 3D the camera hangs as a small model on the wall or ceiling, its field of view lies on the floor as a wedge. When a motion or presence sensor of the camera reports motion, the wedge turns red.
-
 ### 4.14 Parking spots and vehicles
 
 The item **Parking spot** in the Parking group marks where a car stands: in the garage, on the driveway or anywhere on the plot.
@@ -419,7 +408,6 @@ The 3D view has three levels:
 | **Dimmed** / **Stacked** / **Alone** | With an open floor: what happens to the floors below |
 | **Normal** / **Temp.** / **Humidity** / **CO₂** / **Values** | Heatmap: floors coloured by the room's value; **Values** colours nothing and writes temperature, humidity and CO₂ as numbers under the room names |
 | **Room names** | Show or hide the room names |
-| **Trail** | Motion trail, see [6.1](#61-cameras) |
 | **Weather** | Weather at the house, see [6.2](#62-weather-at-the-house) |
 | **≡ / ↔** (right end of the floor and room bar) | Wrap the bar at the top onto several lines when many rooms do not fit in one, or back to one line; in one line it scrolls sideways, on a PC with the mouse wheel too. In the house view the rooms of every floor follow its name |
 | **⚙** (phones only, top, next to the version) | Opens and folds the view options quality, look, markers and FPS; so the header takes only two lines on a phone |
@@ -491,31 +479,12 @@ NextFloor warns for free and without setup:
 
 The room pulses red and a banner appears at the top. A tap on the warning jumps into the room. The rain warning uses the weather entity from the plan settings and can be switched off there on its own under **Warning: window open while it rains**.
 
-### 5.9 Cameras in 3D
-
-A tap on the camera or on its wedge opens the snapshot, which refreshes every few seconds. A tap on the picture opens the Home Assistant live view. The wedge is a much bigger target than the small camera.
 
 ---
 
 ## 6. Live features
 
-Six features bring what happens in the house into the 3D view. They are built in and free, need no licence and nothing to install. Each one switches off on its own: in the 3D view with the switches at the bottom, in the card with its options (chapter 8).
-
-### 6.1 Cameras
-
-**Fly into a camera:** tap a camera in 3D, or choose **Look through the camera** in its snapshot menu or in the room panel. The view flies to where the camera hangs and looks its way, then the live picture fades in over the scene. **Back to the view** flies back. If the picture does not line up, correct the camera's rotation and tilt in the editor.
-
-![Looking through the camera](images/view-camera-through.jpg)
-
-**Detection pins:** when one of a camera's sensors reports a detection right now (Frigate, UniFi Protect, Reolink and the like give one sensor per object), a pin stands in front of the camera: person 🧍, vehicle 🚗 or animal 🐾. NextFloor finds these sensors on the camera's device by itself; the camera form in the editor says how many it found.
-
-**Camera wall:** the **Cameras** switch at the bottom (in the card the option `camera_wall: true`) shows every placed camera's picture side by side. A red frame marks a camera that sees motion right now. A tap shows one picture big, as a live stream when the camera can stream. Pictures come through Home Assistant's camera proxy over plain HTTP.
-
-![Camera wall](images/view-cameras.jpg)
-
-**Motion trail:** the **Trail** switch (card option `motion_trail: true`) draws where motion was reported in the last 30 minutes, in time order, as a glowing path through the house: faint blue where it is old, bright pink where it is new, with a comet running along it and a ring at every spot. Sources are motion, presence and occupancy sensors: placed ones where they stand, the others in the middle of the room of their area. The data comes from Home Assistant's history.
-
-![Motion trail](images/view-trail.jpg)
+Five features bring what happens in the house into the 3D view. They are built in and free, need no licence and nothing to install. Each one switches off on its own: in the 3D view with the switches at the bottom, in the card with its options (chapter 8).
 
 ### 6.2 Weather at the house
 
@@ -586,11 +555,11 @@ A glass card over the spot shows the charge with a colour ring, the range, charg
 
 ![Extensions](images/extensions.jpg)
 
-The **✦ Extensions** tab shows what NextFloor brings: the six live features of chapter 6 and the furniture packs.
+The **✦ Extensions** tab is where you upload your own 3D models (see [models.md](models.md)) and find the links to the project. The furniture packs below need no setup.
 
 ### 7.1 Built-in packs
 
-Eleven packs come with the integration and are always there:
+The packs that come with the integration and are always there:
 
 | Pack | Contents |
 |---|---|
@@ -610,7 +579,7 @@ Devices in packs have a small glowing part (display, status LED): linked to a me
 
 ### 7.2 Your own packs
 
-**Import furniture packs …** at the bottom of the page imports pack files, several at once. A pack is plain JSON; the format is described in [packs.md](packs.md) (German).
+A pack is plain JSON; the format is described in [packs.md](packs.md) (German). The Extensions tab does not list packs any more; an own pack file is imported with the integration's websocket command `nextfloor/packs/import` (field `pack` with the file's text), for example from the developer tools of a client of your choice.
 
 - If you remove a pack, its furniture stays in the plan as plain boxes. Import it again and it is back, with all its links.
 - A newer version of a pack replaces the old one without losing anything in the plan.
@@ -630,7 +599,7 @@ The card `custom:nextfloor-card` brings the 3D view into any dashboard. It loads
 |---|---|
 | **View** | One floor or the whole house, fixed size or full screen, height, look, walls, quality, floors below |
 | **Show** | Markers, heatmap, switches in the card, floor pictures, room names, room panel, full-screen button, floors apart, performance display |
-| **Features** | Warnings, jump to a warning, scene buttons, motion trail, weather with weather entity |
+| **Features** | Warnings, jump to a warning, scene buttons, weather with weather entity |
 | **Wall tablet (kiosk)** | Back to the start view, night dimming, camera turn as screensaver |
 
 In YAML a card looks like this. Every line except the first is optional:
@@ -669,11 +638,9 @@ stats: false
 alerts: true
 alert_jump: false       # jump into the room of a new warning
 scenes: true
-motion_trail: false     # cameras: motion trail
 weather: true           # weather at the house
 weather_entity: weather.home
 holograms: true         # live cards always on/off; leave out = a switch in the card
-camera_wall: false      # a "Cameras" button at the bottom of the card opens the camera wall
 roof_fade: true         # false: the roof stays on the house while zooming in
 start_view: { theta: 0.8, phi: 1.0, radius: 20 }   # a start view of this card's own; the line is shown in the editor under Start view (leave out = the plan's)
 idle_return: 0          # seconds without a touch until the start view
@@ -740,9 +707,6 @@ After an update the old version still runs in the background. Restart Home Assis
 
 **A device is missing in a room's device list.**
 The room needs an area, and the device must belong to that area, either the device or the entity itself. If the entity sits under a device with several entities, it is behind "+n more". The search field finds it directly.
-
-**A camera is hard to hit.**
-Tap its wedge on the floor, it counts like the camera.
 
 **Furniture shows as grey boxes.**
 The pack it comes from is not installed. Import it again.

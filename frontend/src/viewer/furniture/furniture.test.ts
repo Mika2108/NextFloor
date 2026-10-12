@@ -11,7 +11,6 @@ import { M } from "./palette.ts";
 import { pushPackGlow, pushPackLamp } from "./packs.ts";
 import { legs } from "./parts.ts";
 import { screenRect } from "./screens.ts";
-import { pushCameraModel } from "./technical.ts";
 
 const identity: Plan = (x, z) => [x, z];
 const mirrored: Plan = (x, z) => [-x, z];
@@ -179,15 +178,6 @@ test("a smart fridge's doors swing open and turn red", () => {
   const zs = (buf: GeoBuffer) => Math.max(...buf.p.filter((_, i) => i % 3 === 2));
   assert.ok(zs(open) > zs(closed), "an open door reaches out into the room");
   assert.ok(FRIDGE_DOOR > 0 && RADIATOR_Y > 0);
-});
-
-test("camera models: a wall camera and a ceiling dome", () => {
-  const wall = new GeoBuffer();
-  const dome = new GeoBuffer();
-  pushCameraModel(wall, "camera_wall", 1, 2.2, 1, 0);
-  pushCameraModel(dome, "camera_ceiling", 1, 2.6, 1, 0);
-  assert.ok(wall.count > 20 && dome.count > 10);
-  assert.ok(Math.max(...ys(dome)) <= 2.6 + 1e-9, "hangs from the ceiling");
 });
 
 test("screens: where a TV or an appliance's glowing front is, with and without a mount, mirrored or not", () => {

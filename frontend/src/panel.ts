@@ -38,7 +38,6 @@ export class NextFloorPanel extends LitElement {
     _furnish: { state: true },
     _selFurniture: { state: true },
     _selDevice: { state: true },
-    _cameraWall: { state: true },
     _optsOpen: { state: true },
   };
 
@@ -57,7 +56,6 @@ export class NextFloorPanel extends LitElement {
   private declare _furnish: boolean;
   private declare _selFurniture: string | null;
   private declare _selDevice: string | null;
-  private declare _cameraWall: boolean;
   /** Phones fold the view options behind a gear button. */
   private declare _optsOpen: boolean;
 
@@ -76,7 +74,6 @@ export class NextFloorPanel extends LitElement {
     this._furnish = false;
     this._selFurniture = null;
     this._selDevice = null;
-    this._cameraWall = false;
     this._optsOpen = false;
   }
 
@@ -340,7 +337,7 @@ export class NextFloorPanel extends LitElement {
   }
 
   /** A chip that toggles one remembered setting. */
-  private toggleChip(key: "roomNames" | "trail" | "weather", label: Key, hint?: Key) {
+  private toggleChip(key: "roomNames" | "weather", label: Key, hint?: Key) {
     return html`<button class="nf-chip" aria-pressed=${this._prefs[key]} title=${hint ? this.t(hint) : nothing} @click=${() => this.setPref(key, !this._prefs[key])}>${this.t(label)}</button>`;
   }
 
@@ -367,8 +364,8 @@ export class NextFloorPanel extends LitElement {
       <div class="nf-seg" role="group" aria-label=${t("heatmap")}>
         ${heats.map((m) => html`<button aria-pressed=${p.heat === m} @click=${() => this.setPref("heat", m)}>${t(m === "none" ? "heat_off" : (`heat_short_${m}` as Key))}</button>`)}
       </div>
-      ${this.toggleChip("roomNames", "room_names_short")} ${this.toggleChip("trail", "trail_short", "trail_hint")}
-      <button class="nf-chip" aria-pressed=${this._cameraWall} title=${t("camera_wall_hint")} @click=${() => (this._cameraWall = !this._cameraWall)}>${t("cameras_short")}</button>
+      ${this.toggleChip("roomNames", "room_names_short")}
+     
       ${this.toggleChip("weather", "weather_short", "weather_hint")}
       ${this._roomId || (this._floorId && several) ? html`<button class="nf-chip" @click=${() => this.back()}>${t("back")}</button>` : nothing}
     </div>`;
@@ -395,10 +392,6 @@ export class NextFloorPanel extends LitElement {
           .packs=${this.data.packs}
           .floorStack=${p.floorStack}
           .roomLabels=${p.roomNames}
-          ?trail=${p.trail}
-          .cameraWall=${this._cameraWall}
-          @camera-wall-close=${() => (this._cameraWall = false)}
-          @camera-wall-open=${() => (this._cameraWall = true)}
           .clean=${p.clean}
           .cleanButton=${true}
           @clean-toggle=${() => this.setPref("clean", !p.clean)}
@@ -428,7 +421,6 @@ export class NextFloorPanel extends LitElement {
         ${room
           ? html`<nf-room-panel
               class="nf-room-panel"
-              @camera-look=${(e: CustomEvent<{ entity: string }>) => this.view3d()?.lookThrough(e.detail.entity)}
               .hass=${this.hass}
               .room=${room}
               .floor=${building.floors.find((f) => f.rooms.some((r) => r.id === this._roomId)) ?? null}

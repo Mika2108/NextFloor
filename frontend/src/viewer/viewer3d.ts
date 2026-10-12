@@ -44,7 +44,7 @@ import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
 import { centredAt, floorLabelPosition, floorShowsMarkers, LabelPlacer, leftAt, project, stackFloorLabels, type FloorLabel, type ScreenPoint } from "./scene/labels.ts";
 import { easeFloor, fadeMaterials, floorShare, floorTarget } from "./scene/floor-motion.ts";
 import { atTarget, stepOpening, stepShare } from "./scene/opening-motion.ts";
-import { addCameraWedge, addLampHalo, addSpotCone, hiddenInCut, type HaloPoints } from "./scene/halos.ts";
+import { addLampHalo, addSpotCone, hiddenInCut, type HaloPoints } from "./scene/halos.ts";
 import { sunlightPatches, sunSignature } from "./scene/sunlight.ts";
 import { LAMP_SIZE, HANGING_LAMPS } from "./scene/lamp-data.ts";
 import { lightSourcesOf } from "./scene/light-sources.ts";
@@ -53,7 +53,7 @@ import { createDevicePin, type PinHooks } from "./scene/pins.ts";
 import { buildFloorGeometry, SLAB, stairHoles, type FloorGeometry } from "./build.ts";
 import { OrbitControls, type OrbitView } from "./controls.ts";
 import { type FoldMasks } from "./fold.ts";
-import { pushCameraModel, pushPackLamp, screenRect, pushFridgeDoors } from "./furniture.ts";
+import { pushPackLamp, screenRect, pushFridgeDoors } from "./furniture.ts";
 import { hasMesh, mountBase, packItem, setMeshSource, setPacks, type FurniturePack, type MeshSource } from "../packs.ts";
 import { withVehicles } from "../parking.ts";
 import { buildRoof, type RoofWindowState } from "./roof.ts";
@@ -68,7 +68,6 @@ import { WeatherLayer, type SkyView } from "./live-weather.ts";
 import { EnergyLayer, type EnergyArc, type PlanPoint, type SparkField } from "./live-energy.ts";
 import { SoundLayer, type SoundSpot } from "./live-sound.ts";
 import { ScreenLayer, type LiveScreen } from "./live-screens.ts";
-import { TrailLayer, type TrailPoint } from "./live-trail.ts";
 import { addMeshLighting, applyEnvironment, disposeMeshInstance, instantiateMesh, loadMesh } from "./meshes.ts";
 import { circlePath, cleaningPath, stepRobot, type RobotInfo, type RobotMotion } from "./robot.ts";
 
@@ -137,8 +136,6 @@ export interface DeviceMarker {
   /** The text shows on the floor as well (a marker set to "always"); otherwise only in its room or while active. */
   full?: boolean;
   unavailable: boolean;
-  /** Cameras: no field-of-view wedge on the floor (false); default on. */
-  cone?: boolean;
   /** Light cone on the floor for lights that are on. */
   glow: { color: [number, number, number]; level: number } | null;
   /** Power drawn (W) when the device reports it. */
@@ -174,14 +171,6 @@ export interface DeviceMarker {
   variant?: string | null;
   /** Formatted power, e.g. "85 W". */
   powerText?: string;
-  /** A camera drawn in 3D (wall or ceiling); its field of view lies on the floor, red while motion is seen. */
-  model?: "camera_wall" | "camera_ceiling";
-  motion?: boolean;
-  /** Camera: opening angle (degrees) and reach (m) of its field of view; default 90° / 4.5 m (dome: 360° / 3 m). */
-  fov?: number;
-  reach?: number;
-  /** Camera: degrees below the horizon it looks (for the look through it). */
-  tilt?: number;
 }
 
 export type FloorStack = "dim" | "stacked" | "single";
@@ -221,7 +210,6 @@ export interface SunState {
 export type { SkyView, SkyWeather } from "./live-weather.ts";
 export type { EnergyArc, PlanPoint, SparkField } from "./live-energy.ts";
 export type { SoundSpot } from "./live-sound.ts";
-export type { TrailPoint } from "./live-trail.ts";
 
 /** What a TV shows (NextFloor TV screens): the viewer finds the screen of the furniture itself. */
 export type LiveScreenInput = Omit<LiveScreen, "x" | "z" | "rotation" | "rect"> & { furnitureId: string };
@@ -295,8 +283,6 @@ interface FloorView {
   fridgeMesh: Mesh;
   /** Triangle ranges of lamps (entity ids), furniture walls mesh and openings, for tapping. */
   lampTris: { id: string; start: number; end: number }[];
-  /** Triangle range of every camera's field-of-view wedge, by device id (a tap on it hits the camera). */
-  coneTris: { id: string; start: number; end: number }[];
   /** The same lamp ranges, keyed by furniture id (for moving lamps). */
   lampFurnTris: { id: string; start: number; end: number }[];
   frameTris: { id: string; start: number; end: number }[];
@@ -486,8 +472,6 @@ export class NextFloorViewer {
   private readonly soundLayer: SoundLayer;
   /** Pictures on TVs that play, with an ambilight behind (live-screens.ts). */
   private readonly screenLayer: ScreenLayer;
-  /** The motion of the last half hour as a path (live-trail.ts). */
-  private readonly trailLayer: TrailLayer;
   /** NextFloor's floating cards: their points in the plan and who is told where they are on screen. */
   private liveAnchors: PlanPoint[] = [];
   private liveAnchorCb: LiveAnchorCallback | null = null;
@@ -517,7 +501,6 @@ export class NextFloorViewer {
     this.soundLayer = new SoundLayer(this.scene, this.liftOf);
     this.screenLayer = new ScreenLayer(this.scene, this.liftOf);
     this.screenLayer.onChange = () => this.invalidate();
-    this.trailLayer = new TrailLayer(this.scene, this.liftOf);
     this.weatherLayer.onFlash = (on) => this.host.classList.toggle("live-flash", on);
     this.controls = this.makeControls();
     this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -869,12 +852,6 @@ export class NextFloorViewer {
     this.invalidate();
   }
 
-  /** The motion trail: spots in time order (empty: none). */
-  setLiveTrail(points: TrailPoint[]): void {
-    this.trailLayer.set(points);
-    this.invalidate();
-  }
-
   /** TVs and monitors that play: their picture and the ambilight behind them. */
   setLiveScreens(list: LiveScreenInput[]): void {
     const out: LiveScreen[] = [];
@@ -1059,7 +1036,6 @@ export class NextFloorViewer {
     this.energyLayer.dispose();
     this.soundLayer.dispose();
     this.screenLayer.dispose();
-    this.trailLayer.dispose();
     this.resizeObserver.disconnect();
     this.intersection?.disconnect();
     document.removeEventListener("visibilitychange", this.onVisibility);
@@ -1392,7 +1368,6 @@ export class NextFloorViewer {
         coneMesh,
         fridgeMesh,
         lampTris: [],
-        coneTris: [],
         lampFurnTris: [],
         frameTris: [],
         glassTris: [],
@@ -1652,11 +1627,11 @@ export class NextFloorViewer {
       const k = left > FLASH_MS ? 0.5 + 0.5 * Math.sin(left / 140) : left / FLASH_MS;
       return Math.round(k * 10) / 10;
     };
-    const lamps = this.devices.filter((d) => d.floorId === fv.floor.id && (d.lamp || d.model));
+    const lamps = this.devices.filter((d) => d.floorId === fv.floor.id && d.lamp);
     const shapeSig =
       this.wallMode +
       (this.lowQuality ? "L" : this.highQuality ? "H" : "M") +
-      lamps.map((d) => `${d.id},${d.lamp ?? d.model},${d.variant},${d.x},${d.z},${d.y},${d.rotation ?? 0},${d.roll ?? 0},${d.upright ? 1 : 0},${d.size?.join("/")},${d.base ?? 0},${d.pack ?? ""},${d.mirror ? 1 : 0}`).join(";");
+      lamps.map((d) => `${d.id},${d.lamp},${d.variant},${d.x},${d.z},${d.y},${d.rotation ?? 0},${d.roll ?? 0},${d.upright ? 1 : 0},${d.size?.join("/")},${d.base ?? 0},${d.pack ?? ""},${d.mirror ? 1 : 0}`).join(";");
     const glows = lamps.map((d) => this.glowOf(d));
     const colorSig = lamps.map((d, i) => `${flash(d.id)},${glows[i] ? `${glows[i]!.level.toFixed(3)},${glows[i]!.color.map((c) => c.toFixed(3)).join("/")}` : "off"}`).join(";");
     if (shapeSig !== fv.lampShapeSig || !fv.lampMesh.geometry.getAttribute("position")) {
@@ -1668,15 +1643,14 @@ export class NextFloorViewer {
       const ranges = new Map<string, { start: number; end: number }>();
       const H = fv.floor.height;
       for (const d of lamps) {
-        // hanging lamps (and ceiling cameras) would float above cut walls
-        const hanging = d.lamp === "strip" ? (d.base ?? H) > Math.min(fv.floor.cut_height, H) : d.lamp ? HANGING_LAMPS.has(d.lamp) : d.model === "camera_ceiling";
-        if ((!d.lamp && !d.model) || (hanging && this.wallMode === "cut")) continue;
+        // hanging lamps would float above cut walls
+        const hanging = d.lamp === "strip" ? (d.base ?? H) > Math.min(fv.floor.cut_height, H) : d.lamp ? HANGING_LAMPS.has(d.lamp) : false;
+        if (!d.lamp || (hanging && this.wallMode === "cut")) continue;
         const start = buf.count;
         const packed = d.pack ? packItem(d.pack) : undefined;
         const [pw, pd, ph] = d.size ?? [0.3, 0.3, 0.3];
         // shades get the sentinel colour and are recoloured below
-        if (d.model) pushCameraModel(buf, d.model, d.x, d.model === "camera_ceiling" ? H : d.y, d.z, d.rotation ?? 0);
-        else if (packed) pushPackLamp(buf, packed, { x: d.x, z: d.z, rotation: d.rotation ?? 0, w: pw, d: pd, h: ph, mirror: d.mirror }, d.base ?? 0, SHADE_SENTINEL);
+        if (packed) pushPackLamp(buf, packed, { x: d.x, z: d.z, rotation: d.rotation ?? 0, w: pw, d: pd, h: ph, mirror: d.mirror }, d.base ?? 0, SHADE_SENTINEL);
         else pushLampModel(buf, { ...d, lamp: d.lamp! }, H, SHADE_SENTINEL);
         // keyed by the furniture: two lamps may share one light (one switch for two strips)
         ranges.set(d.furnitureId ?? d.id, { start, end: buf.count });
@@ -1739,15 +1713,8 @@ export class NextFloorViewer {
     }
     const points: HaloPoints = { positions: [], colours: [] };
     const cones = new GeoBuffer();
-    const wedges: FloorView["coneTris"] = [];
     const cut = this.wallMode === "cut";
     for (const marker of this.devices) {
-      if (marker.model && marker.floorId === fv.floor.id) {
-        // a camera: its field of view on the floor
-        if ((marker.model === "camera_ceiling" && cut) || marker.cone === false) continue;
-        wedges.push({ id: marker.id, ...addCameraWedge(cones, marker, fv.geo.walls2d) });
-        continue;
-      }
       const glow = this.glowOf(marker);
       if (marker.floorId !== fv.floor.id || !marker.lamp || !glow) continue;
       if (cut && hiddenInCut(marker.lamp)) continue;
@@ -1764,7 +1731,6 @@ export class NextFloorViewer {
     fv.coneMesh.geometry.dispose();
     fv.coneMesh.geometry = cones.geometry();
     fv.coneMesh.visible = cones.count > 0;
-    fv.coneTris = wedges;
   }
 
   /** Lit screens of a floor: a bright panel in the app colour and a faint glow around it. */
@@ -1971,8 +1937,7 @@ export class NextFloorViewer {
       const tri = hit.faceIndex;
       const fv = floors.find((f) => f.group === hit.object.parent)!;
       if (hit.object === fv.lampMesh || hit.object === fv.coneMesh) {
-        // a camera's wedge on the floor is a far bigger target than the camera itself
-        const id = inRange(hit.object === fv.lampMesh ? fv.lampTris : fv.coneTris, tri);
+        const id = hit.object === fv.lampMesh ? inRange(fv.lampTris, tri) : undefined;
         if (id) return { entity: id };
       } else if (hit.object === fv.framesMesh || hit.object === fv.blindsMesh || hit.object === fv.glassMesh) {
         // the part above the cut is folded away with its wall: a tap there is meant for what lies behind
@@ -2467,14 +2432,6 @@ export class NextFloorViewer {
     this.controls.flyTo(view, duration);
   }
 
-  /** NextFloor's cameras: fly into a view given relative to a floor (target height above that floor). */
-  liveFlyInto(floorId: string, v: { target: [number, number, number]; radius: number; theta: number; phi: number }, duration = 1100): void {
-    const fv = this.floorMap.get(floorId);
-    const base = fv ? fv.floor.elevation + fv.ty : 0;
-    // the orbit keeps its polar angle inside its limits; a dome looking straight down still works
-    this.controls.flyTo({ target: new Vector3(v.target[0], base + v.target[1], v.target[2]), radius: v.radius, theta: v.theta, phi: Math.max(0.08, v.phi) }, duration);
-  }
-
   /** Fly to a point of a floor (search) and let the device there flash. */
   focus(floorId: string, x: number, z: number, y: number, entityId: string | null): void {
     const fv = this.floorMap.get(floorId);
@@ -2517,7 +2474,7 @@ export class NextFloorViewer {
     const roofMoving = this.placeRoof(dt);
     const robotsMoving = this.stepRobots(now);
     // NextFloor's layers: each one steps every frame (no short-circuit), any of them moving keeps the frames coming
-    const liveMoving = [this.weatherLayer, this.energyLayer, this.soundLayer, this.screenLayer, this.trailLayer].map((l) => l.step(now));
+    const liveMoving = [this.weatherLayer, this.energyLayer, this.soundLayer, this.screenLayer].map((l) => l.step(now));
     const weatherMoving = liveMoving.some(Boolean);
     const moving = cameraMoving || floorsMoving || openingsMoving || flashing || roofMoving;
     const busy: string[] = [];

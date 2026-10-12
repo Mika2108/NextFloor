@@ -79,7 +79,6 @@ export function stateText(hass: Hass, st: HassEntity | undefined): string {
     case "media":
       return mediaText(hass, st);
     case "lock":
-    case "camera":
       return stateWord(hass, st.state);
     case "binary":
       return binaryText(hass, st);
@@ -104,7 +103,6 @@ function markerFor(hass: HomeAssistant, floor: Floor, placed: Placement): Device
   if (!kind || !st) return null;
   const room = roomAt(floor, placed.x, placed.z);
   const areaName = room?.area_id ? hass.areas?.[room.area_id]?.name : undefined;
-  const isCamera = kind === "camera";
   return {
     id: placed.entity_id,
     floorId: floor.id,
@@ -113,14 +111,8 @@ function markerFor(hass: HomeAssistant, floor: Floor, placed: Placement): Device
     z: placed.z,
     y: placed.y ?? defaultHeight(kind, floor.height, placed.mount ?? null),
     lamp: kind === "light" ? (placed.mount ?? "ceiling") : null,
-    model: isCamera ? (placed.mount === "ceiling" ? "camera_ceiling" : "camera_wall") : undefined,
-    motion: isCamera ? cameraMotion(hass, placed.entity_id) : undefined,
-    fov: placed.fov ?? undefined,
-    reach: placed.reach ?? undefined,
-    tilt: placed.tilt ?? undefined,
     rotation: placed.rotation ?? 0,
     icon: placed.icon ? mdiIcon(placed.icon) : iconSvg(kind),
-    cone: isCamera && placed.cone === false ? false : undefined,
     name: placed.name || entityName(hass, placed.entity_id, areaName),
     ownName: placed.name || undefined,
     showName: !!placed.show_name,
@@ -137,38 +129,6 @@ function markerFor(hass: HomeAssistant, floor: Floor, placed: Placement): Device
 export function buildMarkers(hass: HomeAssistant, building: Building): DeviceMarker[] {
   return building.floors.flatMap((floor) => floor.placements.map((placed) => markerFor(hass, floor, placed)).filter((m): m is DeviceMarker => m !== null));
 }
-
-/** What a camera's detection sensor looks for. */
-export type DetectionKind = "person" | "car" | "pet" | "motion";
-
-const DETECTION_WORDS: [DetectionKind, RegExp][] = [
-  ["person", /person|people|human|pedestrian/],
-  ["car", /\bcar\b|vehicle|truck|bus|motorcycle|bicycle|fahrzeug|auto\b/],
-  ["pet", /\bdog\b|\bcat\b|\bpet\b|animal|bird|hund|katze|tier/],
-];
-
-/** Person, vehicle, animal or plain motion, judged from the sensor's id and friendly name. */
-export function detectionKind(hass: HomeAssistant, sensorId: string): DetectionKind {
-  const name = String(hass.states[sensorId]?.attributes.friendly_name ?? "");
-  // ids glue words with underscores ("driveway_car_occupancy")
-  const text = `${sensorId} ${name}`.toLowerCase().replace(/[_.-]/g, " ");
-  return DETECTION_WORDS.find(([, pattern]) => pattern.test(text))?.[0] ?? "motion";
-}
-
-/** The motion, occupancy and presence sensors that belong to the device of a camera. */
-export function cameraMotionSensors(hass: HomeAssistant, cameraId: string): string[] {
-  const entities = hass.entities ?? {};
-  const device = entities[cameraId]?.device_id;
-  if (!device) return [];
-  const motionClasses = new Set(["motion", "occupancy", "presence"]);
-  return Object.values(entities)
-    .filter((e) => e.device_id === device && e.entity_id.startsWith("binary_sensor."))
-    .map((e) => e.entity_id)
-    .filter((id) => motionClasses.has(String(hass.states[id]?.attributes.device_class)));
-}
-
-/** Whether the camera's device currently reports motion, a person or presence. */
-export const cameraMotion = (hass: HomeAssistant, cameraId: string): boolean => cameraMotionSensors(hass, cameraId).some((id) => hass.states[id]?.state === "on");
 
 /** Every entity that is placed somewhere in the building. */
 export const placedEntities = (building: Building): string[] => building.floors.flatMap((floor) => floor.placements.map((p) => p.entity_id));

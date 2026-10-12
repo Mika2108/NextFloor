@@ -282,17 +282,6 @@ Fernseher, Medienwand, Wohnwand mit TV (die Wohnwand ohne TV ist eine Leuchte: V
 
 Steht dort „automatisch“, sucht NextFloor die passende Entität im Bereich selbst.
 
-### 4.13 Kameras
-
-Kameras platzierst du wie jedes Gerät. Danach:
-
-- **Montage:** Wand mit Blickrichtung oder Decke als Dome, der rundum schaut.
-- Im Plan zeigt ein **Kegel**, wohin die Kamera schaut. Der **Griff an der Spitze** dreht die Kamera und setzt zugleich die Reichweite.
-- **Sichtwinkel (°)**, **Reichweite (m)** und **Neigung nach unten (°)** stellst du auch als Zahl ein.
-- **Sichtkegel in 3D zeigen** lässt sich je Kamera abschalten. In 3D endet der Kegel an der ersten Wand: Eine Innenkamera sieht nicht durch die Wand in den Nachbarraum.
-
-In 3D hängt die Kamera als kleines Modell an der Wand oder Decke, ihr Sichtfeld liegt als Kegel auf dem Boden. Meldet ein Bewegungs- oder Präsenzsensor der Kamera Bewegung, wird der Kegel rot.
-
 ### 4.14 Stellplätze und Fahrzeuge
 
 Das Möbel **Stellplatz** in der Gruppe Stellplätze markiert, wo ein Auto steht: in der Garage, in der Einfahrt oder irgendwo auf dem Grundstück.
@@ -421,7 +410,6 @@ Die 3D-Ansicht hat drei Ebenen:
 | **Abgedunkelt** / **Gestapelt** / **Einzeln** | Bei einer offenen Etage: Was mit den Etagen darunter passiert |
 | **Normal** / **Temp.** / **Feuchte** / **CO₂** / **Werte** | Heatmap: Böden in der Farbe des Raumwerts; **Werte** färbt nichts, sondern schreibt Temperatur, Feuchte und CO₂ als Zahlen unter die Raumnamen |
 | **Raumnamen** | Namen der Räume ein- oder ausblenden |
-| **Spur** | Bewegungsspur, siehe [6.1](#61-kameras) |
 | **Wetter** | Wetter am Haus, siehe [6.2](#62-wetter-am-haus) |
 | **≡ / ↔** (rechts in der Etagen- und Raumleiste) | Die Leiste oben auf mehrere Zeilen umbrechen, wenn viele Räume nicht in eine Zeile passen, oder zurück in eine Zeile; in einer Zeile scrollt sie seitlich, am PC auch mit dem Mausrad. In der Hausansicht steht vor den Räumen jeder Etage ihr Name |
 | **⚙** (nur auf dem Handy, oben neben der Version) | Klappt die Ansichtsoptionen Qualität, Look, Symbole und FPS auf und wieder zu; so braucht der Kopf auf dem Handy nur zwei Zeilen |
@@ -493,31 +481,12 @@ NextFloor warnt kostenlos und ohne Einrichtung:
 
 Der betroffene Raum pulsiert rot, oben erscheint ein Banner. Ein Tipp auf die Warnung springt in den Raum. Die Regenwarnung nimmt die Wetter-Entität aus den Plan-Einstellungen und lässt sich dort unter **Warnung: Fenster offen bei Regen** einzeln abschalten.
 
-### 5.9 Kameras in 3D
-
-Ein Tipp auf die Kamera oder auf ihren Sichtkegel öffnet das Standbild, das sich alle paar Sekunden erneuert. Ein Tipp auf das Bild öffnet das Livebild von Home Assistant. Der Kegel ist eine viel größere Tippfläche als die kleine Kamera.
 
 ---
 
 ## 6. Live-Funktionen
 
-Sechs Funktionen holen in die 3D-Ansicht, was im Haus gerade passiert. Sie sind eingebaut und kostenlos, brauchen keine Lizenz und keine Installation. Jede lässt sich einzeln abschalten: in der 3D-Ansicht mit den Schaltern unten, in der Karte über ihre Optionen (Kapitel 8).
-
-### 6.1 Kameras
-
-**In die Kamera fliegen:** Tippe in 3D auf eine Kamera oder wähle im Schnappschuss-Menü oder im Raum-Panel **Durch die Kamera schauen**. Die Ansicht fliegt dorthin, wo die Kamera hängt, schaut in ihre Richtung, dann blendet das Livebild über die Szene. **Zurück zur Ansicht** fliegt zurück. Passt das Bild nicht, korrigiere Drehung und Neigung der Kamera im Editor.
-
-![Durch die Kamera schauen](images/view-camera-through.jpg)
-
-**Erkennungs-Pins:** Meldet ein Sensor der Kamera gerade etwas (Frigate, UniFi Protect, Reolink und Co. liefern je Objekt einen Sensor), steht ein Pin vor der Kamera: Person 🧍, Fahrzeug 🚗 oder Tier 🐾. NextFloor findet diese Sensoren selbst am Gerät der Kamera; das Kamera-Formular im Editor sagt, wie viele es gefunden hat.
-
-**Kamera-Wand:** Der Schalter **Kameras** unten (in der Karte die Option `camera_wall: true`) zeigt die Bilder aller platzierten Kameras nebeneinander. Ein roter Rahmen markiert eine Kamera, die gerade Bewegung sieht. Antippen zeigt ein Bild groß, als Livestream, wenn die Kamera streamen kann. Die Bilder kommen über den Kamera-Proxy von Home Assistant per normalem HTTP.
-
-![Kamera-Wand](images/view-cameras.jpg)
-
-**Bewegungsspur:** Der Schalter **Spur** (Karten-Option `motion_trail: true`) zeichnet, wo in den letzten 30 Minuten Bewegung gemeldet wurde, in zeitlicher Reihenfolge als leuchtenden Pfad durchs Haus: blass blau, wo es länger her ist, kräftig pink, wo es frisch ist, mit einem Kometen, der den Pfad entlangläuft, und einem Ring an jeder Stelle. Quellen sind Bewegungs-, Präsenz- und Belegungssensoren: platzierte dort, wo sie stehen, die anderen in der Mitte des Raums ihres Bereichs. Die Daten kommen aus dem Verlauf von Home Assistant.
-
-![Bewegungsspur](images/view-trail.jpg)
+Fünf Funktionen holen in die 3D-Ansicht, was im Haus gerade passiert. Sie sind eingebaut und kostenlos, brauchen keine Lizenz und keine Installation. Jede lässt sich einzeln abschalten: in der 3D-Ansicht mit den Schaltern unten, in der Karte über ihre Optionen (Kapitel 8).
 
 ### 6.2 Wetter am Haus
 
@@ -588,7 +557,7 @@ Eine Glaskarte über dem Stellplatz zeigt den Ladestand mit Farbring, die Reichw
 
 ![Erweiterungen](images/extensions.jpg)
 
-Der Reiter **✦ Erweiterungen** zeigt, was in NextFloor steckt: die sechs Live-Funktionen aus Kapitel 6 und die Möbel-Packs.
+Im Reiter **✦ Erweiterungen** lädst du eigene 3D-Modelle hoch (siehe [models.md](models.md)) und findest die Links zum Projekt. Die Möbel-Packs brauchen keine Einrichtung.
 
 ### 7.1 Mitgelieferte Packs
 
@@ -612,7 +581,7 @@ Geräte in Packs haben ein kleines leuchtendes Teil (Display, Status-LED): Mit e
 
 ### 7.2 Eigene Packs
 
-**Möbel-Packs importieren …** unten auf der Seite importiert Pack-Dateien, auch mehrere auf einmal. Ein Pack ist eine einfache JSON-Datei; das Format steht in [packs.md](packs.md).
+Ein Pack ist eine einfache JSON-Datei; das Format steht in [packs.md](packs.md). Der Reiter Erweiterungen listet keine Packs mehr; eine eigene Pack-Datei importierst du mit dem Websocket-Befehl `nextfloor/packs/import` der Integration (Feld `pack` mit dem Text der Datei).
 
 - Wird ein Pack entfernt, bleiben seine Möbel als einfache Kästen im Plan. Nach einem erneuten Import sind sie mit allen Verknüpfungen wieder da.
 - Eine neuere Version eines Packs ersetzt die alte, ohne dass im Plan etwas verloren geht.
@@ -671,11 +640,9 @@ stats: false
 alerts: true
 alert_jump: false       # bei einer neuen Warnung in den Raum springen
 scenes: true
-motion_trail: false     # Kameras: Bewegungsspur
 weather: true           # Wetter am Haus
 weather_entity: weather.home
 holograms: true         # Live-Karten immer an/aus; weglassen = Schalter in der Karte
-camera_wall: false      # Knopf „Kameras“ unten in der Karte öffnet die Kamera-Wand
 roof_fade: true         # false: Dach bleibt beim Heranzoomen auf dem Haus
 start_view: { theta: 0.8, phi: 1.0, radius: 20 }   # eigene Startansicht dieser Karte; die Zeile steht im Editor unter Startansicht (weglassen = die des Plans)
 idle_return: 0          # Sekunden ohne Berührung bis zur Startansicht

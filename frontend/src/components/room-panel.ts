@@ -11,7 +11,6 @@ import { controls, tokens } from "../styles.ts";
 import type { HassEntity, HomeAssistant } from "../types.ts";
 
 const COVER_SET_POSITION = 4;
-const CAMERA_REFRESH_MS = 3000;
 const COVER_STOP = 8;
 
 /** Colour presets offered for colour lights (warm white first). */
@@ -46,7 +45,6 @@ export class NfRoomPanel extends LitElement {
     floor: { attribute: false },
     confirmEntities: { attribute: false },
     _showAll: { state: true },
-    _tick: { state: true },
   };
 
   declare hass: HomeAssistant;
@@ -57,31 +55,13 @@ export class NfRoomPanel extends LitElement {
   declare confirmEntities: Set<string> | null;
   /** Show the other devices of the area as well (their main entities). */
   private declare _showAll: boolean;
-  /** Bumped every few seconds while the panel is open, so camera snapshots refresh. */
-  private declare _tick: number;
-  private cameraTimer: ReturnType<typeof setInterval> | undefined;
   private memo: { entities: HomeAssistant["entities"]; floor: Floor | null; room: Room; shown: string[]; more: string[] } | null = null;
-  private hasCameras = false;
 
   constructor() {
     super();
     this.room = null;
     this.floor = null;
     this._showAll = false;
-    this._tick = 0;
-  }
-
-  connectedCallback(): void {
-    super.connectedCallback();
-    // snapshots every few seconds are much lighter for a wall tablet than a permanent stream
-    this.cameraTimer = setInterval(() => {
-      if (this.hasCameras && !document.hidden) this._tick++;
-    }, CAMERA_REFRESH_MS);
-  }
-
-  disconnectedCallback(): void {
-    super.disconnectedCallback();
-    clearInterval(this.cameraTimer);
   }
 
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
@@ -145,8 +125,6 @@ export class NfRoomPanel extends LitElement {
     const media = by(["media"]);
     const switches = by(["switch", "fan", "lock"]);
     const sensors = by(["sensor", "binary"]);
-    const cameras = by(["camera"]);
-    this.hasCameras = cameras.length > 0;
     const scenes = by(["scene", "script"]);
     const facts = this.facts(climates);
     const lightsOn = lights.filter((l) => l.state === "on");
@@ -197,7 +175,6 @@ export class NfRoomPanel extends LitElement {
         ${climates.length ? this.section("panel_climate", climates.map((st) => this.climateRow(st))) : nothing}
         ${media.length ? this.section("panel_media", media.map((st) => this.mediaRow(st))) : nothing}
         ${switches.length ? this.section("panel_switches", switches.map((st) => this.switchRow(st))) : nothing}
-        ${cameras.length ? this.section("panel_cameras", cameras.map((st) => this.cameraTile(st))) : nothing}
         ${sensors.length ? this.section("panel_sensors", sensors.map((st) => this.sensorRow(st))) : nothing}
         ${scenes.length
           ? this.section(
@@ -458,29 +435,6 @@ export class NfRoomPanel extends LitElement {
     </div>`;
   }
 
-  /** Camera snapshot (refreshed while the panel is open); a tap opens the live view of Home Assistant. */
-  private cameraTile(st: HassEntity) {
-    const picture = st.attributes.entity_picture as string | undefined;
-    // a changing query parameter makes the browser fetch a fresh snapshot (not for inline pictures)
-    const src = picture && !isUnavailable(st) ? (picture.startsWith("data:") ? picture : `${picture}${picture.includes("?") ? "&" : "?"}nf=${this._tick}`) : null;
-    const placed = this.floor?.placements.some((p) => p.entity_id === st.entity_id);
-    return html`<div class="nf-rp-camera-wrap">
-      <button class="nf-rp-camera" title=${this.t("camera_live")} @click=${() => openMoreInfo(this, st.entity_id)}>
-        ${src ? html`<img src=${src} alt=${this.name(st.entity_id)} loading="lazy" />` : html`<span class="nf-rp-note">${stateText(this.hass, st)}</span>`}
-        <span class="nf-rp-camera-name">${this.name(st.entity_id)}</span>
-      </button>
-      ${placed
-        ? html`<button
-            class="nf-rp-look"
-            title=${this.t("through_camera")}
-            @click=${() => this.dispatchEvent(new CustomEvent("camera-look", { detail: { entity: st.entity_id }, bubbles: true, composed: true }))}
-          >
-            ${this.t("through_camera")}
-          </button>`
-        : nothing}
-    </div>`;
-  }
-
   private sensorRow(st: HassEntity) {
     const kind = kindOf(st.entity_id)!;
     const warn = kind === "binary" && st.state === "on";
@@ -703,53 +657,6 @@ export class NfRoomPanel extends LitElement {
         background: var(--c);
         box-shadow: 0 0 10px var(--c);
         cursor: pointer;
-      }
-      .nf-rp-camera {
-        position: relative;
-        display: block;
-        width: 100%;
-        aspect-ratio: 16 / 9;
-        margin: 6px 0;
-        padding: 0;
-        border: 1px solid var(--nf-line);
-        border-radius: 12px;
-        overflow: hidden;
-        background: #05080f;
-        cursor: pointer;
-      }
-      .nf-rp-camera img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .nf-rp-camera-wrap {
-        position: relative;
-      }
-      .nf-rp-look {
-        position: absolute;
-        right: 8px;
-        bottom: 12px;
-        padding: 4px 10px;
-        border: 1px solid var(--nf-line);
-        border-radius: 999px;
-        background: rgba(7, 11, 20, 0.8);
-        color: var(--nf-accent);
-        font: inherit;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      .nf-rp-camera-name {
-        position: absolute;
-        left: 8px;
-        bottom: 6px;
-        padding: 2px 8px;
-        border-radius: 8px;
-        background: rgba(7, 11, 20, 0.75);
-        color: var(--nf-text);
-        font-size: 12px;
-        font-weight: 600;
       }
       .nf-rp-more {
         justify-self: start;

@@ -74,11 +74,9 @@ test("a relay's lamp takes colour and brightness from the bulb, unless the bulb 
   assert.equal(lightGlow(entity("switch.relay", "off"), bulb), null);
 });
 
-test("default heights: lamps by mount, cameras high or under the ceiling, the rest by kind", () => {
+test("default heights: lamps by mount, the rest by kind", () => {
   assert.ok(Math.abs(defaultHeight("light", 2.6) - 2.35) < 1e-9);
   assert.equal(defaultHeight("light", 2.6, "table"), 1.25);
-  assert.ok(Math.abs(defaultHeight("camera", 2.6, "ceiling") - 2.55) < 1e-9);
-  assert.equal(defaultHeight("camera", 2.6), 2.2);
   assert.equal(defaultHeight("cover", 3), 2);
   assert.equal(defaultHeight("sensor", 2.6), 1.4);
   assert.equal(defaultHeight("lock", 2.6), 1.05);

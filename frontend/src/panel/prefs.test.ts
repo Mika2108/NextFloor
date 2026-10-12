@@ -11,7 +11,7 @@ test("nothing stored gives the defaults", () => {
   const prefs = new PrefStore(memory()).load();
   assert.deepEqual(prefs, {
     explode: true, keepRoof: false, quality: "auto", stats: false, markers: "important", heat: "none", theme: "neon", accent: null,
-    floorStack: "dim", roomNames: true, trail: false, clean: false, navWrap: false, weather: true,
+    floorStack: "dim", roomNames: true, clean: false, navWrap: false, weather: true,
   });
 });
 

@@ -58,9 +58,6 @@ export function dragFurniture(building: Building, id: string, x: number, z: numb
 /** An angle in degrees turned by `delta`, kept within 0 to 360. */
 export const turned = (degrees: number, delta: number): number => (((degrees + delta) % 360) + 360) % 360;
 
-/** Cameras turn in finer steps than lamps, as their wedge shows where they look. */
-export const turnStepFor = (kind: string | null): number => (kind === "camera" ? 15 : 45);
-
 /** A number typed into a size field: a decimal comma works too. NaN when it is not a number. */
 export const parseTyped = (text: string): number => Number.parseFloat(text.replace(",", "."));
 

@@ -4,8 +4,7 @@
 import { alertEntities, type AlertSources } from "../../alerts.ts";
 import { areaEntities, carWatched, kindOf, robotRoomSensor, type FurnitureLinks, type OpeningEntities } from "../../devices.ts";
 import { powerSensorFor } from "../../energy.ts";
-import { motionSensors } from "../../live/cameras.ts";
-import { cameraMotionSensors, placedEntities } from "../../markers.ts";
+import { placedEntities } from "../../markers.ts";
 import type { Building } from "../../model.ts";
 import { parkingEntities } from "../../parking.ts";
 import type { HomeAssistant } from "../../types.ts";
@@ -19,7 +18,6 @@ export interface WatchInputs {
   /** Heat map or room labels are on, so the sensors of every room's area are needed. */
   needsRoomSensors: boolean;
   alertSources: AlertSources | null;
-  trail: boolean;
   weatherEntityId: string | null;
 }
 
@@ -61,7 +59,6 @@ export function watchedEntities(inputs: WatchInputs): string[] {
   const sensorsOfRooms = inputs.needsRoomSensors ? roomsOf(b).flatMap((r) => areaEntities(hass, r.area_id).filter((id) => id.startsWith("sensor."))) : [];
   const ids: MaybeId[] = [
     ...placed,
-    ...placed.filter((id) => kindOf(id) === "camera").flatMap((id) => cameraMotionSensors(hass, id)),
     ...openingIds(inputs.openingLinks),
     ...placed.map((id) => powerSensorFor(hass, id)),
     ...furnitureIds(inputs),
@@ -78,7 +75,6 @@ export function watchedEntities(inputs: WatchInputs): string[] {
     ...(inputs.alertSources ? alertEntities(inputs.alertSources) : []),
     ...parkingEntities(b.floors),
     ...carWatched(hass, b.floors),
-    ...(inputs.trail ? motionSensors(hass, b).map((s) => s.entity) : []),
     weatherEntity(hass, inputs.weatherEntityId ?? b.settings.weather_entity),
     "sun.sun",
   ];

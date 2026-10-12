@@ -1,57 +1,9 @@
-// Soft glow points at lit lamps, light cones under spots (quality "High"), and the field of view of cameras on the floor.
+// Soft glow points at lit lamps and light cones under spots (quality "High").
 
 import { Color } from "three";
 import { DEG, GeoBuffer } from "../geo.ts";
 import { HANGING_LAMPS, LAMP_SIZE } from "./lamp-data.ts";
 import type { DeviceMarker, LampModel } from "./types.ts";
-
-type Wall2d = { a: readonly [number, number]; b: readonly [number, number] };
-
-/** Height above the floor at which the camera's wedge is drawn. */
-const WEDGE_Y = 0.015;
-/** A wall closer than this to the camera is the one it hangs on, and does not block the view. */
-const OWN_WALL = 0.45;
-
-/**
- * How far a camera at `origin` sees along the direction turned `turn` radians from `heading`: up to `reach`, or to the first wall in
- * the way. A camera does not see through walls.
- */
-export function viewReach(walls: readonly Wall2d[], origin: readonly [number, number], heading: readonly [number, number], turn: number, reach: number): number {
-  const [c, s] = [Math.cos(turn), Math.sin(turn)];
-  const ray: [number, number] = [heading[0] * c - heading[1] * s, heading[1] * c + heading[0] * s];
-  let nearest = reach;
-  for (const wall of walls) {
-    const edge: [number, number] = [wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]];
-    const denominator = ray[0] * edge[1] - ray[1] * edge[0];
-    if (Math.abs(denominator) < 1e-9) continue;
-    const toStart: [number, number] = [wall.a[0] - origin[0], wall.a[1] - origin[1]];
-    const along = (toStart[0] * edge[1] - toStart[1] * edge[0]) / denominator;
-    const across = (toStart[0] * ray[1] - toStart[1] * ray[0]) / denominator;
-    // a camera just inside an outer wall looks out through it, so the wall it hangs on does not count
-    if (along > OWN_WALL && along < nearest && across >= 0 && across <= 1) nearest = along;
-  }
-  return nearest;
-}
-
-/** The wedge of a camera's field of view on the floor: faint, and red while the camera sees motion. Returns the triangles it added. */
-export function addCameraWedge(buffer: GeoBuffer, camera: DeviceMarker, walls: readonly Wall2d[]): { start: number; end: number } {
-  const turn = (camera.rotation ?? 0) * DEG;
-  const heading: [number, number] = [-Math.sin(turn), Math.cos(turn)];
-  const dome = camera.model === "camera_ceiling";
-  const reach = camera.reach ?? (dome ? 3 : 4.5);
-  const half = ((camera.fov ?? (dome ? 360 : 90)) * DEG) / 2;
-  const near = camera.motion ? new Color(0.9, 0.12, 0.16) : new Color(0.04, 0.22, 0.28);
-  const far = new Color(0, 0, 0);
-  const steps = Math.max(4, Math.round(half / 0.15));
-  const origin: [number, number] = [camera.x, camera.z];
-  const rim = (t: number): [number, number, number] => {
-    const r = viewReach(walls, origin, heading, t, reach);
-    return [camera.x + (heading[0] * Math.cos(t) - heading[1] * Math.sin(t)) * r, WEDGE_Y, camera.z + (heading[1] * Math.cos(t) + heading[0] * Math.sin(t)) * r];
-  };
-  const start = buffer.count;
-  for (let i = 0; i < steps; i++) buffer.tri([camera.x, WEDGE_Y, camera.z], rim(-half + (2 * half * (i + 1)) / steps), rim(-half + (2 * half * i) / steps), near, far, far);
-  return { start, end: buffer.count };
-}
 
 /** The height of the glow point of a lamp model, for a room of height `ceiling`. */
 export function haloHeight(model: LampModel, ceiling: number, base: number, height: number): number {

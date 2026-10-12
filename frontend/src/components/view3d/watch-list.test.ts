@@ -17,7 +17,7 @@ const building = (extra: Record<string, unknown> = {}): Building =>
 
 function inputs(extra: Partial<WatchInputs> = {}): WatchInputs {
   const hass = hassOf([entity("light.a", "on"), entity("sensor.room_temp", "20", { device_class: "temperature" })], { "sensor.room_temp": { area_id: "lounge" }, "light.a": { area_id: "lounge" } }, { areas: { lounge: { area_id: "lounge", name: "Lounge" } } });
-  return { hass, building: building(), openingLinks: new Map(), furnitureLinks: new Map(), needsRoomSensors: false, alertSources: null, trail: false, weatherEntityId: null, ...extra };
+  return { hass, building: building(), openingLinks: new Map(), furnitureLinks: new Map(), needsRoomSensors: false, alertSources: null, weatherEntityId: null, ...extra };
 }
 
 test("placed devices, energy sensors, presence, furniture links, the roof and the sun are watched", () => {

@@ -136,7 +136,7 @@ export class NextFloorCardEditor extends LitElement {
       <p class="hint">${f.t("card_dashboard_hint")}</p>`;
   }
 
-  /** Warnings, scenes and the live features (motion trail, weather with its entity). */
+  /** Warnings, scenes and the live features (weather with its entity). */
   private featuresSection(): TemplateResult {
     const f = this.form;
     const weatherEntities = Object.keys(this.hass?.states ?? {})
@@ -144,8 +144,8 @@ export class NextFloorCardEditor extends LitElement {
       .sort();
     return html`<h3>${f.t("card_section_features")}</h3>
       ${switchOption(f, "alerts", "card_alerts", "card_alerts_hint")} ${switchOption(f, "alert_jump", "card_alert_jump", "card_alert_jump_hint")}
-      ${switchOption(f, "scenes", "card_scenes", "card_scenes_hint")} ${switchOption(f, "motion_trail", "card_motion_trail", "card_motion_trail_hint")}
-      ${switchOption(f, "camera_wall", "card_camera_wall", "card_camera_wall_hint")} ${switchOption(f, "weather", "card_weather", "card_weather_hint")}
+      ${switchOption(f, "scenes", "card_scenes", "card_scenes_hint")}
+      ${switchOption(f, "weather", "card_weather", "card_weather_hint")}
       ${f.value.weather !== false
         ? html`<div class="grid">
             <label class="field wide"

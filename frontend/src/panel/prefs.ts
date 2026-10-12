@@ -18,7 +18,6 @@ export interface DevicePrefs {
   accent: string | null;
   floorStack: FloorStack;
   roomNames: boolean;
-  trail: boolean;
   clean: boolean;
   navWrap: boolean;
   weather: boolean;
@@ -59,7 +58,6 @@ const CODECS: { [K in keyof DevicePrefs]: Codec<DevicePrefs[K]> } = {
   accent: { name: "accent", fallback: null, read: (raw) => (/^#[0-9a-f]{6}$/i.test(raw) ? raw : null), write: (value) => value ?? "" },
   floorStack: word("floor_stack", ["dim", "stacked", "single"], "dim"),
   roomNames: flag("room_names", true),
-  trail: flag("trail", false),
   clean: flag("clean", false),
   navWrap: flag("nav_wrap", false),
   weather: flag("weather", true),

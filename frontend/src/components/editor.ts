@@ -21,13 +21,11 @@ import { iconPath } from "../icons.ts";
 import {
   bounds,
   centroid,
-  FURNITURE_GROUPS,
   ENERGY_DEVICES,
   type StartView,
   canLift,
   isFixed,
   isLamp,
-  LAMP_MODEL,
   isAxisRect,
   step,
   type Direction,
@@ -69,6 +67,7 @@ import { dragRotation, pictureCentre, pictureLocal } from "./editor/ops/backgrou
 import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWallActions, type MeasureActions, type MeasureState, type OutdoorActions } from "./editor/forms/outdoor.ts";
 import { outdoorRectangleAfter } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
+import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
 import { renderDeviceForm, type DeviceActions } from "./editor/forms/device.ts";
 import { renderFurnitureForm, type FurnitureActions } from "./editor/forms/furniture.ts";
 import { renderOpeningForm, type OpeningActions } from "./editor/forms/opening.ts";
@@ -93,10 +92,9 @@ import { spotItems, suggestedSpots } from "./editor/ops/spots.ts";
 import { editorStyles } from "./editor/styles.ts";
 import "./entity-picker.ts";
 import type { HassFloor, HomeAssistant } from "../types.ts";
-import { load3d } from "../load3d.ts";
 import type { WallMode } from "../viewer/viewer3d.ts";
 import { furnitureName } from "../furniture-names.ts";
-import { furnitureSize, isElectric, mountBase, packItemName, packName, packType, setPacks, type FurniturePack } from "../packs.ts";
+import { mountBase, setPacks, type FurniturePack } from "../packs.ts";
 
 /** Items that can be fixed against moving. */
 type FixKind = "room" | "opening" | "furniture" | "device" | "wall" | "outdoor";
@@ -149,7 +147,6 @@ export class NfEditor extends LitElement {
     building: { attribute: false },
     narrow: { type: Boolean },
     packs: { attribute: false },
-    _preview: { state: true },
     _doc: { state: true },
     _doc3d: { state: true },
     _split: { state: true },
@@ -159,8 +156,6 @@ export class NfEditor extends LitElement {
     _sideOpen: { state: true },
     _floorId: { state: true },
     _energyNote: { state: true },
-    _furnQuery: { state: true },
-    _libOpen: { state: true },
     _ctx: { state: true },
     _fixedHint: { state: true },
     _openingPreset: { state: true },
@@ -181,9 +176,6 @@ export class NfEditor extends LitElement {
   declare narrow: boolean;
   /** Imported furniture packs (from the panel's controller). */
   declare packs: FurniturePack[] | undefined;
-  /** Result of the last pack import. */
-  /** Picture of the furniture under the pointer in the library. */
-  private declare _preview: { type: string; url: string | null; left: number; top: number } | null;
   private declare _doc: Building;
   /** The draft as the 3D pane shows it (follows _doc with a short delay, so drags stay smooth). */
   private declare _doc3d: Building;
@@ -200,9 +192,6 @@ export class NfEditor extends LitElement {
   private declare _floorId: string | null;
   /** What the import from the energy dashboard did (shown under its button). */
   private declare _energyNote: string | null;
-  /** Furniture library: the search text, and which sections are open (built-in groups and packs). */
-  private declare _furnQuery: string;
-  private declare _libOpen: Set<string>;
   /** Open context menu (right-click, long press) at a plan point, for one item. */
   private declare _ctx: { x: number; y: number; kind: FixKind; id: string } | null;
   /** A drag on a fixed item was turned into panning: the hint line says why. */
@@ -227,6 +216,8 @@ export class NfEditor extends LitElement {
   private declare _canRedo: boolean;
 
   private readonly history = new EditHistory<Building>(100);
+  /** The furniture library's search, open sections and preview. */
+  private readonly lib = new LibraryState(() => this.requestUpdate());
   /** State of the floor and room forms in the side panel. */
   private readonly side = new SideState(() => this.requestUpdate());
   /** What is selected in the plan. */
@@ -259,14 +250,6 @@ export class NfEditor extends LitElement {
     this.roof.picking = false;
     this.roof.windowId = null;
     this._energyNote = null;
-    this._furnQuery = "";
-    this._libOpen = new Set(["group:lights", "group:living"]);
-    try {
-      const saved = localStorage.getItem("nextfloor.library");
-      if (saved) this._libOpen = new Set(JSON.parse(saved) as string[]);
-    } catch {
-      // no storage: the defaults stand
-    }
     this._openingPreset = "door";
     let split = false;
     try {
@@ -292,7 +275,6 @@ export class NfEditor extends LitElement {
       // no storage
     }
     this._sidePinned = pinned;
-    this._preview = null;
     this._measureLen = 3;
     this._rectSize = [4, 3];
     this._tool = "select";
@@ -338,6 +320,14 @@ export class NfEditor extends LitElement {
       duplicate: () => this.duplicateOutdoor(),
       remove: () => this.deleteOutdoor(),
       lockButton: this.fixButton("outdoor", this.sel.outdoor ?? ""),
+    };
+  }
+
+  private libraryActions(): LibraryActions {
+    return {
+      add: (type) => this.addFurniture(type),
+      openExtensions: () => this.dispatchEvent(new CustomEvent("open-extensions", { bubbles: true, composed: true })),
+      packs: this.packs ?? [],
     };
   }
 
@@ -2699,7 +2689,7 @@ export class NfEditor extends LitElement {
     const floor = this.floor;
     const walls = floor ? generateWalls(floor.rooms, { exterior: this._doc.settings.wall_exterior, interior: this._doc.settings.wall_interior }, floor.walls ?? []) : null;
     return html`
-      ${this.renderPreview()}
+      ${renderPreview(this.host, this.lib.preview)}
       <div class="nf-editor ${this.narrow ? "nf-narrow" : ""}">
         <div class="nf-main">
           <div class="nf-toolbar">
@@ -3399,7 +3389,7 @@ export class NfEditor extends LitElement {
     if (this._tool === "energy") return this.renderEnergyPanel();
     // furnishing: the library and the selected item come first
     if (this._tool === "furniture" && floor && admin) {
-      return html`${this.furnitureItem ? renderFurnitureForm(this.host, this.furnitureItem, this.furnitureActions()) : nothing} ${this.renderFurnitureLibrary()}`;
+      return html`${this.furnitureItem ? renderFurnitureForm(this.host, this.furnitureItem, this.furnitureActions()) : nothing} ${renderLibrary(this.host, this.lib, this.room?.name, this.libraryActions())}`;
     }
     // a selected item shows only its own form, with a way back to the floor and room
     const item =
@@ -3490,48 +3480,6 @@ export class NfEditor extends LitElement {
     this.updateRoom({ start_view: v });
   }
 
-  private toggleLibrary(key: string): void {
-    const next = new Set(this._libOpen);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    this._libOpen = next;
-    try {
-      localStorage.setItem("nextfloor.library", JSON.stringify([...next]));
-    } catch {
-      // no storage
-    }
-  }
-
-  /** A section of the library: folded away unless open (or while a search shows its hits). */
-  private librarySection(key: string, title: string, items: { type: string; label: string; search?: string }[], q: string) {
-    // every word of the query somewhere in the item's names, its id or its section's title (D155)
-    const words = fold(q).split(/\s+/).filter(Boolean);
-    const hits = words.length ? items.filter((it) => {
-      const hay = fold(`${it.label} ${it.search ?? ""} ${it.type.replace(/[_:.]/g, " ")} ${title}`);
-      return words.every((w) => hay.includes(w));
-    }) : items;
-    if (q && !hits.length) return nothing;
-    const open = q ? true : this._libOpen.has(key);
-    return html`<button class="nf-lib-head nf-lib-toggle" aria-expanded=${open} @click=${() => this.toggleLibrary(key)}>
-        <span class="nf-lib-caret">${open ? "▾" : "▸"}</span>${title} <span class="nf-lib-count">${hits.length}</span>
-      </button>
-      ${open ? html`<div class="nf-library">${hits.map((it) => this.libraryButton(it.type, it.label))}</div>` : nothing}`;
-  }
-
-  /** Whether the furniture library has any item for the query (else a "nothing found" line shows). */
-  private libraryHasHits(q: string): boolean {
-    const words = fold(q).split(/\s+/).filter(Boolean);
-    const lang = this.hass?.language ?? "en";
-    const all: string[] = [
-      ...Object.entries(FURNITURE_GROUPS).flatMap(([g, types]) => types.map((t) => `${this.t(`furn_${t}` as I18nKey)} ${translate(EN_HASS, `furn_${t}` as I18nKey)} ${t.replace(/_/g, " ")} ${this.t(`furn_group_${g}` as I18nKey)}`)),
-      ...(this.packs ?? []).flatMap((p) => p.items.map((it) => `${packItemName(it, lang)} ${Object.values(it.name).join(" ")} ${it.id.replace(/_/g, " ")} ${p.name} ${packName(p, "en")}`)),
-    ];
-    return all.some((s) => {
-      const hay = fold(s);
-      return words.every((w) => hay.includes(w));
-    });
-  }
-
   /** Ids of the stored pictures any screen of the plan uses (in order of first use). */
   private storedPictures(): string[] {
     const ids: string[] = [];
@@ -3543,94 +3491,6 @@ export class NfEditor extends LitElement {
     return ids;
   }
 
-  private renderFurnitureLibrary() {
-    const room = this.room;
-    const q = this._furnQuery.trim().toLowerCase();
-    const lang = this.hass?.language ?? "en";
-    return html`<section>
-      <h3>${this.t("furniture_add")}</h3>
-      <p class="nf-sub">${room ? this.t("furniture_into", { room: room.name }) : this.t("furniture_pick_room")}</p>
-      <input
-        class="nf-search"
-        type="search"
-        placeholder=${this.t("furniture_search")}
-        .value=${this._furnQuery}
-        @input=${(e: Event) => (this._furnQuery = (e.target as HTMLInputElement).value)}
-        @keydown=${(e: KeyboardEvent) => {
-          if (e.key === "Escape") this._furnQuery = "";
-        }}
-      />
-      ${q && !this.libraryHasHits(q) ? html`<p class="nf-sub">${this.t("furniture_search_none")}</p>` : nothing}
-      ${Object.entries(FURNITURE_GROUPS).map(([group, types]) =>
-        this.librarySection(
-          `group:${group}`,
-          this.t(`furn_group_${group}` as I18nKey),
-          types.map((t) => ({ type: t, label: this.t(`furn_${t}` as I18nKey), search: translate(EN_HASS, `furn_${t}` as I18nKey) })),
-          q,
-        ),
-      )}
-      ${(this.packs ?? []).map((pack) =>
-        this.librarySection(
-          `pack:${pack.id}`,
-          packName(pack, lang),
-          pack.items.map((it) => ({ type: packType(pack.id, it.id), label: packItemName(it, lang), search: Object.values(it.name).join(" ") })),
-          q,
-        ),
-      )}
-    </section>
-    <div class="nf-ext-teaser">
-      <b>${this.t("ext_teaser_title")}</b>
-      <span class="nf-sub">${this.t("ext_teaser_text")}</span>
-      <button class="nf-btn nf-primary" @click=${() => this.dispatchEvent(new CustomEvent("open-extensions", { bubbles: true, composed: true }))}>${this.t("ext_open")}</button>
-    </div>`;
-  }
-
-  private libraryButton(type: string, label: string) {
-    const show = (e: Event) => void this.showPreview(type, e.currentTarget as HTMLElement);
-    // a lamp can be switched from 3D, another electric item takes an entity and a power sensor
-    const badge = isLamp(type) ? "light" : isElectric(type) ? "switch" : null;
-    return html`<button
-      class="nf-btn ${badge ? "nf-lib-electric" : ""}"
-      title=${badge ? this.t(badge === "light" ? "lib_badge_light" : "lib_badge_electric") : label}
-      @click=${() => this.addFurniture(type)}
-      @mouseenter=${show}
-      @focus=${show}
-      @mouseleave=${() => (this._preview = null)}
-      @blur=${() => (this._preview = null)}
-    >
-      ${label}
-      ${badge
-        ? html`<svg class="nf-lib-badge" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d=${iconPath(badge)} />
-          </svg>`
-        : nothing}
-    </button>`;
-  }
-
-  /** Picture of an item, drawn by the 3D bundle and shown left of its button. */
-  private async showPreview(type: string, button: HTMLElement): Promise<void> {
-    const r = button.getBoundingClientRect();
-    const place = { left: Math.max(8, r.left - 196), top: Math.max(8, Math.min(window.innerHeight - 200, r.top + r.height / 2 - 95)) };
-    this._preview = { type, url: null, ...place };
-    try {
-      const mod = await load3d();
-      const [w, d, h] = furnitureSize(type);
-      const url = mod.furniturePreview({ type, w, d, h, variant: null, lamp: LAMP_MODEL[type] ?? null }, 180, this.packs ?? []);
-      if (this._preview?.type === type) this._preview = { type, url, ...place };
-    } catch {
-      this._preview = null;
-    }
-  }
-
-  private renderPreview() {
-    const p = this._preview;
-    if (!p) return nothing;
-    return html`<div class="nf-preview" style="left:${p.left}px;top:${p.top}px" aria-hidden="true">
-      ${p.url ? html`<img src=${p.url} alt="" />` : html`<span class="nf-preview-wait"></span>`}
-      <b>${furnitureName(this.hass, p.type)}</b>
-    </div>`;
-  }
-
   static styles = [tokens, controls, editorStyles];
 }
 
@@ -3638,12 +3498,4 @@ if (!customElements.get("nf-editor")) customElements.define("nf-editor", NfEdito
 
 // the extensions page is part of this bundle: the panel loads it the same way as the editor
 import "./extensions.ts";
-
-/** Lower case without accents, so "kuche" finds "Küche" and "chaise" finds "Chaise longue". */
-function fold(s: string): string {
-  return s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
-}
-
-/** A stand-in hass for English names (the furniture search also matches the English name). */
-const EN_HASS = { language: "en" } as HomeAssistant;
 

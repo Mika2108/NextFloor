@@ -19,7 +19,8 @@
       // Mock of the Home Assistant frontend object with invented demo data.
       import { DEMO_AREAS, DEMO_BUILDING, DEMO_FLOORS, DEMO_PACK, DEMO_ENTITIES, DEMO_STATES, DEMO_PICTURES } from "./demo-data.js";
 
-      const params = new URLSearchParams(location.search);
+      const uploadedMeshes = new Map();
+const params = new URLSearchParams(location.search);
       // Home Assistant's default themes, so the preview shows how NextFloor follows them (?ha=light, dark otherwise)
       const light = params.get("ha") === "light";
       const haTheme = light
@@ -143,8 +144,12 @@
           else if (window.nfPanel) window.nfPanel.hass = current;
         },
         // a model the owner uploaded: only when the page is told where to read it from (?meshdir=)
-        async fetchWithAuth(path) {
-          const id = /mesh\/([a-z0-9_]+)/.exec(path)?.[1];
+        async fetchWithAuth(path, init = {}) {
+          const id = /mesh\/([a-z0-9_%]+)/.exec(path)?.[1];
+          // models uploaded in this page stay in memory, as on a real Home Assistant they stay in its configuration folder
+          if (id && init.method === "POST") return uploadedMeshes.set(id, init.body) && new Response(null, { status: 201 });
+          if (id && init.method === "DELETE") return uploadedMeshes.delete(id) && new Response(null, { status: 204 });
+          if (id && uploadedMeshes.has(id)) return new Response(uploadedMeshes.get(id), { status: 200 });
           const dir = params.get("meshdir");
           return id && dir ? fetch(`${dir}/${id}.glb`) : new Response(null, { status: 404 });
         },

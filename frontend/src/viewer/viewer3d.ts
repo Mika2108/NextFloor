@@ -73,6 +73,7 @@ import { addMeshLighting, applyEnvironment, disposeMeshInstance, instantiateMesh
 import { circlePath, cleaningPath, stepRobot, type RobotInfo, type RobotMotion } from "./robot.ts";
 
 export type { RobotInfo } from "./robot.ts";
+export { inspectModel, ModelError, prepareModel, previewModel, type ModelInfo, type PrepareOptions } from "./models/prepare.ts";
 
 /** Colour of a robot's light by what it does. */
 const ROBOT_LED: Record<RobotInfo["mode"], number> = { cleaning: 0x37e0ff, returning: 0xffb547, docked: 0x41c46b, idle: 0x5b7cff, error: 0xff3b4f };

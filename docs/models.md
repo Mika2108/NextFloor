@@ -15,6 +15,13 @@ files: without yours, the item looks as it always did.
 
 ## Putting a model on your Home Assistant
 
+**The easy way:** open the Extensions page of NextFloor (as administrator). Every item that takes a model is listed
+with an "Add a model" button. Choose your `.glb`, turn its front towards the viewer, check which material is the body
+paint (NextFloor guesses it), pick a level of detail and look at the preview. "Store on Home Assistant" does the rest;
+reload the panel afterwards. Compressed files (Draco, Meshopt, KTX) are refused: export the model without compression.
+
+**By hand:**
+
 1. Get a model you may use, as a binary glTF (`.glb`), for example a purchased one. Check its licence: it must
    allow you to use it in your own installation.
 2. Prepare it (lighter, front to +z, paint marked), see below.
@@ -43,7 +50,9 @@ files: without yours, the item looks as it always did.
 | Tesla Model Y L | `tesla_model_y_l` |
 | Tesla Cybertruck | `tesla_cybertruck` |
 
-## Preparing a model
+## Preparing a model by hand
+
+The Extensions page does this in the browser. If you prefer the command line:
 
 The 3D view reads plain binary glTF without Draco compression and without textures, and a model with 200,000
 triangles would be too heavy for a tablet. `tools/prepare-model.mjs` does the work:

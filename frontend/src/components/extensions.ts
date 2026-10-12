@@ -6,6 +6,7 @@ import { importPack, removePack } from "../api.ts";
 import { FEATURES, REPO_URL } from "../features.ts";
 import { translate, type I18nKey } from "../i18n.ts";
 import { packName, type FurniturePack } from "../packs.ts";
+import "./model-upload.ts";
 import { controls, tokens } from "../styles.ts";
 import type { HomeAssistant } from "../types.ts";
 
@@ -56,6 +57,7 @@ export class Extensions extends LitElement {
         </div>
       </section>
       ${this.renderPacks()}
+      <nf-model-upload .hass=${this.hass} .packs=${this.packs}></nf-model-upload>
     </div>`;
   }
 

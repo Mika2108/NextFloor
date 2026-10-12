@@ -1,0 +1,1595 @@
+{
+ "format": "nfpack",
+ "version": 1,
+ "id": "nextfloor.a_haustiere",
+ "name": "Haustiere",
+ "publisher": "NextFloor",
+ "description": "Kratzbäume, Betten, Futterautomaten, Käfige, Aquarien und Terrarium",
+ "release": 1,
+ "items": [
+  {
+   "id": "cat_tree_large",
+   "name": {
+    "de": "Kratzbaum groß",
+    "en": "Cat tree (large)"
+   },
+   "size": [
+    0.6,
+    0.6,
+    1.6
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.0375,
+     "color": "#c9b99a"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.2,
+     "z": -0.1667,
+     "w": 0.1667,
+     "d": 0.1667,
+     "y": 0.0375,
+     "h": 0.8125,
+     "color": "#d8c8a0"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.2,
+     "z": 0.1667,
+     "w": 0.1667,
+     "d": 0.1667,
+     "y": 0.0375,
+     "h": 0.8125,
+     "color": "#d8c8a0"
+    },
+    {
+     "shape": "box",
+     "x": -0.1667,
+     "z": 0.0,
+     "w": 0.6667,
+     "d": 0.6667,
+     "y": 0.3125,
+     "h": 0.025,
+     "color": "#c9b99a"
+    },
+    {
+     "shape": "box",
+     "x": 0.1667,
+     "z": 0.0833,
+     "w": 0.6667,
+     "d": 0.6667,
+     "y": 0.5625,
+     "h": 0.025,
+     "color": "#c9b99a"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9167,
+     "d": 0.75,
+     "y": 0.9375,
+     "h": 0.0312,
+     "color": "#c9b99a"
+    },
+    {
+     "shape": "box",
+     "x": -0.1333,
+     "z": -0.1667,
+     "w": 0.5,
+     "d": 0.5,
+     "y": 0.0375,
+     "h": 0.25,
+     "color": "#b8a888"
+    }
+   ]
+  },
+  {
+   "id": "scratch_post",
+   "name": {
+    "de": "Kratzsäule",
+    "en": "Scratching post"
+   },
+   "size": [
+    0.4,
+    0.4,
+    0.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.05,
+     "color": "#c9b99a"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.3,
+     "d": 0.3,
+     "y": 0.05,
+     "h": 0.9,
+     "color": "#d8c8a0"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.75,
+     "d": 0.75,
+     "y": 0.95,
+     "h": 0.05,
+     "color": "#c9b99a"
+    }
+   ]
+  },
+  {
+   "id": "scratch_board_wall",
+   "name": {
+    "de": "Kratzbrett (Wand)",
+    "en": "Scratching board (wall)"
+   },
+   "size": [
+    0.2,
+    0.06,
+    0.6
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#d8c8a0",
+     "edges": "faint"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 0.3
+  },
+  {
+   "id": "cat_cave",
+   "name": {
+    "de": "Katzenhöhle",
+    "en": "Cat cave"
+   },
+   "size": [
+    0.45,
+    0.4,
+    0.4
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.75,
+     "color": "#9a8a7a"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.25,
+     "w": 0.4889,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.55,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.7778,
+     "d": 0.75,
+     "y": 0.75,
+     "h": 0.05,
+     "color": "#b8a898"
+    }
+   ]
+  },
+  {
+   "id": "cat_bed_round",
+   "name": {
+    "de": "Katzenbett rund",
+    "en": "Round cat bed"
+   },
+   "size": [
+    0.5,
+    0.5,
+    0.15
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.9333,
+     "color": "#8a6a5a"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.72,
+     "d": 0.72,
+     "y": 0.4,
+     "h": 0.6,
+     "color": "#d8c8b0"
+    }
+   ]
+  },
+  {
+   "id": "cat_wall_shelf",
+   "name": {
+    "de": "Katzen-Wandliege",
+    "en": "Cat wall shelf"
+   },
+   "size": [
+    0.6,
+    0.3,
+    0.1
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.4,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0.4,
+     "h": 0.4,
+     "color": "#d8c8b0"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.3
+  },
+  {
+   "id": "cat_steps",
+   "name": {
+    "de": "Katzen-Kletterstufen",
+    "en": "Cat climbing steps"
+   },
+   "size": [
+    0.6,
+    0.3,
+    1.2
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0.2083,
+     "h": 0.0333,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0.4167,
+     "h": 0.0333,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0.625,
+     "h": 0.0333,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0.8333,
+     "h": 0.0333,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.1667,
+     "z": 0.0,
+     "w": 0.05,
+     "d": 0.1333,
+     "y": 0,
+     "h": 0.2083,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.1667,
+     "z": 0.0,
+     "w": 0.05,
+     "d": 0.1333,
+     "y": 0,
+     "h": 0.4167,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.1667,
+     "z": 0.0,
+     "w": 0.05,
+     "d": 0.1333,
+     "y": 0,
+     "h": 0.625,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.1667,
+     "z": 0.0,
+     "w": 0.05,
+     "d": 0.1333,
+     "y": 0,
+     "h": 0.8333,
+     "color": "metal"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 0.1
+  },
+  {
+   "id": "litter_covered",
+   "name": {
+    "de": "Katzenklo mit Haube",
+    "en": "Covered litter box"
+   },
+   "size": [
+    0.45,
+    0.55,
+    0.45
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.4,
+     "color": "#cfd6e2",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.2667,
+     "h": 0.6667,
+     "color": "#cfd6e2"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.4636,
+     "w": 0.4444,
+     "d": 0.0909,
+     "y": 0.2222,
+     "h": 0.4444,
+     "color": "dark",
+     "axis": "z"
+    }
+   ]
+  },
+  {
+   "id": "litter_auto",
+   "name": {
+    "de": "Katzenklo selbstreinigend",
+    "en": "Self-cleaning litter box"
+   },
+   "size": [
+    0.6,
+    0.65,
+    0.65
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.9538,
+     "color": "#e8ecf2",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.4692,
+     "w": 0.4667,
+     "d": 0.0769,
+     "y": 0.2308,
+     "h": 0.4615,
+     "color": "dark",
+     "axis": "z"
+    },
+    {
+     "shape": "box",
+     "x": 0.3333,
+     "z": 0.5,
+     "w": 0.1,
+     "d": 0.0154,
+     "y": 0.8,
+     "h": 0.0462,
+     "color": "#7fd0ff",
+     "glow": true
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "dog_bed",
+   "name": {
+    "de": "Hundebett",
+    "en": "Dog bed"
+   },
+   "size": [
+    0.9,
+    0.65,
+    0.2
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.9,
+     "color": "#6a7a8a",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.7778,
+     "d": 0.6923,
+     "y": 0.3,
+     "h": 0.5,
+     "color": "#d8c8b0"
+    }
+   ]
+  },
+  {
+   "id": "dog_basket",
+   "name": {
+    "de": "Hundekorb",
+    "en": "Dog basket"
+   },
+   "size": [
+    0.8,
+    0.6,
+    0.3
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.8333,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8,
+     "d": 0.7667,
+     "y": 0.1667,
+     "h": 0.6667,
+     "color": "#d8c8b0"
+    }
+   ]
+  },
+  {
+   "id": "dog_house",
+   "name": {
+    "de": "Hundehütte",
+    "en": "Dog house"
+   },
+   "size": [
+    0.8,
+    1.0,
+    0.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.625,
+     "color": "#b98d5a",
+     "edges": "faint"
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.625,
+     "h": 0.375,
+     "color": "#8a4a3a",
+     "tw": 0.125
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.5,
+     "d": 0.012,
+     "y": 0,
+     "h": 0.5625,
+     "color": "dark"
+    }
+   ]
+  },
+  {
+   "id": "pet_bowls",
+   "name": {
+    "de": "Futter- und Wassernapf",
+    "en": "Food and water bowls"
+   },
+   "size": [
+    0.5,
+    0.25,
+    0.08
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": -0.24,
+     "z": 0.0,
+     "w": 0.4,
+     "d": 0.8,
+     "y": 0,
+     "h": 0.875,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.24,
+     "z": 0.0,
+     "w": 0.4,
+     "d": 0.8,
+     "y": 0,
+     "h": 0.875,
+     "color": "#7aa6c9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.24,
+     "z": 0.0,
+     "w": 0.32,
+     "d": 0.64,
+     "y": 0.625,
+     "h": 0.125,
+     "color": "#7fd0ff"
+    }
+   ],
+   "mount": "surface"
+  },
+  {
+   "id": "pet_feeder",
+   "name": {
+    "de": "Futterautomat",
+    "en": "Automatic pet feeder"
+   },
+   "size": [
+    0.25,
+    0.3,
+    0.4
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.1667,
+     "w": 0.8,
+     "d": 0.6,
+     "y": 0.25,
+     "h": 0.75,
+     "color": "#cfd6e2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.25,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.3333,
+     "w": 0.48,
+     "d": 0.3333,
+     "y": 0,
+     "h": 0.15,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.3333,
+     "w": 0.24,
+     "d": 0.0333,
+     "y": 0.8,
+     "h": 0.075,
+     "color": "#7fd0ff",
+     "glow": true
+    }
+   ],
+   "electric": true,
+   "mount": "surface"
+  },
+  {
+   "id": "pet_fountain",
+   "name": {
+    "de": "Trinkbrunnen",
+    "en": "Pet water fountain"
+   },
+   "size": [
+    0.25,
+    0.25,
+    0.25
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.4,
+     "color": "white"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8,
+     "d": 0.8,
+     "y": 0.32,
+     "h": 0.08,
+     "color": "#7fd0ff",
+     "glow": true
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.32,
+     "d": 0.32,
+     "y": 0.4,
+     "h": 0.56,
+     "color": "#cfd6e2"
+    }
+   ],
+   "electric": true,
+   "mount": "surface"
+  },
+  {
+   "id": "pet_gate",
+   "name": {
+    "de": "Tier-Absperrgitter",
+    "en": "Pet gate"
+   },
+   "size": [
+    0.8,
+    0.05,
+    0.75
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.04,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.9333,
+     "h": 0.04,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.4375,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.35,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.2625,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.175,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.0875,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0875,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.175,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.2625,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.35,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.4375,
+     "z": 0.0,
+     "w": 0.0187,
+     "d": 0.4,
+     "y": 0.04,
+     "h": 0.8933,
+     "color": "wood"
+    }
+   ]
+  },
+  {
+   "id": "pet_stairs",
+   "name": {
+    "de": "Haustiertreppe",
+    "en": "Pet stairs"
+   },
+   "size": [
+    0.4,
+    0.7,
+    0.5
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.3571,
+     "w": 1,
+     "d": 0.3143,
+     "y": 0,
+     "h": 1,
+     "color": "#d8c8b0",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0429,
+     "w": 1,
+     "d": 0.3143,
+     "y": 0,
+     "h": 0.7,
+     "color": "#d8c8b0",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.2714,
+     "w": 1,
+     "d": 0.3143,
+     "y": 0,
+     "h": 0.4,
+     "color": "#d8c8b0",
+     "edges": "faint"
+    }
+   ]
+  },
+  {
+   "id": "hamster_cage",
+   "name": {
+    "de": "Hamsterkäfig",
+    "en": "Hamster cage"
+   },
+   "size": [
+    0.6,
+    0.35,
+    0.4
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.2,
+     "color": "#2e86c1"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.2,
+     "h": 0.8,
+     "color": "glass",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.95,
+     "h": 0.05,
+     "color": "#2e86c1"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.25,
+     "z": 0.0,
+     "w": 0.3,
+     "d": 0.1143,
+     "y": 0.3,
+     "h": 0.45,
+     "color": "#c0392b",
+     "axis": "z"
+    }
+   ]
+  },
+  {
+   "id": "small_animal_cage",
+   "name": {
+    "de": "Kleintierkäfig",
+    "en": "Small animal cage"
+   },
+   "size": [
+    1.0,
+    0.55,
+    0.55
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.2182,
+     "color": "#7aa6c9"
+    },
+    {
+     "shape": "box",
+     "x": -0.48,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.42,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.36,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.3,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.24,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.18,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.12,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.06,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.06,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.12,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.18,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.24,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.3,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.36,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.42,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.48,
+     "z": 0.4818,
+     "w": 0.01,
+     "d": 0.0182,
+     "y": 0.2182,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.9455,
+     "h": 0.0545,
+     "color": "#7aa6c9"
+    },
+    {
+     "shape": "box",
+     "x": 0.3,
+     "z": 0.0,
+     "w": 0.25,
+     "d": 0.4545,
+     "y": 0.2182,
+     "h": 0.3636,
+     "color": "wood"
+    }
+   ]
+  },
+  {
+   "id": "rabbit_run",
+   "name": {
+    "de": "Kaninchengehege (außen)",
+    "en": "Rabbit run (outdoor)"
+   },
+   "size": [
+    1.8,
+    1.0,
+    0.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.025,
+     "color": "#6b8a5a"
+    },
+    {
+     "shape": "box",
+     "x": -0.4889,
+     "z": -0.48,
+     "w": 0.0167,
+     "d": 0.03,
+     "y": 0,
+     "h": 0.9375,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.4889,
+     "z": 0.48,
+     "w": 0.0167,
+     "d": 0.03,
+     "y": 0,
+     "h": 0.9375,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.4889,
+     "z": -0.48,
+     "w": 0.0167,
+     "d": 0.03,
+     "y": 0,
+     "h": 0.9375,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.4889,
+     "z": 0.48,
+     "w": 0.0167,
+     "d": 0.03,
+     "y": 0,
+     "h": 0.9375,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.9375,
+     "h": 0.0375,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9667,
+     "d": 0.012,
+     "y": 0.0375,
+     "h": 0.875,
+     "color": "glass"
+    },
+    {
+     "shape": "box",
+     "x": -0.2778,
+     "z": -0.1,
+     "w": 0.2778,
+     "d": 0.6,
+     "y": 0.025,
+     "h": 0.5625,
+     "color": "#b98d5a",
+     "edges": "faint"
+    }
+   ]
+  },
+  {
+   "id": "bird_cage",
+   "name": {
+    "de": "Vogelkäfig",
+    "en": "Bird cage"
+   },
+   "size": [
+    0.5,
+    0.4,
+    1.4
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.6,
+     "d": 0.75,
+     "y": 0,
+     "h": 0.0357,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.08,
+     "d": 0.1,
+     "y": 0.0357,
+     "h": 0.5357,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.5714,
+     "h": 0.3571,
+     "color": "glass",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.5714,
+     "h": 0.0214,
+     "color": "#2a303c"
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.9286,
+     "h": 0.0571,
+     "color": "metal",
+     "tw": 0.12,
+     "td": 0.15
+    }
+   ]
+  },
+  {
+   "id": "aquarium_100",
+   "name": {
+    "de": "Aquarium 100 l",
+    "en": "Aquarium 100 l"
+   },
+   "size": [
+    0.8,
+    0.4,
+    0.95
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.5789,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.5789,
+     "h": 0.4,
+     "color": "glass",
+     "edges": "glow"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.95,
+     "d": 0.9,
+     "y": 0.6105,
+     "h": 0.3158,
+     "color": "#2e86c1",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.95,
+     "d": 0.9,
+     "y": 0.6,
+     "h": 0.0316,
+     "color": "#c9b99a"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.25,
+     "z": 0.0,
+     "w": 0.15,
+     "d": 0.3,
+     "y": 0.6316,
+     "h": 0.1895,
+     "color": "plant"
+    }
+   ],
+   "electric": true,
+   "light": "table"
+  },
+  {
+   "id": "aquarium_240",
+   "name": {
+    "de": "Aquarium 240 l mit Unterschrank",
+    "en": "Aquarium 240 l with cabinet"
+   },
+   "size": [
+    1.2,
+    0.5,
+    1.5
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.5,
+     "color": "wood",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.4583,
+     "d": 0.024,
+     "y": 0.0333,
+     "h": 0.4333,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.5,
+     "h": 0.4,
+     "color": "glass",
+     "edges": "glow"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9667,
+     "d": 0.92,
+     "y": 0.5333,
+     "h": 0.3333,
+     "color": "#2e86c1",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9667,
+     "d": 0.92,
+     "y": 0.52,
+     "h": 0.0267,
+     "color": "#c9b99a"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.25,
+     "z": 0.0,
+     "w": 0.15,
+     "d": 0.36,
+     "y": 0.5467,
+     "h": 0.2,
+     "color": "plant"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.9,
+     "h": 0.02,
+     "color": "dark"
+    }
+   ],
+   "electric": true,
+   "light": "table"
+  },
+  {
+   "id": "terrarium",
+   "name": {
+    "de": "Terrarium",
+    "en": "Terrarium"
+   },
+   "size": [
+    0.9,
+    0.5,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.3889,
+     "color": "dark",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.3889,
+     "h": 0.5556,
+     "color": "glass",
+     "edges": "glow"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9556,
+     "d": 0.92,
+     "y": 0.4,
+     "h": 0.0444,
+     "color": "#8a6a4a"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.2222,
+     "z": 0.0,
+     "w": 0.2222,
+     "d": 0.4,
+     "y": 0.4444,
+     "h": 0.3333,
+     "color": "plant"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8889,
+     "d": 0.12,
+     "y": 0.9111,
+     "h": 0.0222,
+     "color": "#ffb347",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.2222,
+     "z": 0.0,
+     "w": 0.3333,
+     "d": 0.4,
+     "y": 0.4444,
+     "h": 0.1111,
+     "color": "#b98d5a"
+    }
+   ],
+   "electric": true,
+   "light": "table"
+  }
+ ]
+}

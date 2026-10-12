@@ -6022,8 +6022,7 @@
     }
    ],
    "electric": true,
-   "light": "table",
-   "mount": null
+   "light": "table"
   },
   {
    "id": "vase_pampas",

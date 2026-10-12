@@ -1,0 +1,1960 @@
+{
+ "format": "nfpack",
+ "version": 1,
+ "id": "nextfloor.a_smart",
+ "name": "Smart Home & Technik",
+ "publisher": "NextFloor",
+ "description": "Wallbox, Speicher, Wechselrichter, Netzwerk, smarte Leuchten, Melder und Ventilatoren",
+ "release": 1,
+ "items": [
+  {
+   "id": "wallbox",
+   "name": {
+    "de": "Wallbox",
+    "en": "Wallbox"
+   },
+   "size": [
+    0.25,
+    0.14,
+    0.4
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.8,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.56,
+     "d": 0.0714,
+     "y": 0.5,
+     "h": 0.1,
+     "color": "#27ae60",
+     "glow": true
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.64,
+     "d": 1,
+     "y": 0.825,
+     "h": 0.175,
+     "color": "dark"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.0,
+   "electric": true
+  },
+  {
+   "id": "electric_car",
+   "name": {
+    "de": "Elektroauto",
+    "en": "Electric car"
+   },
+   "size": [
+    1.9,
+    4.7,
+    1.6
+   ],
+   "parts": [
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.1562,
+     "h": 0.3875,
+     "color": "#e8ecf2",
+     "tw": 0.97,
+     "td": 0.98,
+     "edges": true
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": -0.0213,
+     "w": 0.92,
+     "d": 0.4894,
+     "y": 0.5437,
+     "h": 0.3125,
+     "color": "glass",
+     "tw": 0.78,
+     "td": 0.2979,
+     "tz": -0.0319
+    },
+    {
+     "shape": "cyl",
+     "x": -0.4316,
+     "z": -0.3191,
+     "w": 0.1158,
+     "d": 0.1404,
+     "y": 0,
+     "h": 0.4125,
+     "color": "dark",
+     "axis": "x"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.4316,
+     "z": 0.3191,
+     "w": 0.1158,
+     "d": 0.1404,
+     "y": 0,
+     "h": 0.4125,
+     "color": "dark",
+     "axis": "x"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.4316,
+     "z": -0.3191,
+     "w": 0.1158,
+     "d": 0.1404,
+     "y": 0,
+     "h": 0.4125,
+     "color": "dark",
+     "axis": "x"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.4316,
+     "z": 0.3191,
+     "w": 0.1158,
+     "d": 0.1404,
+     "y": 0,
+     "h": 0.4125,
+     "color": "dark",
+     "axis": "x"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4989,
+     "w": 0.6842,
+     "d": 0.0026,
+     "y": 0.375,
+     "h": 0.05,
+     "color": "#ffffff",
+     "glow": true
+    }
+   ],
+   "vehicle": true,
+   "electric": true
+  },
+  {
+   "id": "heat_pump_outdoor",
+   "name": {
+    "de": "Wärmepumpe (Außengerät)",
+    "en": "Heat pump (outdoor unit)"
+   },
+   "size": [
+    1.1,
+    0.5,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.0556,
+     "h": 0.9444,
+     "color": "#cfd6e2",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.1364,
+     "z": 0.5,
+     "w": 0.5455,
+     "d": 1,
+     "y": 0.1667,
+     "h": 0.6667,
+     "color": "dark",
+     "axis": "z"
+    },
+    {
+     "shape": "box",
+     "x": -0.1364,
+     "z": 0.5,
+     "w": 0.5273,
+     "d": 0.024,
+     "y": 0.2,
+     "h": 0.0133,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.1364,
+     "z": 0.5,
+     "w": 0.5273,
+     "d": 0.024,
+     "y": 0.3111,
+     "h": 0.0133,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.1364,
+     "z": 0.5,
+     "w": 0.5273,
+     "d": 0.024,
+     "y": 0.4222,
+     "h": 0.0133,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.1364,
+     "z": 0.5,
+     "w": 0.5273,
+     "d": 0.024,
+     "y": 0.5333,
+     "h": 0.0133,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.1364,
+     "z": 0.5,
+     "w": 0.5273,
+     "d": 0.024,
+     "y": 0.6444,
+     "h": 0.0133,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.3818,
+     "z": 0.5,
+     "w": 0.1364,
+     "d": 0.02,
+     "y": 0.5556,
+     "h": 0.1111,
+     "color": "#2b3446"
+    },
+    {
+     "shape": "box",
+     "x": -0.4545,
+     "z": -0.4,
+     "w": 0.0545,
+     "d": 0.12,
+     "y": 0,
+     "h": 0.0556,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.4545,
+     "z": 0.4,
+     "w": 0.0545,
+     "d": 0.12,
+     "y": 0,
+     "h": 0.0556,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.4545,
+     "z": -0.4,
+     "w": 0.0545,
+     "d": 0.12,
+     "y": 0,
+     "h": 0.0556,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.4545,
+     "z": 0.4,
+     "w": 0.0545,
+     "d": 0.12,
+     "y": 0,
+     "h": 0.0556,
+     "color": "dark"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "home_battery",
+   "name": {
+    "de": "Heimspeicher",
+    "en": "Home battery"
+   },
+   "size": [
+    0.6,
+    0.25,
+    1.2
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#2a303c",
+     "edges": "glow"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.6667,
+     "d": 0.04,
+     "y": 0.75,
+     "h": 0.0417,
+     "color": "#27ae60",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.8333,
+     "d": 0.04,
+     "y": 0.0833,
+     "h": 0.5833,
+     "color": "#1e2430"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "inverter_solar",
+   "name": {
+    "de": "Solar-Wechselrichter",
+    "en": "Solar inverter"
+   },
+   "size": [
+    0.5,
+    0.2,
+    0.55
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.6,
+     "d": 0.05,
+     "y": 0.6364,
+     "h": 0.2182,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "box",
+     "x": 0.3,
+     "z": 0.5,
+     "w": 0.08,
+     "d": 0.05,
+     "y": 0.2182,
+     "h": 0.0364,
+     "color": "#27ae60",
+     "glow": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.1,
+   "electric": true
+  },
+  {
+   "id": "robot_vacuum",
+   "name": {
+    "de": "Saugroboter mit Station",
+    "en": "Robot vacuum with dock"
+   },
+   "size": [
+    0.45,
+    0.4,
+    0.15
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.3111,
+     "d": 0.75,
+     "y": 0,
+     "h": 0.6667,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.4444,
+     "z": 0.0,
+     "w": 0.2222,
+     "d": 0.95,
+     "y": 0,
+     "h": 0.9333,
+     "color": "white"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.1111,
+     "z": 0.0,
+     "w": 0.6667,
+     "d": 0.75,
+     "y": 0,
+     "h": 0.6,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.4444,
+     "z": 0.0,
+     "w": 0.2222,
+     "d": 0.25,
+     "y": 0.6667,
+     "h": 0.1333,
+     "color": "#27ae60",
+     "glow": true
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "mower_garage",
+   "name": {
+    "de": "Mähroboter mit Garage",
+    "en": "Robot mower with garage"
+   },
+   "size": [
+    0.8,
+    0.6,
+    0.35
+   ],
+   "parts": [
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#4a4f5a",
+     "tw": 0.9,
+     "td": 0.7,
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.625,
+     "d": 0.0167,
+     "y": 0,
+     "h": 0.5714,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.375,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.4,
+     "color": "#e8a33a"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "washer_dryer_stack",
+   "name": {
+    "de": "Waschturm",
+    "en": "Washer-dryer stack"
+   },
+   "size": [
+    0.6,
+    0.65,
+    1.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.5,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.5,
+     "h": 0.5,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.7,
+     "d": 0.0615,
+     "y": 0.0667,
+     "h": 0.2333,
+     "color": "glass",
+     "axis": "z"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.7,
+     "d": 0.0615,
+     "y": 0.5667,
+     "h": 0.2333,
+     "color": "glass",
+     "axis": "z"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.6667,
+     "d": 0.0154,
+     "y": 0.4333,
+     "h": 0.0333,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.6667,
+     "d": 0.0154,
+     "y": 0.9333,
+     "h": 0.0333,
+     "color": "#2b3446",
+     "screen": true
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "network_rack",
+   "name": {
+    "de": "Netzwerkschrank",
+    "en": "Network rack"
+   },
+   "size": [
+    0.6,
+    0.45,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "dark",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4556,
+     "w": 0.8333,
+     "d": 0.0444,
+     "y": 0.1111,
+     "h": 0.1333,
+     "color": "#2a303c"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4556,
+     "w": 0.8333,
+     "d": 0.0444,
+     "y": 0.2778,
+     "h": 0.1333,
+     "color": "#2a303c"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4556,
+     "w": 0.8333,
+     "d": 0.0444,
+     "y": 0.4444,
+     "h": 0.1333,
+     "color": "#2a303c"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4556,
+     "w": 0.8333,
+     "d": 0.0444,
+     "y": 0.6111,
+     "h": 0.1333,
+     "color": "#2a303c"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4556,
+     "w": 0.8333,
+     "d": 0.0444,
+     "y": 0.7778,
+     "h": 0.1333,
+     "color": "#2a303c"
+    },
+    {
+     "shape": "box",
+     "x": 0.3333,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.0222,
+     "y": 0.1556,
+     "h": 0.0222,
+     "color": "#27ae60",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.3333,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.0222,
+     "y": 0.3222,
+     "h": 0.0222,
+     "color": "#27ae60",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.3333,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.0222,
+     "y": 0.4889,
+     "h": 0.0222,
+     "color": "#27ae60",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.3333,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.0222,
+     "y": 0.6556,
+     "h": 0.0222,
+     "color": "#27ae60",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.3333,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.0222,
+     "y": 0.8222,
+     "h": 0.0222,
+     "color": "#27ae60",
+     "glow": true
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "smart_display",
+   "name": {
+    "de": "Smart Display",
+    "en": "Smart display"
+   },
+   "size": [
+    0.25,
+    0.04,
+    0.17
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "dark",
+     "edges": "faint",
+     "screen": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.4,
+   "electric": true
+  },
+  {
+   "id": "solar_balcony",
+   "name": {
+    "de": "Balkon-Solarmodul",
+    "en": "Balcony solar panel"
+   },
+   "size": [
+    1.1,
+    0.06,
+    1.7
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#1a2a4a",
+     "edges": "glow"
+    },
+    {
+     "shape": "box",
+     "x": -0.3182,
+     "z": 0.5,
+     "w": 0.0045,
+     "d": 0.0833,
+     "y": 0.0118,
+     "h": 0.9765,
+     "color": "#4a6a9a"
+    },
+    {
+     "shape": "box",
+     "x": -0.1091,
+     "z": 0.5,
+     "w": 0.0045,
+     "d": 0.0833,
+     "y": 0.0118,
+     "h": 0.9765,
+     "color": "#4a6a9a"
+    },
+    {
+     "shape": "box",
+     "x": 0.1,
+     "z": 0.5,
+     "w": 0.0045,
+     "d": 0.0833,
+     "y": 0.0118,
+     "h": 0.9765,
+     "color": "#4a6a9a"
+    },
+    {
+     "shape": "box",
+     "x": 0.3091,
+     "z": 0.5,
+     "w": 0.0045,
+     "d": 0.0833,
+     "y": 0.0118,
+     "h": 0.9765,
+     "color": "#4a6a9a"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 0.3,
+   "electric": true
+  },
+  {
+   "id": "fuse_box",
+   "name": {
+    "de": "Sicherungskasten",
+    "en": "Fuse box"
+   },
+   "size": [
+    0.4,
+    0.12,
+    0.5
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#cfd6e2",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.375,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.24,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.275,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.24,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.175,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.24,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.075,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.24,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.025,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.24,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.125,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.24,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.225,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.24,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.325,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.24,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.375,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.6,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.275,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.6,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.175,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.6,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.075,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.6,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.025,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.6,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.125,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.6,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.225,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.6,
+     "h": 0.24,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.325,
+     "z": 0.5,
+     "w": 0.075,
+     "d": 0.0833,
+     "y": 0.6,
+     "h": 0.24,
+     "color": "dark"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.2,
+   "electric": true
+  },
+  {
+   "id": "nas_server",
+   "name": {
+    "de": "NAS-Server",
+    "en": "NAS server"
+   },
+   "size": [
+    0.2,
+    0.25,
+    0.25
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "dark",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.15,
+     "d": 0.04,
+     "y": 0.12,
+     "h": 0.16,
+     "color": "#2b3446"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.15,
+     "d": 0.04,
+     "y": 0.34,
+     "h": 0.16,
+     "color": "#2b3446"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.15,
+     "d": 0.04,
+     "y": 0.56,
+     "h": 0.16,
+     "color": "#2b3446"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.15,
+     "d": 0.04,
+     "y": 0.78,
+     "h": 0.16,
+     "color": "#2b3446"
+    },
+    {
+     "shape": "box",
+     "x": 0.35,
+     "z": 0.5,
+     "w": 0.1,
+     "d": 0.04,
+     "y": 0.92,
+     "h": 0.04,
+     "color": "#27ae60",
+     "glow": true
+    }
+   ],
+   "electric": true,
+   "mount": "surface"
+  },
+  {
+   "id": "hot_water_tank",
+   "name": {
+    "de": "Warmwasserspeicher",
+    "en": "Hot water tank"
+   },
+   "size": [
+    0.6,
+    0.6,
+    1.7
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.0588,
+     "h": 0.9118,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.6667,
+     "d": 0.6667,
+     "y": 0,
+     "h": 0.0588,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0.9706,
+     "h": 0.0294,
+     "color": "#bcc4d0"
+    },
+    {
+     "shape": "box",
+     "x": 0.3333,
+     "z": 0.4667,
+     "w": 0.1667,
+     "d": 0.0667,
+     "y": 0.7059,
+     "h": 0.1176,
+     "color": "#2b3446",
+     "screen": true
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "light_pillar",
+   "name": {
+    "de": "Verlaufs-Lichtsäule",
+    "en": "Gradient light pillar"
+   },
+   "size": [
+    0.12,
+    0.12,
+    1.4
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.0214,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.6667,
+     "d": 0.6667,
+     "y": 0.0214,
+     "h": 0.9643,
+     "color": "#d98cff",
+     "glow": true
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0.9857,
+     "h": 0.0143,
+     "color": "dark"
+    }
+   ],
+   "electric": true,
+   "light": "floor"
+  },
+  {
+   "id": "light_bars_tv",
+   "name": {
+    "de": "Lichtleisten-Paar (TV)",
+    "en": "Light bar pair (TV)"
+   },
+   "size": [
+    1.2,
+    0.1,
+    0.4
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.4583,
+     "z": 0.0,
+     "w": 0.025,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.4583,
+     "z": 0.0,
+     "w": 0.025,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.4583,
+     "z": 0.2,
+     "w": 0.01,
+     "d": 0.12,
+     "y": 0.05,
+     "h": 0.9,
+     "color": "#d98cff",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.4583,
+     "z": 0.2,
+     "w": 0.01,
+     "d": 0.12,
+     "y": 0.05,
+     "h": 0.9,
+     "color": "#d98cff",
+     "glow": true
+    }
+   ],
+   "electric": true,
+   "light": "strip",
+   "mount": "surface"
+  },
+  {
+   "id": "orb_lamp",
+   "name": {
+    "de": "Leuchtkugel-Tischlampe",
+    "en": "Glowing orb table lamp"
+   },
+   "size": [
+    0.2,
+    0.2,
+    0.2
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#ffe7b0",
+     "glow": true
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.5,
+     "d": 0.5,
+     "y": 0,
+     "h": 0.05,
+     "color": "dark"
+    }
+   ],
+   "electric": true,
+   "light": "table",
+   "mount": "surface"
+  },
+  {
+   "id": "glow_lamp_portable",
+   "name": {
+    "de": "Tragbare Leuchte",
+    "en": "Portable glow lamp"
+   },
+   "size": [
+    0.14,
+    0.14,
+    0.22
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.8182,
+     "color": "#ffe7b0",
+     "glow": true
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.8182,
+     "h": 0.1364,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.0909,
+     "color": "dark"
+    }
+   ],
+   "electric": true,
+   "light": "table",
+   "mount": "surface"
+  },
+  {
+   "id": "mood_spot",
+   "name": {
+    "de": "Stimmungs-Spot",
+    "en": "Table mood spot"
+   },
+   "size": [
+    0.12,
+    0.12,
+    0.14
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.1429,
+     "color": "dark"
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0.1429,
+     "h": 0.8571,
+     "color": "#d98cff",
+     "tw": 0.5,
+     "td": 0.5,
+     "glow": true
+    }
+   ],
+   "electric": true,
+   "light": "table",
+   "mount": "surface"
+  },
+  {
+   "id": "cube_lamp",
+   "name": {
+    "de": "Würfelleuchte",
+    "en": "Cube lamp"
+   },
+   "size": [
+    0.18,
+    0.18,
+    0.18
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#ffe7b0",
+     "glow": true,
+     "edges": "faint"
+    }
+   ],
+   "electric": true,
+   "light": "table",
+   "mount": "surface"
+  },
+  {
+   "id": "ceiling_panel_round",
+   "name": {
+    "de": "Runde Deckenleuchte",
+    "en": "Round ceiling panel"
+   },
+   "size": [
+    0.6,
+    0.6,
+    0.05
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9333,
+     "d": 0.9333,
+     "y": 0,
+     "h": 0.08,
+     "color": "#fff2c8",
+     "glow": true
+    }
+   ],
+   "mount": "ceiling",
+   "electric": true,
+   "light": "ceiling"
+  },
+  {
+   "id": "garden_spots_3",
+   "name": {
+    "de": "Gartenspots (3er-Set)",
+    "en": "Garden spots (set of 3)"
+   },
+   "size": [
+    1.2,
+    0.2,
+    0.4
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.4167,
+     "z": 0.0,
+     "w": 0.0167,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.75,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.0167,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.75,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.4167,
+     "z": 0.0,
+     "w": 0.0167,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.75,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.4167,
+     "z": 0.0,
+     "w": 0.0833,
+     "d": 0.5,
+     "y": 0.7,
+     "h": 0.25,
+     "color": "#ffe7b0",
+     "glow": true
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.0833,
+     "d": 0.5,
+     "y": 0.7,
+     "h": 0.25,
+     "color": "#ffe7b0",
+     "glow": true
+    },
+    {
+     "shape": "cyl",
+     "x": 0.4167,
+     "z": 0.0,
+     "w": 0.0833,
+     "d": 0.5,
+     "y": 0.7,
+     "h": 0.25,
+     "color": "#ffe7b0",
+     "glow": true
+    }
+   ],
+   "electric": true,
+   "light": "garden"
+  },
+  {
+   "id": "wall_light_updown",
+   "name": {
+    "de": "Außen-Wandleuchte Up & Down",
+    "en": "Outdoor up and down wall light"
+   },
+   "size": [
+    0.12,
+    0.12,
+    0.25
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "dark",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0.996,
+     "h": 0.004,
+     "color": "#ffe7b0",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8333,
+     "y": 0,
+     "h": 0.004,
+     "color": "#ffe7b0",
+     "glow": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.9,
+   "electric": true,
+   "light": "wall"
+  },
+  {
+   "id": "siren_strobe",
+   "name": {
+    "de": "Sirene mit Blitzlicht",
+    "en": "Siren with strobe"
+   },
+   "size": [
+    0.2,
+    0.1,
+    0.25
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.8,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.5,
+     "d": 1,
+     "y": 0.8,
+     "h": 0.2,
+     "color": "#c0392b",
+     "glow": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 2.0,
+   "electric": true
+  },
+  {
+   "id": "access_point",
+   "name": {
+    "de": "WLAN-Access-Point (Decke)",
+    "en": "Wi-Fi access point (ceiling)"
+   },
+   "size": [
+    0.2,
+    0.2,
+    0.04
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.15,
+     "d": 0.15,
+     "y": 0,
+     "h": 0.05,
+     "color": "#27ae60",
+     "glow": true
+    }
+   ],
+   "mount": "ceiling",
+   "electric": true
+  },
+  {
+   "id": "smoke_detector",
+   "name": {
+    "de": "Rauchmelder",
+    "en": "Smoke detector"
+   },
+   "size": [
+    0.12,
+    0.12,
+    0.04
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.3333,
+     "z": 0.3333,
+     "w": 0.1,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.05,
+     "color": "#c0392b",
+     "glow": true
+    }
+   ],
+   "mount": "ceiling",
+   "electric": true
+  },
+  {
+   "id": "thermostat_wall",
+   "name": {
+    "de": "Wandthermostat",
+    "en": "Wall thermostat"
+   },
+   "size": [
+    0.09,
+    0.02,
+    0.09
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.6667,
+     "d": 0.25,
+     "y": 0.1667,
+     "h": 0.6667,
+     "color": "#2b3446",
+     "screen": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.4,
+   "electric": true
+  },
+  {
+   "id": "dehumidifier",
+   "name": {
+    "de": "Luftentfeuchter",
+    "en": "Dehumidifier"
+   },
+   "size": [
+    0.35,
+    0.25,
+    0.6
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.05,
+     "h": 0.95,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.5714,
+     "d": 0.04,
+     "y": 0.75,
+     "h": 0.0667,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.7143,
+     "d": 0.04,
+     "y": 0.1667,
+     "h": 0.4167,
+     "color": "#cfd6e2"
+    },
+    {
+     "shape": "box",
+     "x": -0.4143,
+     "z": -0.38,
+     "w": 0.1143,
+     "d": 0.16,
+     "y": 0,
+     "h": 0.05,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.4143,
+     "z": 0.38,
+     "w": 0.1143,
+     "d": 0.16,
+     "y": 0,
+     "h": 0.05,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.4143,
+     "z": -0.38,
+     "w": 0.1143,
+     "d": 0.16,
+     "y": 0,
+     "h": 0.05,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.4143,
+     "z": 0.38,
+     "w": 0.1143,
+     "d": 0.16,
+     "y": 0,
+     "h": 0.05,
+     "color": "dark"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "ceiling_fan",
+   "name": {
+    "de": "Deckenventilator",
+    "en": "Ceiling fan"
+   },
+   "size": [
+    1.3,
+    1.3,
+    0.4
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.0462,
+     "d": 0.0462,
+     "y": 0.375,
+     "h": 0.625,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.1385,
+     "d": 0.1385,
+     "y": 0.125,
+     "h": 0.3,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.2692,
+     "z": 0.0,
+     "w": 0.3846,
+     "d": 0.0923,
+     "y": 0.1,
+     "h": 0.03,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.2692,
+     "z": 0.0,
+     "w": 0.3846,
+     "d": 0.0923,
+     "y": 0.1,
+     "h": 0.03,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.2692,
+     "w": 0.0923,
+     "d": 0.3846,
+     "y": 0.1,
+     "h": 0.03,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.2692,
+     "w": 0.0923,
+     "d": 0.3846,
+     "y": 0.1,
+     "h": 0.03,
+     "color": "wood"
+    }
+   ],
+   "mount": "ceiling",
+   "electric": true
+  },
+  {
+   "id": "ceiling_fan_light",
+   "name": {
+    "de": "Deckenventilator mit Licht",
+    "en": "Ceiling fan with light"
+   },
+   "size": [
+    1.3,
+    1.3,
+    0.45
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.0462,
+     "d": 0.0462,
+     "y": 0.4444,
+     "h": 0.5556,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.1385,
+     "d": 0.1385,
+     "y": 0.2222,
+     "h": 0.2667,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.1538,
+     "d": 0.1538,
+     "y": 0.0889,
+     "h": 0.1333,
+     "color": "#ffe7b0",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.2692,
+     "z": 0.0,
+     "w": 0.3846,
+     "d": 0.0923,
+     "y": 0.2222,
+     "h": 0.0267,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.2692,
+     "z": 0.0,
+     "w": 0.3846,
+     "d": 0.0923,
+     "y": 0.2222,
+     "h": 0.0267,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.2692,
+     "w": 0.0923,
+     "d": 0.3846,
+     "y": 0.2222,
+     "h": 0.0267,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.2692,
+     "w": 0.0923,
+     "d": 0.3846,
+     "y": 0.2222,
+     "h": 0.0267,
+     "color": "wood"
+    }
+   ],
+   "mount": "ceiling",
+   "electric": true,
+   "light": "ceiling"
+  }
+ ]
+}

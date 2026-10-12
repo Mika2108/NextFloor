@@ -2,10 +2,18 @@
 
 import importlib
 
-MODULES = ["area_living"]
+MODULES = ["area_living", "area_kitchen", "area_bath", "area_rooms2", "area_garden", "area_tech"]
 
 
 def register(bp):
+    extend = importlib.import_module("area_extend")
+    for pack in bp.PACKS:
+        if pack["id"] in extend.EXTRA:
+            more = extend.EXTRA[pack["id"]](bp)
+            have = {i["id"] for i in pack["items"]}
+            assert not have & {i["id"] for i in more}, pack["id"]
+            pack["items"] += more
+
     for name in MODULES:
         for pid, title, desc, items in importlib.import_module(name).build(bp):
             ids = [i["id"] for i in items]

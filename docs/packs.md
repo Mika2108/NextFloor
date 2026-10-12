@@ -7,11 +7,11 @@ Ein Pack ist eine einfache JSON-Datei. Jeder kann eigene Packs bauen, weitergebe
 
 ## Mitgelieferte Packs
 
-Elf Packs kommen mit der Integration (`custom_components/nextfloor/packs/nextfloor.*.json`) und sind
-immer da: Wohnen & Haustiere, Küche extra, Bad extra, Schlafen & Kinder, Heimkino & Gaming, Büro &
-Homelab, Fitness, Garten & Terrasse, Energie & Haustechnik, Fahrzeuge, IKEA-Maße. Sie werden mit
-`python tools/build_packs.py` aus den Definitionen in diesem Skript erzeugt; nach einer Änderung dort
-das Skript laufen lassen und die JSON-Dateien mit committen. Mitgelieferte Packs lassen sich nicht
+26 Packs kommen mit der Integration (`custom_components/nextfloor/packs/nextfloor.*.json`) und sind
+immer da; Übersicht in der [Anleitung](anleitung.md#71-mitgelieferte-packs). Sie werden mit
+`python3 tools/build_packs.py` aus den Definitionen in `tools/` erzeugt (`build_packs.py` und die
+`area_*.py`-Module); nach einer Änderung dort das Skript laufen lassen, mit `python3 tools/check_packs.py`
+prüfen und die JSON-Dateien mit committen. Mitgelieferte Packs lassen sich nicht
 entfernen, und ein importiertes Pack darf nicht dieselbe ID haben.
 
 ## Eigenes Pack

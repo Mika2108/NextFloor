@@ -564,17 +564,23 @@ The packs that come with the integration and are always there:
 
 | Pack | Contents |
 |---|---|
-| Living & pets | Corner sofa, fireplace, piano, aquarium, cat tree, dog bed and more |
-| Kitchen extra | More kitchen units and appliances |
-| Bath extra | More bathroom furniture |
-| Bedroom & kids | Beds, wardrobes, kids' furniture |
-| Home cinema & gaming | Screen, projector, speakers, soundbar, gaming desk and chair, console, arcade cabinet |
-| Office & homelab | Standing desk, server rack, NAS, 3D printer, router, tower PC |
-| Fitness | Training equipment |
-| Garden & terrace | Garden furniture, grill, pool, hot tub, greenhouse, robotic mower, trees and hedges |
-| Energy & building services | Heat pump, pellet boiler, tanks, home battery, inverter, wallbox, meter cabinet, ventilation |
-| Vehicles | Tesla models, an electric SUV, small car, van, bikes and a trailer for parking spots |
-| IKEA sizes | Bookcases, cube shelves, beds, chests of drawers, wardrobes, sofas, desk and tables in popular IKEA sizes |
+| Living room (70) | Sofas, corner sofas, armchairs, tables, shelving, wall units, wood stove, piano, lamps, rugs |
+| Kitchen (66) | Base, drawer and wall units, tall units, fridges, hobs, islands, dining sets, small appliances |
+| Bedroom (41) | Beds, wardrobes, nightstands, dressers, vanities, baby furniture |
+| Bathroom (38) | Vanities, tubs, showers, toilets, cabinets, mirrors with light, sauna, laundry |
+| Kids' room (18) | Loft bed with slide, teepee, play kitchen, kids' furniture, night lights |
+| Office & gaming (26) | Desks, chairs, sim cockpit, server rack, 3D printers, arcade cabinet |
+| Garden & patio (33) | Grill, lounges, pergola, greenhouse, hot tub, play tower, shed, trees and shrubs |
+| Fitness (17) | Treadmill, power rack, rowing machine, weights, sauna cabin, massage chair |
+| Smart home & tech (30) | Wallbox, battery, inverter, network rack, smart lights, detectors, fans |
+| Home cinema & hi-fi (36) | Screens, projectors, speakers, soundbars, smart speakers and displays, cinema seats, acoustics |
+| Utility & building services (18) | Boiler, heat pump tower, buffer tank, ventilation, meter cabinet, water softener, laundry room |
+| Pets (24) | Cat trees, beds, feeders, cages, aquariums, terrarium |
+| Vehicles (34) | Tesla models, cars of every class, vans, pickup, campervan, motorhome, caravan, bikes, trailer |
+| Stairs & railings (13) | Straight, floating, L, U, spiral and compact stairs, outdoor steps, railings |
+| Architecture & fit-out (21) | Columns, beams, fireplaces, glass partition, sliding wall, niches, light cove, window seat |
+| Garage & workshop (22) | Workbench, tool wall, shelving, tyre rack, mower, compressor, wallbox, bike holders |
+| Older packs | Living & pets, Kitchen extra, Bath extra, Bedroom & kids, Home cinema & gaming, Office & homelab, Fitness, Garden & terrace, Energy & building services, IKEA sizes: kept so that existing plans do not change |
 
 Devices in packs have a small glowing part (display, status LED): linked to a media player, a switch or a light, it lights up while the device runs.
 

@@ -562,21 +562,27 @@ Im Reiter **✦ Erweiterungen** lädst du eigene 3D-Modelle hoch (siehe [models.
 
 ### 7.1 Mitgelieferte Packs
 
-Elf Packs kommen mit der Integration und sind immer da:
+Diese Packs kommen mit der Integration und sind immer da (in Klammern die Zahl der Möbel):
 
 | Pack | Inhalt |
 |---|---|
-| Wohnen & Haustiere | Ecksofa, Kamin, Klavier, Aquarium, Kratzbaum, Hundebett und mehr |
-| Küche extra | Weitere Küchenschränke und Geräte |
-| Bad extra | Weitere Badmöbel |
-| Schlafen & Kinder | Betten, Schränke, Kindermöbel |
-| Heimkino & Gaming | Leinwand, Beamer, Lautsprecher, Soundbar, Gaming-Tisch und -Stuhl, Konsole, Arcade-Automat |
-| Büro & Homelab | Stehtisch, Serverschrank, NAS, 3D-Drucker, Router, Tower-PC |
-| Fitness | Trainingsgeräte |
-| Garten & Terrasse | Gartenmöbel, Grill, Pool, Whirlpool, Gewächshaus, Mähroboter, Bäume und Hecken |
-| Energie & Haustechnik | Wärmepumpe, Pelletkessel, Speicher, Hausakku, Wechselrichter, Wallbox, Zählerschrank, Lüftung |
-| Fahrzeuge | Tesla-Modelle, Elektro-SUV, Kleinwagen, Transporter, Fahrräder und Anhänger für Stellplätze |
-| IKEA-Maße | Regale, Würfelregale, Betten, Kommoden, Schränke, Sofas, Schreibtisch und Tische in beliebten IKEA-Maßen |
+| Wohnzimmer (70) | Sofas, Ecksofas, Sessel, Tische, Regale, Wohnwände, Kaminofen, Klavier, Leuchten, Teppiche |
+| Küche (66) | Unter-, Schubladen- und Hängeschränke, Hochschränke, Kühlschränke, Kochfelder, Inseln, Esstische, Kleingeräte |
+| Schlafzimmer (41) | Betten, Kleiderschränke, Nachttische, Kommoden, Frisiertische, Babymöbel |
+| Bad (38) | Waschtische, Wannen, Duschen, WCs, Schränke, Spiegel mit Licht, Sauna, Wäsche |
+| Kinderzimmer (18) | Hochbett mit Rutsche, Tipi, Spielküche, Kindermöbel, Nachtlichter |
+| Büro & Gaming (26) | Schreibtische, Stühle, Sim-Cockpit, Serverschrank, 3D-Drucker, Arcade-Automat |
+| Garten & Terrasse (33) | Grill, Lounges, Pergola, Gewächshaus, Whirlpool, Spielturm, Gartenhaus, Bäume und Sträucher |
+| Fitness (17) | Laufband, Kraftstation, Rudergerät, Hanteln, Saunakabine, Massagesessel |
+| Smart Home & Technik (30) | Wallbox, Speicher, Wechselrichter, Netzwerkschrank, smarte Leuchten, Melder, Ventilatoren |
+| Heimkino & Hi-Fi (36) | Leinwände, Beamer, Lautsprecher, Soundbars, Smart Speaker und Displays, Kinosessel, Akustik |
+| Hauswirtschaft & Haustechnik (18) | Kessel, Wärmepumpen-Tower, Pufferspeicher, Lüftung, Zählerschrank, Wasserenthärter, Hauswirtschaftsraum |
+| Haustiere (24) | Kratzbäume, Betten, Futterautomaten, Käfige, Aquarien, Terrarium |
+| Fahrzeuge (34) | Tesla-Modelle, Autos aller Klassen, Vans, Pick-up, Campervan, Wohnmobil, Wohnwagen, Fahrräder, Anhänger |
+| Treppen & Geländer (13) | Gerade, freitragende, L-, U-, Wendel- und Raumspartreppe, Außentreppe, Geländer |
+| Architektur & Ausbau (21) | Säulen, Balken, Kamine, Glaswand, Schiebewand, Nischen, Lichtvoute, Fensterbank-Sitz |
+| Garage & Werkstatt (22) | Werkbank, Werkzeugwand, Regale, Reifenregal, Rasenmäher, Kompressor, Wallbox, Fahrradhalter |
+| Ältere Packs | Wohnen & Haustiere, Küche extra, Bad extra, Schlafen & Kinder, Heimkino & Gaming, Büro & Homelab, Fitness, Garten & Terrasse, Energie & Haustechnik, IKEA-Maße: bleiben erhalten, damit sich bestehende Pläne nicht ändern |
 
 Geräte in Packs haben ein kleines leuchtendes Teil (Display, Status-LED): Mit einem Media Player, Schalter oder Licht verknüpft, leuchtet es, solange das Gerät läuft.
 

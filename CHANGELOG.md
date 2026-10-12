@@ -6,7 +6,9 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 ### Added
 
-- **Wohnzimmer pack (70) and Schlafzimmer pack (41)**, built from scratch: sofas, corner sofas, armchairs, tables, shelving, wall units, lamps and decor; beds, wardrobes, nightstands, dressers and baby furniture. More area packs follow.
+- **Twelve new furniture packs with 417 models, all built from scratch:** Living room (70), Kitchen (66), Bedroom (41), Bathroom (38), Garden & patio (33), Home cinema & hi-fi (36), Smart home & tech (30), Office & gaming (26), Pets (24), Kids' room (18), Utility & building services (18) and Fitness (17).
+- **Existing packs grew:** Vehicles now has cars of every class, vans, a pickup, a campervan, a motorhome and a caravan (34); Stairs & railings has floating and winder stairs and a corner railing (13); Architecture & fit-out has steel columns, ceiling beams, niches, a light cove, a window seat and more (21); Garage & workshop has a tool wall, shelving, a mower, wallbox holder and more (22).
+- Every model is visible in the demo's showcase.
 - **Compass control:** under Settings a dial shows where north lies, with **Swap north ↔ south** (180°) and quarter turns. Turning the compass never moves the drawing, the roof faces or the solar fields; sunlight, wind and the compass directions of roof faces follow it. So a plan drawn the wrong way round is fixed in one tap, without placing the solar fields again.
 - **Real map under the plan (off by default):** a dimmed OpenStreetMap (or your own tile address) lies under the plan in the editor and under the house in 3D, turned by the compass. Start at Home Assistant's location, set the visibility and detail level, and move the map with arrow buttons until the house sits on its plot. Nothing is loaded while it is off.
 

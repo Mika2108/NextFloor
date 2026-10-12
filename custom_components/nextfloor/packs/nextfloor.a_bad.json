@@ -1,0 +1,2808 @@
+{
+ "format": "nfpack",
+ "version": 1,
+ "id": "nextfloor.a_bad",
+ "name": "Bad",
+ "publisher": "NextFloor",
+ "description": "Waschtische, Wannen, Duschen, WCs, Schränke, Spiegel mit Licht, Heizkörper, Sauna und Wäsche",
+ "release": 1,
+ "items": [
+  {
+   "id": "vanity_60",
+   "name": {
+    "de": "Waschtisch 60 mit Unterschrank",
+    "en": "Vanity 60 with base cabinet"
+   },
+   "size": [
+    0.6,
+    0.5,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.12,
+     "h": 0.68,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9333,
+     "d": 0.9,
+     "y": 0,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.8,
+     "h": 0.03,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8,
+     "d": 0.68,
+     "y": 0.83,
+     "h": 0.012,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.238,
+     "w": 0.05,
+     "d": 0.06,
+     "y": 0.83,
+     "h": 0.12,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.136,
+     "w": 0.0333,
+     "d": 0.2,
+     "y": 0.94,
+     "h": 0.02,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9333,
+     "d": 0.024,
+     "y": 0.15,
+     "h": 0.6,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.3,
+     "d": 0.03,
+     "y": 0.62,
+     "h": 0.015,
+     "color": "metal"
+    }
+   ],
+   "surface": false
+  },
+  {
+   "id": "vanity_80",
+   "name": {
+    "de": "Waschtisch 80 mit Unterschrank",
+    "en": "Vanity 80 with base cabinet"
+   },
+   "size": [
+    0.8,
+    0.5,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.12,
+     "h": 0.68,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.95,
+     "d": 0.9,
+     "y": 0,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.8,
+     "h": 0.03,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.625,
+     "d": 0.68,
+     "y": 0.83,
+     "h": 0.012,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.238,
+     "w": 0.0375,
+     "d": 0.06,
+     "y": 0.83,
+     "h": 0.12,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.136,
+     "w": 0.025,
+     "d": 0.2,
+     "y": 0.94,
+     "h": 0.02,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.95,
+     "d": 0.024,
+     "y": 0.15,
+     "h": 0.6,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.225,
+     "d": 0.03,
+     "y": 0.62,
+     "h": 0.015,
+     "color": "metal"
+    }
+   ],
+   "surface": false
+  },
+  {
+   "id": "vanity_100",
+   "name": {
+    "de": "Waschtisch 100 mit Unterschrank",
+    "en": "Vanity 100 with base cabinet"
+   },
+   "size": [
+    1.0,
+    0.5,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.12,
+     "h": 0.68,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.96,
+     "d": 0.9,
+     "y": 0,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.8,
+     "h": 0.03,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.5,
+     "d": 0.68,
+     "y": 0.83,
+     "h": 0.012,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.238,
+     "w": 0.03,
+     "d": 0.06,
+     "y": 0.83,
+     "h": 0.12,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.136,
+     "w": 0.02,
+     "d": 0.2,
+     "y": 0.94,
+     "h": 0.02,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.96,
+     "d": 0.024,
+     "y": 0.15,
+     "h": 0.6,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.18,
+     "d": 0.03,
+     "y": 0.62,
+     "h": 0.015,
+     "color": "metal"
+    }
+   ],
+   "surface": false
+  },
+  {
+   "id": "vanity_double_120",
+   "name": {
+    "de": "Doppelwaschtisch 120",
+    "en": "Double vanity 120"
+   },
+   "size": [
+    1.2,
+    0.5,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.12,
+     "h": 0.68,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9667,
+     "d": 0.9,
+     "y": 0,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.8,
+     "h": 0.03,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.0,
+     "w": 0.4,
+     "d": 0.68,
+     "y": 0.83,
+     "h": 0.012,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.25,
+     "z": -0.238,
+     "w": 0.025,
+     "d": 0.06,
+     "y": 0.83,
+     "h": 0.12,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": -0.136,
+     "w": 0.0167,
+     "d": 0.2,
+     "y": 0.94,
+     "h": 0.02,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.5,
+     "w": 0.4667,
+     "d": 0.024,
+     "y": 0.15,
+     "h": 0.6,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.5,
+     "w": 0.15,
+     "d": 0.03,
+     "y": 0.62,
+     "h": 0.015,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0.0,
+     "w": 0.4,
+     "d": 0.68,
+     "y": 0.83,
+     "h": 0.012,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.25,
+     "z": -0.238,
+     "w": 0.025,
+     "d": 0.06,
+     "y": 0.83,
+     "h": 0.12,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": -0.136,
+     "w": 0.0167,
+     "d": 0.2,
+     "y": 0.94,
+     "h": 0.02,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0.5,
+     "w": 0.4667,
+     "d": 0.024,
+     "y": 0.15,
+     "h": 0.6,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0.5,
+     "w": 0.15,
+     "d": 0.03,
+     "y": 0.62,
+     "h": 0.015,
+     "color": "metal"
+    }
+   ],
+   "surface": false
+  },
+  {
+   "id": "vanity_double_160",
+   "name": {
+    "de": "Doppelwaschtisch",
+    "en": "Double vanity"
+   },
+   "size": [
+    1.6,
+    0.5,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.12,
+     "h": 0.68,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.975,
+     "d": 0.9,
+     "y": 0,
+     "h": 0.12,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.8,
+     "h": 0.03,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.0,
+     "w": 0.3125,
+     "d": 0.68,
+     "y": 0.83,
+     "h": 0.012,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.25,
+     "z": -0.238,
+     "w": 0.0187,
+     "d": 0.06,
+     "y": 0.83,
+     "h": 0.12,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": -0.136,
+     "w": 0.0125,
+     "d": 0.2,
+     "y": 0.94,
+     "h": 0.02,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.5,
+     "w": 0.475,
+     "d": 0.024,
+     "y": 0.15,
+     "h": 0.6,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.5,
+     "w": 0.1125,
+     "d": 0.03,
+     "y": 0.62,
+     "h": 0.015,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0.0,
+     "w": 0.3125,
+     "d": 0.68,
+     "y": 0.83,
+     "h": 0.012,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.25,
+     "z": -0.238,
+     "w": 0.0187,
+     "d": 0.06,
+     "y": 0.83,
+     "h": 0.12,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": -0.136,
+     "w": 0.0125,
+     "d": 0.2,
+     "y": 0.94,
+     "h": 0.02,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0.5,
+     "w": 0.475,
+     "d": 0.024,
+     "y": 0.15,
+     "h": 0.6,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0.5,
+     "w": 0.1125,
+     "d": 0.03,
+     "y": 0.62,
+     "h": 0.015,
+     "color": "metal"
+    }
+   ],
+   "surface": false
+  },
+  {
+   "id": "pedestal_basin",
+   "name": {
+    "de": "Standwaschbecken",
+    "en": "Pedestal basin"
+   },
+   "size": [
+    0.55,
+    0.45,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.8667,
+     "h": 0.1333,
+     "color": "#f2f5f9",
+     "tw": 0.8182,
+     "td": 0.7778
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.1778,
+     "w": 0.2909,
+     "d": 0.3556,
+     "y": 0,
+     "h": 0.8667,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.1778,
+     "w": 0.5091,
+     "d": 0.6222,
+     "y": 0,
+     "h": 0.0333,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.3778,
+     "w": 0.0545,
+     "d": 0.0667,
+     "y": 0.9778,
+     "h": 0.1333,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "bathtub_builtin",
+   "name": {
+    "de": "Einbaubadewanne",
+    "en": "Built-in bathtub"
+   },
+   "size": [
+    1.7,
+    0.75,
+    0.55
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#f2f5f9",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8824,
+     "d": 0.7333,
+     "y": 0.9818,
+     "h": 0.0218,
+     "color": "#bfe3f5"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.4118,
+     "z": 0.0,
+     "w": 0.0235,
+     "d": 0.0533,
+     "y": 0.9818,
+     "h": 0.0909,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.4412,
+     "z": 0.0,
+     "w": 0.0588,
+     "d": 0.1333,
+     "y": 1,
+     "h": 0.1818,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "bathtub_corner",
+   "name": {
+    "de": "Eckbadewanne",
+    "en": "Corner bathtub"
+   },
+   "size": [
+    1.5,
+    1.5,
+    0.55
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#f2f5f9",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0667,
+     "z": 0.0667,
+     "w": 0.7333,
+     "d": 0.7333,
+     "y": 0.9818,
+     "h": 0.0218,
+     "color": "#bfe3f5"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.4,
+     "z": -0.4,
+     "w": 0.0333,
+     "d": 0.0333,
+     "y": 1,
+     "h": 0.1455,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "bathtub_corner_compact",
+   "name": {
+    "de": "Raumspar-Eckbadewanne",
+    "en": "Space-saving corner bathtub"
+   },
+   "size": [
+    1.4,
+    1.0,
+    0.55
+   ],
+   "parts": [
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#f2f5f9",
+     "tx": 0.0714,
+     "tw": 0.7857,
+     "td": 0.9
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.7857,
+     "d": 0.7,
+     "y": 0.9818,
+     "h": 0.0218,
+     "color": "#bfe3f5"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.3929,
+     "z": -0.4,
+     "w": 0.0286,
+     "d": 0.04,
+     "y": 1,
+     "h": 0.1455,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "bathtub_free",
+   "name": {
+    "de": "Freistehende Badewanne",
+    "en": "Freestanding bathtub"
+   },
+   "size": [
+    1.7,
+    0.8,
+    0.62
+   ],
+   "parts": [
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.129,
+     "h": 0.8387,
+     "color": "#f2f5f9",
+     "tw": 1,
+     "td": 1
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8824,
+     "d": 0.75,
+     "y": 0.9677,
+     "h": 0.0323,
+     "color": "#bfe3f5"
+    },
+    {
+     "shape": "box",
+     "x": -0.4118,
+     "z": -0.35,
+     "w": 0.0471,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.129,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.4118,
+     "z": 0.35,
+     "w": 0.0471,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.129,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.4118,
+     "z": -0.35,
+     "w": 0.0471,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.129,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.4118,
+     "z": 0.35,
+     "w": 0.0471,
+     "d": 0.1,
+     "y": 0,
+     "h": 0.129,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.5,
+     "z": 0.0,
+     "w": 0.0235,
+     "d": 0.05,
+     "y": 0.1613,
+     "h": 0.9677,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.5,
+     "z": 0.0,
+     "w": 0.0588,
+     "d": 0.05,
+     "y": 1,
+     "h": 0.0323,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "whirlpool_indoor",
+   "name": {
+    "de": "Whirlpool innen",
+    "en": "Indoor whirlpool"
+   },
+   "size": [
+    2.0,
+    2.0,
+    0.8
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#cfd6e2",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.85,
+     "d": 0.85,
+     "y": 0.975,
+     "h": 0.0187,
+     "color": "#7fd0ff",
+     "glow": true
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9,
+     "d": 0.9,
+     "y": 1,
+     "h": 0.025,
+     "color": "#f2f5f9"
+    }
+   ],
+   "electric": true,
+   "light": "table"
+  },
+  {
+   "id": "shower_corner_90",
+   "name": {
+    "de": "Eckdusche 90 × 90",
+    "en": "Corner shower 90 × 90"
+   },
+   "size": [
+    0.9,
+    0.9,
+    2.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.025,
+     "color": "#f2f5f9",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.25,
+     "z": 0.25,
+     "w": 0.1111,
+     "d": 0.1111,
+     "y": 0.025,
+     "h": 0.0025,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4889,
+     "w": 1,
+     "d": 0.0133,
+     "y": 0.025,
+     "h": 0.975,
+     "color": "glass",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.4889,
+     "z": 0.0,
+     "w": 0.0133,
+     "d": 1,
+     "y": 0.025,
+     "h": 0.975,
+     "color": "glass",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.4778,
+     "z": -0.4778,
+     "w": 0.0333,
+     "d": 0.0333,
+     "y": 0.025,
+     "h": 1,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.2778,
+     "z": -0.4444,
+     "w": 0.0444,
+     "d": 0.0444,
+     "y": 0.5,
+     "h": 0.05,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "shower_niche_120",
+   "name": {
+    "de": "Nischendusche 120 × 90",
+    "en": "Niche shower 120 × 90"
+   },
+   "size": [
+    1.2,
+    0.9,
+    2.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.025,
+     "color": "#f2f5f9",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.25,
+     "z": 0.25,
+     "w": 0.0833,
+     "d": 0.1111,
+     "y": 0.025,
+     "h": 0.0025,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4889,
+     "w": 1,
+     "d": 0.0133,
+     "y": 0.025,
+     "h": 0.975,
+     "color": "glass",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.4917,
+     "z": 0.0,
+     "w": 0.01,
+     "d": 1,
+     "y": 0.025,
+     "h": 0.975,
+     "color": "glass",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.3333,
+     "z": -0.4444,
+     "w": 0.0333,
+     "d": 0.0444,
+     "y": 0.5,
+     "h": 0.05,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "shower_walkin_140",
+   "name": {
+    "de": "Begehbare Dusche 140 × 90",
+    "en": "Walk-in shower 140 × 90"
+   },
+   "size": [
+    1.4,
+    0.9,
+    2.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.025,
+     "color": "#f2f5f9",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.25,
+     "z": 0.25,
+     "w": 0.0714,
+     "d": 0.1111,
+     "y": 0.025,
+     "h": 0.0025,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.0714,
+     "z": 0.4889,
+     "w": 0.8571,
+     "d": 0.0133,
+     "y": 0.025,
+     "h": 0.975,
+     "color": "glass",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.4778,
+     "w": 1,
+     "d": 0.0444,
+     "y": 0.025,
+     "h": 1,
+     "color": "#cfd6e2"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.3571,
+     "z": -0.4444,
+     "w": 0.0286,
+     "d": 0.0444,
+     "y": 0.5,
+     "h": 0.05,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "shower_walkin_120",
+   "name": {
+    "de": "Walk-in-Dusche",
+    "en": "Walk-in shower"
+   },
+   "size": [
+    1.2,
+    1.2,
+    2.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.025,
+     "color": "#f2f5f9",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.25,
+     "z": 0.25,
+     "w": 0.0833,
+     "d": 0.0833,
+     "y": 0.025,
+     "h": 0.0025,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4917,
+     "w": 0.75,
+     "d": 0.01,
+     "y": 0.025,
+     "h": 0.975,
+     "color": "glass",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.4833,
+     "w": 1,
+     "d": 0.0333,
+     "y": 0.025,
+     "h": 1,
+     "color": "#cfd6e2"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.3333,
+     "z": -0.4583,
+     "w": 0.0333,
+     "d": 0.0333,
+     "y": 0.5,
+     "h": 0.05,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "shower_rain_led",
+   "name": {
+    "de": "Regendusche mit LED",
+    "en": "Rain shower with LED"
+   },
+   "size": [
+    1.0,
+    1.0,
+    2.2
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.46,
+     "w": 0.04,
+     "d": 0.04,
+     "y": 0,
+     "h": 0.9545,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.1,
+     "w": 0.4,
+     "d": 0.4,
+     "y": 0.9545,
+     "h": 0.0136,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.28,
+     "w": 0.04,
+     "d": 0.4,
+     "y": 0.9682,
+     "h": 0.0136,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.1,
+     "w": 0.34,
+     "d": 0.34,
+     "y": 0.95,
+     "h": 0.0045,
+     "color": "#7fd0ff",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.0182,
+     "color": "#f2f5f9"
+    }
+   ],
+   "electric": true,
+   "light": "spot"
+  },
+  {
+   "id": "toilet_close",
+   "name": {
+    "de": "Stand-WC mit Spülkasten",
+    "en": "Close-coupled toilet"
+   },
+   "size": [
+    0.4,
+    0.65,
+    0.78
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.3077,
+     "w": 0.95,
+     "d": 0.3385,
+     "y": 0,
+     "h": 1,
+     "color": "#f2f5f9",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.1231,
+     "w": 0.9,
+     "d": 0.7385,
+     "y": 0,
+     "h": 0.5128,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.1231,
+     "w": 0.85,
+     "d": 0.6769,
+     "y": 0.5128,
+     "h": 0.0385,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.4769,
+     "w": 0.35,
+     "d": 0.0308,
+     "y": 0.9744,
+     "h": 0.0256,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "toilet_hung",
+   "name": {
+    "de": "Wand-WC",
+    "en": "Wall-hung toilet"
+   },
+   "size": [
+    0.4,
+    0.55,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.2182,
+     "w": 0.95,
+     "d": 0.2182,
+     "y": 0.1,
+     "h": 0.35,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0909,
+     "w": 0.9,
+     "d": 0.8182,
+     "y": 0.2,
+     "h": 0.1,
+     "color": "#f2f5f9",
+     "tw": 0.8,
+     "td": 0.6364
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.1455,
+     "w": 0.85,
+     "d": 0.7273,
+     "y": 0.28,
+     "h": 0.04,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.3091,
+     "w": 0.5,
+     "d": 0.0364,
+     "y": 0.4,
+     "h": 0.03,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "toilet_hung_compact",
+   "name": {
+    "de": "Wand-WC kompakt",
+    "en": "Wall-hung toilet (compact)"
+   },
+   "size": [
+    0.4,
+    0.5,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.24,
+     "w": 0.95,
+     "d": 0.24,
+     "y": 0.1,
+     "h": 0.35,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.1,
+     "w": 0.9,
+     "d": 0.9,
+     "y": 0.2,
+     "h": 0.1,
+     "color": "#f2f5f9",
+     "tw": 0.8,
+     "td": 0.7
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.16,
+     "w": 0.85,
+     "d": 0.8,
+     "y": 0.28,
+     "h": 0.04,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.34,
+     "w": 0.5,
+     "d": 0.04,
+     "y": 0.4,
+     "h": 0.03,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "bidet",
+   "name": {
+    "de": "Bidet",
+    "en": "Bidet"
+   },
+   "size": [
+    0.4,
+    0.65,
+    0.78
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0769,
+     "w": 0.9,
+     "d": 0.7692,
+     "y": 0,
+     "h": 0.4872,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.3077,
+     "w": 0.75,
+     "d": 0.3077,
+     "y": 0,
+     "h": 0.4872,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.3077,
+     "w": 0.075,
+     "d": 0.0462,
+     "y": 0.4872,
+     "h": 0.1026,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "cabinet_tall",
+   "name": {
+    "de": "Hochschrank Bad",
+    "en": "Tall bathroom cabinet"
+   },
+   "size": [
+    0.4,
+    0.3,
+    1.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9,
+     "d": 0.04,
+     "y": 0.0167,
+     "h": 0.3111,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9,
+     "d": 0.04,
+     "y": 0.3389,
+     "h": 0.3111,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9,
+     "d": 0.04,
+     "y": 0.6611,
+     "h": 0.3111,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.35,
+     "z": 0.5,
+     "w": 0.0375,
+     "d": 0.04,
+     "y": 0.45,
+     "h": 0.0667,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "cabinet_mid",
+   "name": {
+    "de": "Halbhochschrank Bad",
+    "en": "Mid-height bathroom cabinet"
+   },
+   "size": [
+    0.4,
+    0.3,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9,
+     "d": 0.04,
+     "y": 0.03,
+     "h": 0.45,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9,
+     "d": 0.04,
+     "y": 0.5,
+     "h": 0.45,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.35,
+     "z": 0.5,
+     "w": 0.0375,
+     "d": 0.04,
+     "y": 0.45,
+     "h": 0.12,
+     "color": "metal"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 0.8
+  },
+  {
+   "id": "mirror_round_light",
+   "name": {
+    "de": "Runder Spiegel mit Licht",
+    "en": "Round mirror with light"
+   },
+   "size": [
+    0.7,
+    0.05,
+    0.7
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "glass",
+     "edges": "glow",
+     "axis": "z"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.4,
+     "w": 1,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "#ffe7b0",
+     "glow": true,
+     "axis": "z"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.1,
+   "electric": true,
+   "light": "wall"
+  },
+  {
+   "id": "mirror_80",
+   "name": {
+    "de": "Spiegel 80 × 60 mit Licht",
+    "en": "Mirror 80 × 60 with light"
+   },
+   "size": [
+    0.8,
+    0.04,
+    0.6
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "glass",
+     "edges": "glow"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.95,
+     "d": 0.25,
+     "y": 0.9333,
+     "h": 0.02,
+     "color": "#ffe7b0",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.95,
+     "d": 0.25,
+     "y": 0.0333,
+     "h": 0.02,
+     "color": "#ffe7b0",
+     "glow": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.1,
+   "electric": true,
+   "light": "wall"
+  },
+  {
+   "id": "mirror_led_100",
+   "name": {
+    "de": "LED-Spiegel 100 × 70 mit Uhr",
+    "en": "LED mirror 100 × 70 with clock"
+   },
+   "size": [
+    1.0,
+    0.04,
+    0.7
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "glass",
+     "edges": "glow"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.96,
+     "d": 0.25,
+     "y": 0.9429,
+     "h": 0.0171,
+     "color": "#ffe7b0",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.96,
+     "d": 0.25,
+     "y": 0.0286,
+     "h": 0.0171,
+     "color": "#ffe7b0",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": 0.38,
+     "z": 0.5,
+     "w": 0.14,
+     "d": 0.25,
+     "y": 0.0857,
+     "h": 0.0714,
+     "color": "#7fd0ff",
+     "glow": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.1,
+   "electric": true,
+   "light": "wall"
+  },
+  {
+   "id": "mirror_cabinet",
+   "name": {
+    "de": "Spiegelschrank mit Licht",
+    "en": "Mirror cabinet with light"
+   },
+   "size": [
+    0.8,
+    0.15,
+    0.7
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.25,
+     "z": 0.5,
+     "w": 0.475,
+     "d": 0.0667,
+     "y": 0.0429,
+     "h": 0.9143,
+     "color": "glass"
+    },
+    {
+     "shape": "box",
+     "x": 0.25,
+     "z": 0.5,
+     "w": 0.475,
+     "d": 0.0667,
+     "y": 0.0429,
+     "h": 0.9143,
+     "color": "glass"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.95,
+     "d": 0.08,
+     "y": 0.9571,
+     "h": 0.0286,
+     "color": "#ffe7b0",
+     "glow": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.2,
+   "electric": true,
+   "light": "wall"
+  },
+  {
+   "id": "wall_shelf_bath",
+   "name": {
+    "de": "Badablage",
+    "en": "Bathroom wall shelf"
+   },
+   "size": [
+    0.6,
+    0.15,
+    0.06
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.25,
+     "color": "glass",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.45,
+     "z": -0.3333,
+     "w": 0.0333,
+     "d": 0.3333,
+     "y": 0,
+     "h": 0.6667,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.45,
+     "z": -0.3333,
+     "w": 0.0333,
+     "d": 0.3333,
+     "y": 0,
+     "h": 0.6667,
+     "color": "metal"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.2,
+   "surface": true
+  },
+  {
+   "id": "towel_rail",
+   "name": {
+    "de": "Handtuchhalter mit Handtuch",
+    "en": "Towel rail with towel"
+   },
+   "size": [
+    0.6,
+    0.12,
+    0.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.4833,
+     "z": 0.0,
+     "w": 0.0333,
+     "d": 0.8333,
+     "y": 0,
+     "h": 0.0625,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.4833,
+     "z": 0.0,
+     "w": 0.0333,
+     "d": 0.8333,
+     "y": 0,
+     "h": 0.0625,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.4167,
+     "w": 0.0333,
+     "d": 0.1667,
+     "y": 0.0625,
+     "h": 0.025,
+     "color": "metal",
+     "axis": "x"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.8333,
+     "d": 0.1667,
+     "y": 0,
+     "h": 0.9375,
+     "color": "#7aa6c9"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.8333,
+     "d": 0.0833,
+     "y": 0,
+     "h": 0.25,
+     "color": "#e8ecf2"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 0.9
+  },
+  {
+   "id": "towel_radiator",
+   "name": {
+    "de": "Handtuchheizkörper",
+    "en": "Towel radiator"
+   },
+   "size": [
+    0.5,
+    0.1,
+    1.7
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.5,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": -0.3,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": -0.1,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.1,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.3,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.5,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.0588,
+     "h": 0.0071,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.1765,
+     "h": 0.0071,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.2941,
+     "h": 0.0071,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.4118,
+     "h": 0.0071,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.5294,
+     "h": 0.0071,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.6471,
+     "h": 0.0071,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.7647,
+     "h": 0.0071,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.8824,
+     "h": 0.0071,
+     "color": "white"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 0.2,
+   "electric": true
+  },
+  {
+   "id": "towel_heater_electric",
+   "name": {
+    "de": "Elektrischer Handtuchwärmer",
+    "en": "Electric towel heater"
+   },
+   "size": [
+    0.5,
+    0.1,
+    1.5
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.5,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": -0.3,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": -0.1,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.1,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.3,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.5,
+     "z": 0.0,
+     "w": 0.024,
+     "d": 0.4,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.0667,
+     "h": 0.008,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.2,
+     "h": 0.008,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.3333,
+     "h": 0.008,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.4667,
+     "h": 0.008,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.6,
+     "h": 0.008,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.7333,
+     "h": 0.008,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 0.8667,
+     "h": 0.008,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.4,
+     "y": 1,
+     "h": 0.008,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.4,
+     "z": 0.25,
+     "w": 0.08,
+     "d": 0.12,
+     "y": 0.0333,
+     "h": 0.0133,
+     "color": "#ff7a1a",
+     "glow": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 0.2,
+   "electric": true
+  },
+  {
+   "id": "sauna",
+   "name": {
+    "de": "Sauna",
+    "en": "Sauna"
+   },
+   "size": [
+    2.0,
+    1.8,
+    2.1
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#b98d5a",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.35,
+     "d": 0.0067,
+     "y": 0,
+     "h": 0.9048,
+     "color": "glass"
+    },
+    {
+     "shape": "box",
+     "x": -0.2,
+     "z": -0.1111,
+     "w": 0.45,
+     "d": 0.2778,
+     "y": 0.2143,
+     "h": 0.019,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.2,
+     "z": -0.25,
+     "w": 0.45,
+     "d": 0.2778,
+     "y": 0.4286,
+     "h": 0.019,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.35,
+     "z": -0.3333,
+     "w": 0.175,
+     "d": 0.1944,
+     "y": 0,
+     "h": 0.2381,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.02,
+     "d": 0.0067,
+     "y": 0.4762,
+     "h": 0.0952,
+     "color": "metal"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "bath_fan",
+   "name": {
+    "de": "Badlüfter",
+    "en": "Bathroom fan"
+   },
+   "size": [
+    0.2,
+    0.2,
+    0.06
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.7,
+     "d": 0.7,
+     "y": 0.9833,
+     "h": 0.0167,
+     "color": "dark"
+    }
+   ],
+   "mount": "ceiling",
+   "electric": true
+  },
+  {
+   "id": "washer_cabinet",
+   "name": {
+    "de": "Waschmaschinenschrank",
+    "en": "Washing machine cabinet"
+   },
+   "size": [
+    0.7,
+    0.65,
+    2.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9429,
+     "d": 0.0185,
+     "y": 0.55,
+     "h": 0.425,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.6571,
+     "d": 0.0615,
+     "y": 0.06,
+     "h": 0.23,
+     "color": "glass",
+     "axis": "z"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9429,
+     "d": 0.0185,
+     "y": 0.325,
+     "h": 0.2,
+     "color": "white"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "washer_under_vanity",
+   "name": {
+    "de": "Waschmaschine unter Waschtisch",
+    "en": "Washer under the vanity"
+   },
+   "size": [
+    1.0,
+    0.6,
+    0.95
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.8632,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.15,
+     "z": 0.5,
+     "w": 0.38,
+     "d": 0.0667,
+     "y": 0.2105,
+     "h": 0.4,
+     "color": "glass",
+     "axis": "z"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.8632,
+     "h": 0.0316,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "box",
+     "x": 0.2,
+     "z": 0.0,
+     "w": 0.4,
+     "d": 0.5,
+     "y": 0.8947,
+     "h": 0.0126,
+     "color": "#f2f5f9"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.2,
+     "z": -0.175,
+     "w": 0.03,
+     "d": 0.05,
+     "y": 0.8947,
+     "h": 0.1263,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.2,
+     "z": -0.1,
+     "w": 0.02,
+     "d": 0.1667,
+     "y": 1,
+     "h": 0.0211,
+     "color": "metal"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "laundry_basket",
+   "name": {
+    "de": "Wäschekorb",
+    "en": "Laundry basket"
+   },
+   "size": [
+    0.4,
+    0.4,
+    0.6
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.9167,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.9167,
+     "h": 0.05,
+     "color": "#a07c4a"
+    }
+   ]
+  },
+  {
+   "id": "laundry_cabinet",
+   "name": {
+    "de": "Wäscheschrank mit Korb",
+    "en": "Laundry cabinet with basket"
+   },
+   "size": [
+    0.5,
+    0.4,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#dfe4ec",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.92,
+     "d": 0.03,
+     "y": 0.0556,
+     "h": 0.4222,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.92,
+     "d": 0.03,
+     "y": 0.5222,
+     "h": 0.4222,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 1,
+     "h": 0.0222,
+     "color": "wood"
+    }
+   ],
+   "surface": true
+  },
+  {
+   "id": "ladder_shelf",
+   "name": {
+    "de": "Leiterregal mit Handtüchern",
+    "en": "Ladder shelf with towels"
+   },
+   "size": [
+    0.6,
+    0.35,
+    1.7
+   ],
+   "parts": [
+    {
+     "shape": "loft",
+     "x": -0.45,
+     "z": 0.0,
+     "w": 0.05,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "tz": -0.4,
+     "td": 0.0857
+    },
+    {
+     "shape": "loft",
+     "x": 0.45,
+     "z": 0.0,
+     "w": 0.05,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "wood",
+     "tz": -0.4,
+     "td": 0.0857
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.3429,
+     "w": 0.9167,
+     "d": 0.2857,
+     "y": 0.1176,
+     "h": 0.0118,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.2943,
+     "w": 0.9167,
+     "d": 0.2857,
+     "y": 0.2941,
+     "h": 0.0118,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.2457,
+     "w": 0.9167,
+     "d": 0.2857,
+     "y": 0.4706,
+     "h": 0.0118,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.1971,
+     "w": 0.9167,
+     "d": 0.2857,
+     "y": 0.6471,
+     "h": 0.0118,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.1486,
+     "w": 0.9167,
+     "d": 0.2857,
+     "y": 0.8235,
+     "h": 0.0118,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.2371,
+     "w": 0.6667,
+     "d": 0.3429,
+     "y": 0.3059,
+     "h": 0.0588,
+     "color": "#7aa6c9"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.1886,
+     "w": 0.6667,
+     "d": 0.3429,
+     "y": 0.4824,
+     "h": 0.0588,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.14,
+     "w": 0.6667,
+     "d": 0.3429,
+     "y": 0.6588,
+     "h": 0.0588,
+     "color": "#7aa6c9"
+    }
+   ]
+  },
+  {
+   "id": "plant_stool",
+   "name": {
+    "de": "Pflanze auf Hocker",
+    "en": "Plant on stool"
+   },
+   "size": [
+    0.35,
+    0.35,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8571,
+     "d": 0.8571,
+     "y": 0.3333,
+     "h": 0.0333,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.3429,
+     "z": -0.3429,
+     "w": 0.0857,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.3333,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": -0.3429,
+     "z": 0.3429,
+     "w": 0.0857,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.3333,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.3429,
+     "z": -0.3429,
+     "w": 0.0857,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.3333,
+     "color": "wood"
+    },
+    {
+     "shape": "box",
+     "x": 0.3429,
+     "z": 0.3429,
+     "w": 0.0857,
+     "d": 0.0857,
+     "y": 0,
+     "h": 0.3333,
+     "color": "wood"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.5143,
+     "d": 0.5143,
+     "y": 0.3667,
+     "h": 0.1667,
+     "color": "pot"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9143,
+     "d": 0.9143,
+     "y": 0.5556,
+     "h": 0.4444,
+     "color": "plant"
+    }
+   ]
+  }
+ ]
+}

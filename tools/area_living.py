@@ -245,7 +245,7 @@ def build(bp):
             lambda m: [
                 m.b(-0.1, 0, 0.6, 0.5, 0.4, 0.04, "wood"),
                 *[m.b(-0.1 + sx * 0.26, sz * 0.2, 0.03, 0.03, 0, 0.4, "metal") for sx in (-1, 1) for sz in (-1, 1)],
-                m.b(0.25, 0.05, 0.4, 0.4, 0.3, 0.04, "walnut" if False else "#6b4a32"),
+                m.b(0.25, 0.05, 0.4, 0.4, 0.3, 0.04, "#6b4a32"),
                 *[
                     m.b(0.25 + sx * 0.17, 0.05 + sz * 0.17, 0.03, 0.03, 0, 0.3, "metal")
                     for sx in (-1, 1)
@@ -327,7 +327,7 @@ def build(bp):
                         0.012,
                         base + 0.03,
                         m.h - base - 0.06,
-                        "#00000022" if False else "dark",
+                        "dark",
                     )
                 )
                 p.append(
@@ -603,7 +603,6 @@ def build(bp):
             ],
             electric=True,
             light="table",
-            mount="surface" if False else None,
         )
     )
     items.append(
@@ -1062,9 +1061,7 @@ def build(bp):
             (0.6, 0.35, 1.7),
             lambda m: [
                 m.l(0, 0, 0.5, 0.03, 0.0, 1.6, "glass", edges="glow", tz=-0.12, td=0.03),
-                m.b(0, 0.0, 0.04, 0.3, 0, 0.9, "wood", rot=0)
-                if False
-                else m.b(0.0, -0.1, 0.55, 0.04, 0.02, 0.04, "wood"),
+                m.b(0.0, -0.1, 0.55, 0.04, 0.02, 0.04, "wood"),
             ],
         )
     )

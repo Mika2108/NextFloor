@@ -1,0 +1,1444 @@
+{
+ "format": "nfpack",
+ "version": 1,
+ "id": "nextfloor.a_haustechnik",
+ "name": "Hauswirtschaft & Haustechnik",
+ "publisher": "NextFloor",
+ "description": "Heizung, Wärmepumpe, Speicher, Lüftung, Zählerschrank, Wasserenthärter und Hauswirtschaftsraum",
+ "release": 1,
+ "items": [
+  {
+   "id": "gas_boiler",
+   "name": {
+    "de": "Gas-Brennwertkessel",
+    "en": "Gas condensing boiler"
+   },
+   "size": [
+    0.6,
+    0.45,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.5,
+     "d": 0.0222,
+     "y": 0.6667,
+     "h": 0.1333,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "cyl",
+     "x": -0.25,
+     "z": -0.2222,
+     "w": 0.0833,
+     "d": 0.1111,
+     "y": 0,
+     "h": 0.0889,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.2222,
+     "w": 0.0833,
+     "d": 0.1111,
+     "y": 0,
+     "h": 0.0889,
+     "color": "metal"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "heat_pump_tower",
+   "name": {
+    "de": "Wärmepumpe Innengerät (Hydrotower)",
+    "en": "Heat pump indoor unit (hydro tower)"
+   },
+   "size": [
+    0.6,
+    0.65,
+    1.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.5,
+     "d": 0.0154,
+     "y": 0.7895,
+     "h": 0.0632,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9333,
+     "d": 0.0154,
+     "y": 0.0263,
+     "h": 0.6316,
+     "color": "#e8ecf2"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "buffer_tank",
+   "name": {
+    "de": "Pufferspeicher",
+    "en": "Buffer tank"
+   },
+   "size": [
+    0.8,
+    0.8,
+    1.9
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.0526,
+     "h": 0.9211,
+     "color": "#c0392b",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.625,
+     "d": 0.625,
+     "y": 0,
+     "h": 0.0526,
+     "color": "dark"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.875,
+     "d": 0.875,
+     "y": 0.9737,
+     "h": 0.0263,
+     "color": "#8a8f9a"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.4375,
+     "z": 0.0,
+     "w": 0.075,
+     "d": 0.075,
+     "y": 0.1579,
+     "h": 0.0316,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.4375,
+     "z": 0.0,
+     "w": 0.075,
+     "d": 0.075,
+     "y": 0.3684,
+     "h": 0.0316,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.4375,
+     "z": 0.0,
+     "w": 0.075,
+     "d": 0.075,
+     "y": 0.5789,
+     "h": 0.0316,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.4375,
+     "z": 0.0,
+     "w": 0.075,
+     "d": 0.075,
+     "y": 0.7895,
+     "h": 0.0316,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "heating_manifold",
+   "name": {
+    "de": "Fußbodenheizungsverteiler",
+    "en": "Underfloor heating manifold"
+   },
+   "size": [
+    0.6,
+    0.12,
+    0.5
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#cfd6e2",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.25,
+     "y": 0.5,
+     "h": 0.06,
+     "color": "#c0392b",
+     "axis": "x"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.25,
+     "y": 0.3,
+     "h": 0.06,
+     "color": "#2e86c1",
+     "axis": "x"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.3333,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.1667,
+     "y": 0.2,
+     "h": 0.4,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.2167,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.1667,
+     "y": 0.2,
+     "h": 0.4,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.1,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.1667,
+     "y": 0.2,
+     "h": 0.4,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0167,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.1667,
+     "y": 0.2,
+     "h": 0.4,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.1333,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.1667,
+     "y": 0.2,
+     "h": 0.4,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.25,
+     "z": 0.5,
+     "w": 0.0333,
+     "d": 0.1667,
+     "y": 0.2,
+     "h": 0.4,
+     "color": "metal"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.0
+  },
+  {
+   "id": "ventilation_unit",
+   "name": {
+    "de": "Lüftungsgerät mit Wärmerückgewinnung",
+    "en": "Ventilation unit with heat recovery"
+   },
+   "size": [
+    0.7,
+    0.5,
+    0.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.4286,
+     "d": 0.02,
+     "y": 0.6875,
+     "h": 0.125,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "cyl",
+     "x": -0.2857,
+     "z": -0.0,
+     "w": 0.1429,
+     "d": 0.2,
+     "y": 0.9988,
+     "h": 0.15,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.1,
+     "z": -0.0,
+     "w": 0.1429,
+     "d": 0.2,
+     "y": 0.9988,
+     "h": 0.15,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0857,
+     "z": -0.0,
+     "w": 0.1429,
+     "d": 0.2,
+     "y": 0.9988,
+     "h": 0.15,
+     "color": "metal"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.2714,
+     "z": -0.0,
+     "w": 0.1429,
+     "d": 0.2,
+     "y": 0.9988,
+     "h": 0.15,
+     "color": "metal"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 1.2,
+   "electric": true
+  },
+  {
+   "id": "radiator_tall",
+   "name": {
+    "de": "Designheizkörper hoch",
+    "en": "Tall designer radiator"
+   },
+   "size": [
+    0.5,
+    0.08,
+    1.8
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.44,
+     "z": 0.0,
+     "w": 0.08,
+     "d": 0.75,
+     "y": 0,
+     "h": 1,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": -0.29,
+     "z": 0.0,
+     "w": 0.08,
+     "d": 0.75,
+     "y": 0,
+     "h": 1,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": -0.14,
+     "z": 0.0,
+     "w": 0.08,
+     "d": 0.75,
+     "y": 0,
+     "h": 1,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.01,
+     "z": 0.0,
+     "w": 0.08,
+     "d": 0.75,
+     "y": 0,
+     "h": 1,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.16,
+     "z": 0.0,
+     "w": 0.08,
+     "d": 0.75,
+     "y": 0,
+     "h": 1,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.31,
+     "z": 0.0,
+     "w": 0.08,
+     "d": 0.75,
+     "y": 0,
+     "h": 1,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.46,
+     "z": 0.0,
+     "w": 0.08,
+     "d": 0.75,
+     "y": 0,
+     "h": 1,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.625,
+     "y": 0.0167,
+     "h": 0.0167,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.625,
+     "y": 0.9667,
+     "h": 0.0167,
+     "color": "metal"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 0.15,
+   "electric": true
+  },
+  {
+   "id": "meter_cabinet",
+   "name": {
+    "de": "Zählerschrank",
+    "en": "Meter cabinet"
+   },
+   "size": [
+    0.75,
+    0.2,
+    1.2
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#cfd6e2",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": -0.24,
+     "z": 0.5,
+     "w": 0.1867,
+     "d": 0.05,
+     "y": 0.5833,
+     "h": 0.2917,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.1867,
+     "d": 0.05,
+     "y": 0.5833,
+     "h": 0.2917,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "box",
+     "x": 0.24,
+     "z": 0.5,
+     "w": 0.1867,
+     "d": 0.05,
+     "y": 0.5833,
+     "h": 0.2917,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.8667,
+     "d": 0.05,
+     "y": 0.0833,
+     "h": 0.375,
+     "color": "#bcc4d0"
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 0.5,
+   "electric": true
+  },
+  {
+   "id": "water_softener",
+   "name": {
+    "de": "Wasserenthärter",
+    "en": "Water softener"
+   },
+   "size": [
+    0.35,
+    0.5,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "#2e86c1",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.5714,
+     "d": 0.02,
+     "y": 0.7222,
+     "h": 0.1111,
+     "color": "#2b3446",
+     "screen": true
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8571,
+     "d": 0.6,
+     "y": 0.9989,
+     "h": 0.0011,
+     "color": "white"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "water_pump",
+   "name": {
+    "de": "Hauswasserwerk",
+    "en": "Domestic water pump"
+   },
+   "size": [
+    0.5,
+    0.35,
+    0.6
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": -0.2,
+     "z": 0.0,
+     "w": 0.6,
+     "d": 0.8571,
+     "y": 0.3333,
+     "h": 0.6667,
+     "color": "#2e86c1"
+    },
+    {
+     "shape": "box",
+     "x": 0.3,
+     "z": 0.0,
+     "w": 0.4,
+     "d": 0.7143,
+     "y": 0,
+     "h": 0.4167,
+     "color": "#cfd6e2",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.0833,
+     "color": "dark"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "drip_tray",
+   "name": {
+    "de": "Auffangwanne mit Leckagesensor",
+    "en": "Drip tray with leak sensor"
+   },
+   "size": [
+    0.7,
+    0.5,
+    0.08
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.875,
+     "color": "#8a8f9a",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9143,
+     "d": 0.88,
+     "y": 0.5,
+     "h": 0.375,
+     "color": "#6a6f7a"
+    },
+    {
+     "shape": "box",
+     "x": 0.4286,
+     "z": 0.4,
+     "w": 0.0571,
+     "d": 0.08,
+     "y": 0.625,
+     "h": 0.25,
+     "color": "#2e86c1",
+     "glow": true
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "chest_freezer",
+   "name": {
+    "de": "Gefriertruhe",
+    "en": "Chest freezer"
+   },
+   "size": [
+    1.0,
+    0.7,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.0556,
+     "h": 0.9444,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.94,
+     "d": 0.9143,
+     "y": 1,
+     "h": 0.0222,
+     "color": "#cfd6e2"
+    },
+    {
+     "shape": "box",
+     "x": 0.3,
+     "z": 0.5,
+     "w": 0.08,
+     "d": 0.0143,
+     "y": 0.9333,
+     "h": 0.0222,
+     "color": "#27ae60",
+     "glow": true
+    },
+    {
+     "shape": "box",
+     "x": -0.47,
+     "z": -0.4571,
+     "w": 0.05,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.0556,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": -0.47,
+     "z": 0.4571,
+     "w": 0.05,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.0556,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.47,
+     "z": -0.4571,
+     "w": 0.05,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.0556,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.47,
+     "z": 0.4571,
+     "w": 0.05,
+     "d": 0.0714,
+     "y": 0,
+     "h": 0.0556,
+     "color": "dark"
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "ironing_station",
+   "name": {
+    "de": "Dampfbügelstation",
+    "en": "Steam ironing station"
+   },
+   "size": [
+    1.2,
+    0.4,
+    1.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 0.875,
+     "y": 0.82,
+     "h": 0.04,
+     "color": "#cfd6e2"
+    },
+    {
+     "shape": "box",
+     "x": -0.4167,
+     "z": 0.0,
+     "w": 0.025,
+     "d": 0.75,
+     "y": 0,
+     "h": 0.82,
+     "color": "metal",
+     "rot": 0
+    },
+    {
+     "shape": "box",
+     "x": 0.4167,
+     "z": 0.0,
+     "w": 0.025,
+     "d": 0.75,
+     "y": 0,
+     "h": 0.82,
+     "color": "metal",
+     "rot": 0
+    },
+    {
+     "shape": "box",
+     "x": 0.4167,
+     "z": 0.0,
+     "w": 0.2083,
+     "d": 0.55,
+     "y": 0.86,
+     "h": 0.18,
+     "color": "#2e86c1"
+    },
+    {
+     "shape": "loft",
+     "x": 0.1667,
+     "z": 0.0,
+     "w": 0.2083,
+     "d": 0.25,
+     "y": 0.86,
+     "h": 0.06,
+     "color": "metal",
+     "tw": 0.1
+    }
+   ],
+   "electric": true
+  },
+  {
+   "id": "drying_rack",
+   "name": {
+    "de": "Wäscheständer",
+    "en": "Clothes drying rack"
+   },
+   "size": [
+    1.6,
+    0.6,
+    1.1
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.4688,
+     "z": -0.4167,
+     "w": 0.0125,
+     "d": 0.0333,
+     "y": 0,
+     "h": 0.9091,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.4688,
+     "z": 0.4167,
+     "w": 0.0125,
+     "d": 0.0333,
+     "y": 0,
+     "h": 0.9091,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.4688,
+     "z": -0.4167,
+     "w": 0.0125,
+     "d": 0.0333,
+     "y": 0,
+     "h": 0.9091,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.4688,
+     "z": 0.4167,
+     "w": 0.0125,
+     "d": 0.0333,
+     "y": 0,
+     "h": 0.9091,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.4167,
+     "w": 0.9375,
+     "d": 0.02,
+     "y": 0.9091,
+     "h": 0.0109,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.25,
+     "w": 0.9375,
+     "d": 0.02,
+     "y": 0.9091,
+     "h": 0.0109,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.0833,
+     "w": 0.9375,
+     "d": 0.02,
+     "y": 0.9091,
+     "h": 0.0109,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0833,
+     "w": 0.9375,
+     "d": 0.02,
+     "y": 0.9091,
+     "h": 0.0109,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.25,
+     "w": 0.9375,
+     "d": 0.02,
+     "y": 0.9091,
+     "h": 0.0109,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.4167,
+     "w": 0.9375,
+     "d": 0.02,
+     "y": 0.9091,
+     "h": 0.0109,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.3125,
+     "z": -0.3333,
+     "w": 0.1125,
+     "d": 0.02,
+     "y": 0.5,
+     "h": 0.4091,
+     "color": "#7aa6c9"
+    },
+    {
+     "shape": "box",
+     "x": -0.0938,
+     "z": -0.3333,
+     "w": 0.1125,
+     "d": 0.02,
+     "y": 0.5,
+     "h": 0.4091,
+     "color": "#e8ecf2"
+    },
+    {
+     "shape": "box",
+     "x": 0.125,
+     "z": -0.3333,
+     "w": 0.1125,
+     "d": 0.02,
+     "y": 0.5,
+     "h": 0.4091,
+     "color": "#c0562e"
+    },
+    {
+     "shape": "box",
+     "x": 0.3437,
+     "z": -0.3333,
+     "w": 0.1125,
+     "d": 0.02,
+     "y": 0.5,
+     "h": 0.4091,
+     "color": "#6b8a5a"
+    }
+   ]
+  },
+  {
+   "id": "rotary_line",
+   "name": {
+    "de": "Wäschespinne",
+    "en": "Rotary washing line"
+   },
+   "size": [
+    1.8,
+    1.8,
+    1.8
+   ],
+   "parts": [
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.0278,
+     "d": 0.0278,
+     "y": 0,
+     "h": 0.8889,
+     "color": "metal"
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9444,
+     "d": 0.0167,
+     "y": 0.8333,
+     "h": 0.1111,
+     "color": "metal",
+     "tz": 0.0,
+     "tw": 0.0167,
+     "rot": 0
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9444,
+     "d": 0.0167,
+     "y": 0.8333,
+     "h": 0.1111,
+     "color": "metal",
+     "tz": 0.0,
+     "tw": 0.0167,
+     "rot": 45
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9444,
+     "d": 0.0167,
+     "y": 0.8333,
+     "h": 0.1111,
+     "color": "metal",
+     "tz": 0.0,
+     "tw": 0.0167,
+     "rot": 90
+    },
+    {
+     "shape": "loft",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9444,
+     "d": 0.0167,
+     "y": 0.8333,
+     "h": 0.1111,
+     "color": "metal",
+     "tz": 0.0,
+     "tw": 0.0167,
+     "rot": 135
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8889,
+     "d": 0.8889,
+     "y": 0.8889,
+     "h": 0.0056,
+     "color": "#bcc4d0"
+    }
+   ]
+  },
+  {
+   "id": "pantry_shelf_util",
+   "name": {
+    "de": "Vorratsregal",
+    "en": "Pantry shelf"
+   },
+   "size": [
+    0.9,
+    0.35,
+    2.0
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": -0.4889,
+     "z": 0.0,
+     "w": 0.0333,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.4889,
+     "z": 0.0,
+     "w": 0.0333,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9556,
+     "d": 1,
+     "y": 0,
+     "h": 0.0125,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9556,
+     "d": 1,
+     "y": 0.15,
+     "h": 0.0125,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9556,
+     "d": 1,
+     "y": 0.3,
+     "h": 0.0125,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9556,
+     "d": 1,
+     "y": 0.45,
+     "h": 0.0125,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9556,
+     "d": 1,
+     "y": 0.6,
+     "h": 0.0125,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9556,
+     "d": 1,
+     "y": 0.75,
+     "h": 0.0125,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.9556,
+     "d": 1,
+     "y": 0.9,
+     "h": 0.0125,
+     "color": "white"
+    },
+    {
+     "shape": "box",
+     "x": -0.2778,
+     "z": 0.0,
+     "w": 0.1556,
+     "d": 0.4,
+     "y": 0.1625,
+     "h": 0.1,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.1556,
+     "d": 0.4,
+     "y": 0.1625,
+     "h": 0.1,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "box",
+     "x": 0.2778,
+     "z": 0.0,
+     "w": 0.1556,
+     "d": 0.4,
+     "y": 0.1625,
+     "h": 0.1,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "box",
+     "x": -0.2778,
+     "z": 0.0,
+     "w": 0.1556,
+     "d": 0.4,
+     "y": 0.3125,
+     "h": 0.1,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.1556,
+     "d": 0.4,
+     "y": 0.3125,
+     "h": 0.1,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "box",
+     "x": 0.2778,
+     "z": 0.0,
+     "w": 0.1556,
+     "d": 0.4,
+     "y": 0.3125,
+     "h": 0.1,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "box",
+     "x": -0.2778,
+     "z": 0.0,
+     "w": 0.1556,
+     "d": 0.4,
+     "y": 0.4625,
+     "h": 0.1,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.1556,
+     "d": 0.4,
+     "y": 0.4625,
+     "h": 0.1,
+     "color": "#c9a46a"
+    },
+    {
+     "shape": "box",
+     "x": 0.2778,
+     "z": 0.0,
+     "w": 0.1556,
+     "d": 0.4,
+     "y": 0.4625,
+     "h": 0.1,
+     "color": "#c9a46a"
+    }
+   ]
+  },
+  {
+   "id": "utility_sink",
+   "name": {
+    "de": "Ausgussbecken",
+    "en": "Utility sink"
+   },
+   "size": [
+    0.6,
+    0.5,
+    0.9
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.8889,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.8333,
+     "d": 0.8,
+     "y": 0.8889,
+     "h": 0.1111,
+     "color": "#cfd6e2"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": -0.36,
+     "w": 0.0667,
+     "d": 0.08,
+     "y": 1,
+     "h": 0.2222,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.2,
+     "w": 0.0333,
+     "d": 0.36,
+     "y": 1,
+     "h": 0.0222,
+     "color": "metal"
+    }
+   ]
+  },
+  {
+   "id": "laundry_basket_util",
+   "name": {
+    "de": "Wäschekorb",
+    "en": "Laundry basket"
+   },
+   "size": [
+    0.45,
+    0.35,
+    0.55
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 0.9091,
+     "color": "#c9a46a",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.9091,
+     "h": 0.0545,
+     "color": "#a07c4a"
+    }
+   ]
+  },
+  {
+   "id": "vacuum_station",
+   "name": {
+    "de": "Akku-Staubsauger-Station",
+    "en": "Cordless vacuum station"
+   },
+   "size": [
+    0.3,
+    0.3,
+    1.2
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.3333,
+     "w": 1,
+     "d": 0.3333,
+     "y": 0,
+     "h": 1,
+     "color": "#cfd6e2",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.3333,
+     "d": 0.3333,
+     "y": 0.4167,
+     "h": 0.5417,
+     "color": "#7a4a9a"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 0.6667,
+     "d": 0.3333,
+     "y": 0.0833,
+     "h": 0.0833,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": -0.1333,
+     "w": 0.1333,
+     "d": 0.0333,
+     "y": 0.875,
+     "h": 0.0167,
+     "color": "#27ae60",
+     "glow": true
+    }
+   ],
+   "electric": true,
+   "mount": "wall",
+   "wall_y": 0.1
+  }
+ ]
+}

@@ -1,7 +1,6 @@
 // 2D editor: floors, rooms (rectangles and free shapes), snapping, undo, background template.
 
 import { html, LitElement, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
-import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { fetchImage, storeImage } from "../api.ts";
 import { areaEntities, autoPlace, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, openingEntities, otherAreaEntities, roomClimateSensors, unassignedEntities, windowPosition, type ClimateKey } from "../devices.ts";
 import { furnitureSymbol } from "./furniture2d.ts";
@@ -10,7 +9,6 @@ import { keepInRoom, snapToWall } from "../geometry/snap.ts";
 import { holeInRoom } from "../geometry/holes.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
 import { cameraMotionSensors, detectionKind } from "../markers.ts";
-import { deviceSensors, energySummary, suggestGridSpot, proposeEnergySensors, type EnergyPrefs } from "../energy.ts";
 import { isStatusSensor, robotRoomSensor, TOGGLE_KINDS } from "../devices.ts";
 import { sectionFloor, dormerParent, effectiveDormer, proposeDormer, sectionGeometry, floorOutline, polygonBox, headroomLines, ridgeHeight, sectionCutsBelow, roofSectionsFromRooms, sectionFrame, wallTopUnder } from "../roof-sections.ts";
 import { bestFace, clampField, faceAt, faceCompass, fieldFace, fieldModules, GROUND, moveField, pointOnFace, proposeField, proposeGroundField, proposeWindow, proposeWallField, roofFaces, rowCounts, turnGroundField, fieldCenter, wallFaces, windowAsField, windowCorners, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
@@ -70,7 +68,6 @@ import {
   type RoofWindow,
   ROOF_SHAPES,
   type MarkerShow,
-  MARKER_SHOWS,
   type OutdoorArea,
   type OutdoorType,
   type Placement,
@@ -89,7 +86,12 @@ import { renderFavorites, renderPresence, renderStartView } from "./editor/forms
 import { BackupService } from "./editor/backup.ts";
 import { renderBackup } from "./editor/forms/backup.ts";
 import { renderSettings, type SettingsActions } from "./editor/forms/settings.ts";
+import { entityOptions, isBinary as binaryish, isNumeric as numberish, isPowerSensor, type EntityOption } from "./editor/entities.ts";
+import { entityField, iconField, markerField, numberField } from "./editor/fields.ts";
+import { renderEnergyBalance, renderEnergyChecklist, renderEnergyDevices, renderEnergyTeaser, renderHelpLinks, type EnergyActions } from "./editor/forms/energy.ts";
 import type { EditorHost } from "./editor/host.ts";
+import { importEnergyPrefs } from "./editor/ops/energy-import.ts";
+import { newEnergyDevice } from "./editor/ops/energy-devices.ts";
 import { EditHistory } from "./editor/history.ts";
 import { editorStyles } from "./editor/styles.ts";
 import "./entity-picker.ts";
@@ -2966,6 +2968,96 @@ export class NfEditor extends LitElement {
     ${this.renderRoofWindowList()}`;
   }
 
+  // ------------------------------------------------------------------ helpers the forms of this file still share
+
+  private entityOptions(accept: (id: string) => boolean) {
+    return entityOptions(this.hass, accept);
+  }
+
+  private isPowerSensor(id: string): boolean {
+    return isPowerSensor(this.hass, id);
+  }
+
+  private num(label: string, value: number, onChange: (v: number) => void, step = 0.01, min?: number) {
+    return numberField(this.host, label, value, onChange, step, min);
+  }
+
+  private entitySelect(label: string, value: string | null, auto: string | null | undefined, options: EntityOption[], onChange: (v: string | null) => void) {
+    return entityField(this.host, label, value, auto, options, onChange);
+  }
+
+  private iconInput(value: string | null | undefined, onChange: (v: string | null) => void) {
+    return iconField(this.host, value, onChange);
+  }
+
+  private markerSelect(value: MarkerShow | null, onChange: (v: MarkerShow | null) => void) {
+    return markerField(this.host, value, onChange);
+  }
+
+  // ------------------------------------------------------------------ energy tool
+
+  /** What the energy panel can make this editor do. */
+  private energyActions(): EnergyActions {
+    return {
+      follow: (target) => {
+        if (target.kind === "solar-field") this._solarId = target.id;
+        else if (target.kind === "add-solar-field") this.addSolarField();
+        else if (target.kind === "add-device") this.addEnergyDevice(target.type);
+        else this.openEnergyDevice(target.floor, target.item);
+      },
+      addDevice: (type) => {
+        this._solarId = null;
+        this.addEnergyDevice(type);
+      },
+      openDevice: (floor, item) => this.openEnergyDevice(floor, item),
+      importPrefs: () => void this.importEnergy(),
+      note: this._energyNote,
+    };
+  }
+
+  private openEnergyDevice(floor: Floor, item: Furniture): void {
+    this._floorId = floor.id;
+    this._solarId = null;
+    this.selectItem("furniture", item.id);
+    this.showPoint(item.x, item.z);
+  }
+
+  /** Adds an energy device on the selected floor where it belongs, and selects it. */
+  private addEnergyDevice(type: string): void {
+    const floor = this.floor;
+    if (!floor || !this.isAdmin) return;
+    const areaOf = (room: Room) => (room.area_id && this.hass?.areas?.[room.area_id]?.name) || "";
+    const item = newEnergyDevice(type, this._doc, floor, {
+      roomLabel: (room) => `${room.name} ${areaOf(room)} ${room.area_id ?? ""}`,
+      selected: this.room,
+      fallback: this.toWorld(this._size.w / 2, this._size.h / 2),
+    });
+    this.change((_, f) => f.furniture.push(item));
+    this.selectItem("furniture", item.id);
+    this.showPoint(item.x, item.z);
+  }
+
+  private async importEnergy(): Promise<void> {
+    if (!this.hass) return;
+    const result = await importEnergyPrefs({
+      hass: this.hass,
+      doc: () => this._doc,
+      canAdd: () => !!this.floor,
+      addDevice: (type) => this.addEnergyDevice(type),
+      setField: (id, key, sensor) =>
+        this.change((doc) => {
+          const item = doc.floors.flatMap((f) => f.furniture).find((m) => m.id === id);
+          if (item) item[key] = sensor;
+        }),
+    });
+    if (result.kind === "failed") {
+      this._energyNote = this.t("energy_import_failed");
+      return;
+    }
+    this.selectItem("furniture", null);
+    this._energyNote = result.filled > 0 ? this.t("energy_import_done", { n: result.filled }) : this.t("energy_import_none");
+  }
+
   /** Sidebar of the energy tool: the selected solar field, or the overview (fields, strings). */
   private renderEnergyPanel() {
     const field = this._solarId ? this._doc.settings.roof.solar?.find((x) => x.id === this._solarId) : undefined;
@@ -2974,15 +3066,8 @@ export class NfEditor extends LitElement {
     if (device)
       return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("furniture", null)}>‹ ${this.t("tool_energy")}</button>
         ${this.renderFurnitureForm(device)}`;
-    return html`${this.renderEnergyChecklist()}${this.renderSolarList()}${this.renderEnergyDevices()}${this.renderEnergyBalance()}${this.renderProCard()}`;
-  }
-
-  /** NextFloor's energy flow: what shows in 3D once the devices above are placed and have their sensors. */
-  private renderProCard() {
-    return html`<section class="nf-teaser nf-teaser-on">
-      <div class="nf-teaser-head"><b>⚡ ${this.t("feature_name_energy")}</b></div>
-      <p class="nf-sub">${this.t("feature_text_energy")}</p>
-    </section>`;
+    const actions = this.energyActions();
+    return html`${renderEnergyChecklist(this.host, actions)}${this.renderSolarList()}${renderEnergyDevices(this.host, actions)}${renderEnergyBalance(this.host, actions)}${renderEnergyTeaser(this.host)}`;
   }
 
   /** NextFloor's car: one entity of the car's device is enough, the rest is found beside it (lh/car.ts). */
@@ -2992,178 +3077,6 @@ export class NfEditor extends LitElement {
     const options = this.entityOptions((id) => /^(device_tracker|sensor|binary_sensor|lock|climate)\./.test(id));
     return html`${this.entitySelect(this.t("live_car_device"), car.device ?? null, null, options, (v) => this.updateFurniture({ car: { ...car, device: v } }))}
       <p class="nf-sub nf-wide">${this.t("live_car_device_hint")}</p>`;
-  }
-
-  /** A power sensor: device class power, or a plain sensor in W or kW (templates, MQTT, many meters have no class). */
-  private isPowerSensor(id: string): boolean {
-    if (!numberish(id)) return false;
-    const a = this.hass?.states[id]?.attributes;
-    return a?.device_class === "power" || a?.unit_of_measurement === "W" || a?.unit_of_measurement === "kW";
-  }
-
-  /** The power sensor of an energy device: set by hand, or the one found on its Home Assistant device. */
-  private devicePower(m: Furniture, links: Map<string, { power: string | null }>): string | null {
-    return m.power && m.power !== "none" ? m.power : (links.get(m.id)?.power ?? null);
-  }
-
-  /** What the energy tool still needs, ticked off live; every row jumps to the right place. */
-  private renderEnergyChecklist() {
-    const doc = this._doc;
-    const links = this.hass ? furnitureEntities(this.hass, doc.floors) : new Map<string, { power: string | null }>();
-    const all = doc.floors.flatMap((fl) => fl.furniture.map((m) => ({ m, fl })));
-    const of = (type: string) => all.filter((x) => x.m.type === type);
-    const goTo = (x: (typeof all)[number]) => {
-      this._floorId = x.fl.id;
-      this._solarId = null;
-      this.selectItem("furniture", x.m.id);
-      this.showPoint(x.m.x, x.m.z);
-    };
-    const fields = doc.settings.roof.solar ?? [];
-    const meters = of("meter");
-    const inverters = of("inverter");
-    const batteries = of("home_battery");
-    const grid = of("grid_point");
-    const meterOk = !!doc.energy.grid || meters.some((x) => this.devicePower(x.m, links));
-    const inverterOk = !!doc.energy.solar || (inverters.length > 0 && inverters.every((x) => this.devicePower(x.m, links)));
-    const batteryOk = batteries.every((x) => this.devicePower(x.m, links) && x.m.soc && x.m.soc !== "none") || !!doc.energy.battery;
-    type Row = { state: "ok" | "todo" | "opt"; label: string; action?: () => void; href?: string };
-    const rows: Row[] = [
-      { state: fields.length ? "ok" : "todo", label: this.t(fields.length ? "chk_solar" : "chk_solar_add"), action: fields.length ? () => (this._solarId = fields[0].id) : () => this.addSolarField() },
-      meters.length
-        ? { state: meterOk ? "ok" : "todo", label: this.t(meterOk ? "chk_meter" : "chk_meter_sensor"), action: () => goTo(meters[0]) }
-        : { state: "todo", label: this.t("chk_meter_add"), action: () => this.addEnergyDevice("meter") },
-      inverters.length
-        ? { state: inverterOk ? "ok" : "todo", label: this.t(inverterOk ? "chk_inverter" : "chk_inverter_sensor"), action: () => goTo(inverters.find((x) => !this.devicePower(x.m, links)) ?? inverters[0]) }
-        : { state: "todo", label: this.t("chk_inverter_add"), action: () => this.addEnergyDevice("inverter") },
-      batteries.length
-        ? { state: batteryOk ? "ok" : "todo", label: this.t(batteryOk ? "chk_battery" : "chk_battery_sensor"), action: () => goTo(batteries[0]) }
-        : { state: "opt", label: this.t("chk_battery_opt"), action: () => this.addEnergyDevice("home_battery") },
-      grid.length ? { state: "ok", label: this.t("chk_grid"), action: () => goTo(grid[0]) } : { state: "opt", label: this.t("chk_grid_opt"), action: () => this.addEnergyDevice("grid_point") },
-    ];
-    const done = rows.filter((r) => r.state === "ok").length;
-    return html`<section class="nf-checklist">
-      <h3>☑ ${this.t("chk_title")} <span class="nf-sub">${done}/${rows.length}</span></h3>
-      <p class="nf-sub">${this.t("chk_hint")}</p>
-      ${rows.map((r) =>
-        r.href
-          ? html`<a class="nf-chk nf-chk-${r.state}" href=${r.href} target="_blank" rel="noopener"><span>${r.state === "ok" ? "✓" : r.state === "todo" ? "○" : "·"}</span>${r.label}</a>`
-          : html`<button class="nf-chk nf-chk-${r.state}" ?disabled=${!this.isAdmin && !!r.action && r.state !== "ok"} @click=${r.action}><span>${r.state === "ok" ? "✓" : r.state === "todo" ? "○" : "·"}</span>${r.label}</button>`,
-      )}
-    </section>`;
-  }
-
-  /** Where to report a problem and where to propose an idea. */
-  private renderHelpLinks() {
-    return html`<section class="nf-help">
-      <h3>${this.t("help_title")}</h3>
-      <p class="nf-sub">${this.t("help_hint")}</p>
-      <div class="nf-actions">
-        <a class="nf-btn" href="https://github.com/therealMRBK/NextFloor/issues/new/choose" target="_blank" rel="noopener">🐞 ${this.t("help_issue")}</a>
-        <a class="nf-btn" href="https://github.com/therealMRBK/NextFloor/discussions/categories/ideas" target="_blank" rel="noopener">💡 ${this.t("help_idea")}</a>
-      </div>
-    </section>`;
-  }
-
-  /**
-   * Add an energy device where it belongs: a wallbox in the garage (or carport), an inverter or a battery in a
-   * utility room (or the garage), else in the selected room; against the nearest wall, and the plan goes there.
-   */
-  private addEnergyDevice(type: string): void {
-    const floor = this.floor;
-    if (!floor || !this.isAdmin) return;
-    if (type === "grid_point") {
-      // the grid connection starts just outside the wall nearest to the meter; then it can be dragged
-      const auto = suggestGridSpot(this._doc);
-      const [gw, gd, gh] = furnitureSize(type);
-      const [gx, gz] = auto ? [auto.x, auto.z] : this.toWorld(this._size.w / 2, this._size.h / 2);
-      const point: Furniture = { id: uid("furniture"), type, x: round(gx), z: round(gz), rotation: 0, w: gw, d: gd, h: gh, variant: null };
-      this.change((_, f) => f.furniture.push(point));
-      this.selectItem("furniture", point.id);
-      this.showPoint(point.x, point.z);
-      return;
-    }
-    const areaName = (r: Room) => `${r.name} ${(r.area_id && this.hass?.areas?.[r.area_id]?.name) || ""} ${r.area_id ?? ""}`.toLowerCase();
-    const rooms = floor.rooms.filter((r) => r.points.length >= 3);
-    const find = (re: RegExp) => rooms.find((r) => re.test(areaName(r)));
-    const parked = rooms.find((r) => floor.furniture.some((m) => m.type === "parking" && pointInPolygon([m.x, m.z], r.points)));
-    const garage = find(/garage|carport/) ?? parked;
-    const utility = find(/hwr|hauswirt|technik|keller|abstell|utility|basement|boiler|heiz/);
-    const hall = find(/flur|diele|eingang|hall|entr|lobby/);
-    const room = (type === "wallbox" ? garage : type === "meter" ? (utility ?? hall ?? garage) : (utility ?? garage)) ?? this.room ?? rooms.sort((a, b) => Math.abs(signedArea(b.points)) - Math.abs(signedArea(a.points)))[0];
-    const [w, d, h] = furnitureSize(type);
-    let [x, z] = room ? centroid(room.points) : this.toWorld(this._size.w / 2, this._size.h / 2);
-    if (room) {
-      // in front of the room's longest wall, so it snaps to that wall (from the middle no wall is near enough)
-      const [cx, cz] = centroid(room.points);
-      let best: { mx: number; mz: number; nx: number; nz: number; l: number } | null = null;
-      // walls with a door, gate or window are no place for it (the garage door wall least of all)
-      const open = new Set(floor.openings.filter((o) => o.room_id === room.id).map((o) => o.edge));
-      const free = room.points.some((_, i) => !open.has(i));
-      room.points.forEach((p, i) => {
-        if (free && open.has(i)) return;
-        const q = room.points[(i + 1) % room.points.length];
-        const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
-        if (best && l <= best.l) return;
-        const mx = (p[0] + q[0]) / 2;
-        const mz = (p[1] + q[1]) / 2;
-        let nx = -(q[1] - p[1]) / l;
-        let nz = (q[0] - p[0]) / l;
-        if ((cx - mx) * nx + (cz - mz) * nz < 0) [nx, nz] = [-nx, -nz];
-        best = { mx, mz, nx, nz, l };
-      });
-      const b = best as { mx: number; mz: number; nx: number; nz: number; l: number } | null;
-      if (b) [x, z] = [b.mx + b.nx * (d / 2 + 0.25), b.mz + b.nz * (d / 2 + 0.25)];
-    }
-    const item: Furniture = { id: uid("furniture"), type, x: round(x), z: round(z), rotation: 0, w, d, h, variant: null };
-    // against the nearest wall of its room, like furniture snapping to a wall
-    const snapped = room ? snapToWall({ ...floor, furniture: [...floor.furniture, item] }, item, this._doc.settings.wall_interior) : null;
-    if (snapped) Object.assign(item, { x: round(snapped.x), z: round(snapped.z), rotation: snapped.rotation });
-    this.change((_, f) => f.furniture.push(item));
-    this.selectItem("furniture", item.id);
-    this.showPoint(item.x, item.z);
-  }
-
-  /** Inverters, batteries and wallboxes of all floors, and buttons to add them on the floor shown. */
-  private renderEnergyDevices() {
-    const admin = this.isAdmin;
-    const list = this._doc.floors.flatMap((fl) => fl.furniture.filter((m) => (ENERGY_DEVICES as readonly string[]).includes(m.type)).map((m) => ({ fl, m })));
-    return html`<section>
-      <h3>⚡ ${this.t("energy_devices")}</h3>
-      <p class="nf-sub">${this.t("energy_devices_hint")}</p>
-      ${list.length
-        ? html`<div class="nf-room-list">
-            ${list.map(
-              ({ fl, m }) => html`<div class="nf-row">
-                <button
-                  class="nf-dev-name"
-                  @click=${() => {
-                    this._floorId = fl.id;
-                    this._solarId = null;
-                    this.selectItem("furniture", m.id);
-                    this.showPoint(m.x, m.z);
-                  }}
-                >
-                  <span>${m.name || this.t(`furn_${m.type}` as I18nKey)} · ${fl.name}</span>
-                </button>
-              </div>`,
-            )}
-          </div>`
-        : nothing}
-      <div class="nf-actions">
-        ${ENERGY_DEVICES.map(
-          (type) => html`<button
-            class="nf-btn"
-            ?disabled=${!admin || !this.floor}
-            @click=${() => {
-              this._solarId = null;
-              this.addEnergyDevice(type);
-            }}
-          >
-            + ${this.t(`furn_${type}` as I18nKey)}
-          </button>`,
-        )}
-      </div>
-    </section>`;
   }
 
   private renderRoofSectionForm(sec: RoofSection) {
@@ -4779,23 +4692,6 @@ export class NfEditor extends LitElement {
     </g>`;
   }
 
-  private num(label: string, value: number, onChange: (v: number) => void, step = 0.01, min?: number) {
-    return html`<label class="nf-field"
-      >${label}
-      <input
-        type="number"
-        inputmode="decimal"
-        step=${step}
-        min=${min ?? nothing}
-        .value=${String(round(value))}
-        ?disabled=${!this.isAdmin}
-        @change=${(e: Event) => {
-          const v = parseFloat((e.target as HTMLInputElement).value.replace(",", "."));
-          if (Number.isFinite(v)) onChange(v);
-        }}
-    /></label>`;
-  }
-
   /** A tap in the 3D pane: select there, and fold the sidebar away (the bar under the pane has the essentials). */
   private selectFrom3d(kind: "room" | "furniture" | "device", id: string | null): void {
     this.selectItem(kind, id);
@@ -4995,7 +4891,7 @@ export class NfEditor extends LitElement {
               ? this.renderRoomList(floor)
               : nothing}
       ${admin ? renderStartView(this.host, () => this.paneView()) : nothing} ${admin ? renderFavorites(this.host) : nothing}
-      ${this.renderHelpLinks()}
+      ${renderHelpLinks(this.host)}
       ${admin && SHOW_PRESENCE ? renderPresence(this.host) : nothing}
       ${floor && admin ? this.renderBackgroundForm(floor) : nothing} ${admin ? renderSettings(this.host, this.settingsActions) : nothing}
       ${admin ? renderBackup(this.host, this.backup) : nothing}
@@ -5154,63 +5050,6 @@ export class NfEditor extends LitElement {
       </div>
       <p class="nf-sub nf-wide">${this.t("spots_hint")}</p>
     </div>`;
-  }
-
-  /** An own symbol for the marker (a Material Design icon name), with a preview. */
-  private iconInput(value: string | null | undefined, onChange: (v: string | null) => void) {
-    const name = value ? (value.startsWith("mdi:") ? value : `mdi:${value}`) : "";
-    return html`<label class="nf-field nf-wide" title=${this.t("marker_icon_hint")}
-      >${this.t("marker_icon")}
-      <span class="nf-icon-row">
-        <input type="text" placeholder="mdi:thermometer" .value=${value ?? ""} ?disabled=${!this.isAdmin} @change=${(e: Event) => onChange((e.target as HTMLInputElement).value.trim().replace(/^mdi:/, "") || null)} />
-        ${name ? unsafeHTML(`<ha-icon icon="${name.replace(/[^a-z0-9:-]/gi, "")}"></ha-icon>`) : nothing}
-      </span></label
-    >`;
-  }
-
-  /** How the marker of a device or furniture item shows in 3D. */
-  private markerSelect(value: MarkerShow | null, onChange: (v: MarkerShow | null) => void) {
-    return html`<label class="nf-field nf-wide" title=${this.t("marker_show_hint")}
-      >${this.t("marker_show")}
-      <select ?disabled=${!this.isAdmin} @change=${(e: Event) => onChange(((e.target as HTMLSelectElement).value || null) as MarkerShow | null)}>
-        <option value="" ?selected=${!value}>${this.t("marker_show_auto")}</option>
-        ${MARKER_SHOWS.map((m) => html`<option value=${m} ?selected=${m === value}>${this.t(`marker_show_${m}` as I18nKey)}</option>`)}
-      </select></label
-    >`;
-  }
-
-  private entityOptions(filter: (id: string) => boolean) {
-    const areaName = (id: string) => {
-      const entry = this.hass?.entities?.[id];
-      const area = entry?.area_id ?? (entry?.device_id ? this.hass?.devices?.[entry.device_id]?.area_id : null);
-      return area ? this.hass?.areas?.[area]?.name : undefined;
-    };
-    return Object.keys(this.hass?.states ?? {})
-      .filter(filter)
-      .map((id) => ({ id, label: `${entityName(this.hass, id)}${areaName(id) ? ` · ${areaName(id)}` : ""}` }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }
-
-  private entitySelect(label: string, value: string | null, auto: string | null | undefined, options: { id: string; label: string }[], onChange: (v: string | null) => void) {
-    const autoLabel =
-      auto === undefined ? null : auto ? this.t("entity_auto", { name: entityName(this.hass, auto) }) : this.t("entity_auto_none");
-    // searchable picker: the fixed choices (automatic, none) first, then the entities filtered as you type
-    const fixed = [...(autoLabel !== null ? [{ id: "__auto", label: autoLabel }] : []), { id: "none", label: this.t("entity_none") }];
-    const current = value === null ? (autoLabel !== null ? "__auto" : "none") : value;
-    return html`<label class="nf-field nf-wide"
-      >${label}
-      <nf-entity-picker
-        .options=${options}
-        .fixed=${fixed}
-        .value=${current}
-        .placeholder=${this.t("entity_search")}
-        ?disabled=${!this.isAdmin}
-        @change=${(e: CustomEvent<{ value: string }>) => {
-          e.stopPropagation();
-          onChange(e.detail.value === "__auto" ? null : e.detail.value);
-        }}
-      ></nf-entity-picker></label
-    >`;
   }
 
   /** Whether an opening sits in an exterior wall (decides the automatic door style). */
@@ -5538,101 +5377,6 @@ export class NfEditor extends LitElement {
             <button class="nf-btn nf-danger" @click=${() => this.deleteFurniture()}>${this.t("delete")}</button>
           </div>`
         : nothing}
-    </section>`;
-  }
-
-  private setEnergy(patch: Partial<Building["energy"]>): void {
-    const next = structuredClone(this._doc);
-    next.energy = { ...next.energy, ...patch };
-    this.setDoc(next);
-  }
-
-  /** Fill the balance from Home Assistant's energy dashboard: its statistics lead to power sensors of the same devices. */
-  private async importEnergyPrefs(): Promise<void> {
-    if (!this.hass) return;
-    let prefs: EnergyPrefs;
-    try {
-      prefs = await this.hass.callWS<EnergyPrefs>({ type: "energy/get_prefs" });
-    } catch {
-      this._energyNote = this.t("energy_import_failed");
-      return;
-    }
-    const found = proposeEnergySensors(this.hass, prefs);
-    // the sensors go to the devices in the plan (meter, inverter, battery), which are created when missing;
-    // only empty fields are filled: what the user chose stays
-    let n = 0;
-    const find = (type: string) => this._doc.floors.flatMap((f) => f.furniture).find((m) => m.type === type);
-    const put = (type: string, key: "power" | "soc", value: string | null | undefined) => {
-      if (!value) return;
-      let m = find(type);
-      if (!m && this.floor) {
-        this.addEnergyDevice(type);
-        m = find(type);
-      }
-      if (!m || (m[key] && m[key] !== "none")) return;
-      const id = m.id;
-      this.change((d) => {
-        const x = d.floors.flatMap((f) => f.furniture).find((y) => y.id === id);
-        if (x) x[key] = value;
-      });
-      n++;
-    };
-    put("meter", "power", found.grid);
-    put("inverter", "power", found.solar);
-    put("home_battery", "power", found.battery);
-    put("home_battery", "soc", found.battery_soc);
-    this.selectItem("furniture", null);
-    this._energyNote = n ? this.t("energy_import_done", { n }) : this.t("energy_import_none");
-  }
-
-  /** Grid, solar, battery and house sensors: from the devices in the plan unless chosen here. */
-  private renderEnergyBalance() {
-    const e = this._doc.energy;
-    const admin = this.isAdmin;
-    const attr = (id: string, key: string) => this.hass?.states[id]?.attributes[key] as string | undefined;
-    const power = this.entityOptions((id) => this.isPowerSensor(id));
-    const soc = this.entityOptions((id) => numberish(id) && attr(id, "device_class") === "battery");
-    const tariff = this.entityOptions(
-      (id) => numberish(id) && (attr(id, "device_class") === "monetary" || /\/(kWh|MWh)$/.test(attr(id, "unit_of_measurement") ?? "")),
-    );
-    const pick = (key: "grid" | "solar" | "battery" | "battery_soc" | "consumption" | "tariff") => (v: string | null) => this.setEnergy({ [key]: v === "none" ? null : v });
-    const links = this.hass ? furnitureEntities(this.hass, this._doc.floors) : new Map<string, { power: string | null }>();
-    const devices = deviceSensors(this._doc, (f) => this.devicePower(f, links));
-    // the usual trap: a sign the wrong way round – exporting without any sun, or a battery charging at night
-    const sum = this.hass ? energySummary(this.hass, this._doc, [], devices) : null;
-    const night = !!sum && (sum.solar ?? 0) < 20;
-    const gridWrong = night && sum!.grid !== null && sum!.grid < -50;
-    const batteryWrong = night && sum!.battery !== null && sum!.battery < -50 && (sum!.grid ?? 0) <= 0;
-    return html`<section>
-      <h3>⚖ ${this.t("energy_balance")}</h3>
-      <p class="nf-sub">${this.t("energy_balance_hint")}</p>
-      ${gridWrong
-        ? html`<p class="nf-sub nf-pack-error">${this.t("energy_sign_grid")} <button class="nf-btn" ?disabled=${!admin} @click=${() => this.setEnergy({ grid_invert: !e.grid_invert })}>${this.t("energy_sign_flip")}</button></p>`
-        : nothing}
-      ${batteryWrong
-        ? html`<p class="nf-sub nf-pack-error">${this.t("energy_sign_battery")} <button class="nf-btn" ?disabled=${!admin} @click=${() => this.setEnergy({ battery_invert: !e.battery_invert })}>${this.t("energy_sign_flip")}</button></p>`
-        : nothing}
-      <div class="nf-form">
-        ${this.entitySelect(this.t("energy_grid"), e.grid, devices.grid, power, pick("grid"))}
-        <label class="nf-check nf-wide"
-          ><input type="checkbox" .checked=${e.grid_invert} ?disabled=${!admin} @change=${(ev: Event) => this.setEnergy({ grid_invert: (ev.target as HTMLInputElement).checked })} />
-          ${this.t("energy_invert")}</label
-        >
-        ${this.entitySelect(this.t("energy_solar_sensor"), e.solar, devices.solar[0] ?? null, power, pick("solar"))}
-        ${this.entitySelect(this.t("energy_battery_sensor"), e.battery, devices.battery[0] ?? null, power, pick("battery"))}
-        <label class="nf-check nf-wide"
-          ><input type="checkbox" .checked=${e.battery_invert} ?disabled=${!admin} @change=${(ev: Event) => this.setEnergy({ battery_invert: (ev.target as HTMLInputElement).checked })} />
-          ${this.t("energy_invert")}</label
-        >
-        ${this.entitySelect(this.t("energy_battery_soc"), e.battery_soc, devices.soc[0] ?? null, soc, pick("battery_soc"))}
-        ${this.entitySelect(this.t("energy_consumption_sensor"), e.consumption, null, power, pick("consumption"))}
-        ${this.entitySelect(this.t("energy_tariff_sensor"), e.tariff, undefined, tariff, pick("tariff"))}
-      </div>
-      <div class="nf-actions">
-        <button class="nf-btn" ?disabled=${!admin || !this.hass} @click=${() => this.importEnergyPrefs()}>${this.t("energy_import_prefs")}</button>
-      </div>
-      ${this._energyNote ? html`<p class="nf-sub">${this._energyNote}</p>` : nothing}
-      <p class="nf-sub">${this.t("energy_hint")}</p>
     </section>`;
   }
 
@@ -6381,12 +6125,3 @@ function fold(s: string): string {
 /** A stand-in hass for English names (the furniture search also matches the English name). */
 const EN_HASS = { language: "en" } as HomeAssistant;
 
-/** Entities that carry a number: sensors and the number helpers (input_number, number) – #161. */
-function numberish(id: string): boolean {
-  return /^(sensor|input_number|number)\./.test(id);
-}
-
-/** Entities that are on or off: binary sensors and the toggle helper (input_boolean) – #161. */
-function binaryish(id: string): boolean {
-  return /^(binary_sensor|input_boolean)\./.test(id);
-}

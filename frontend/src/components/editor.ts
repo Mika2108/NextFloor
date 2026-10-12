@@ -19,18 +19,16 @@ import {
   furnitureFootprint,
   type FreeWall,
 } from "../model.ts";
-import { furnishRoom, PACKAGES, type PackageId } from "../packages.ts";
+import { furnishRoom, type PackageId } from "../packages.ts";
 import { generateWalls, locateOpening, openingHost, pointOnRoomEdge, type Wall } from "../geometry/walls.ts";
 import { formatNumber, languageReady, loadLanguage, translate, type I18nKey } from "../i18n.ts";
 import { iconPath } from "../icons.ts";
 import {
   bounds,
   centroid,
-  FLOOR_MATERIALS,
   FURNITURE_GROUPS,
   ENERGY_DEVICES,
   type StartView,
-  FURNITURE_SIZE,
   FURNITURE_TYPES,
   canLift,
   isFixed,
@@ -41,15 +39,12 @@ import {
   outdoorStanding,
   SLOPE_DIRS,
   type SlopeDir,
-  spotGrid,
   step,
   type Direction,
   signedArea,
-  newFloor,
   OPENING_PRESETS,
   openingPreset,
   type OpeningPreset,
-  floorElevation,
   resizeFurniture,
   roomTiles,
   pointInPolygon,
@@ -58,7 +53,6 @@ import {
   type Building,
   type Floor,
   type Furniture,
-  type FurnitureType,
   type LampMount,
   type SolarField,
   type MarkerShow,
@@ -102,9 +96,14 @@ import { NO_CHANGE, NOTHING_TO_MOVE, nudge, type NudgeTarget } from "./editor/op
 import { areaChoice, copyOfRoom, cornerMoved, evenCeilingLights, newRoom, rectangleAfter, removeCorner, removeRoom, type RectField } from "./editor/ops/rooms.ts";
 import { translate as moveScope, turnQuarterClockwise, type Scope } from "./editor/ops/transform.ts";
 import { Selection, type ItemKind } from "./editor/selection.ts";
+import { SideState } from "./editor/side-state.ts";
+import { renderFloors, type FloorActions } from "./editor/forms/floor.ts";
+import { renderRoomForm, renderRoomList, type RoomActions } from "./editor/forms/room.ts";
+import { floorsSwapped, floorsWith, newFloorFor, unplacedAreas } from "./editor/ops/floors.ts";
+import { spotItems, suggestedSpots } from "./editor/ops/spots.ts";
 import { editorStyles } from "./editor/styles.ts";
 import "./entity-picker.ts";
-import type { HassArea, HassFloor, HomeAssistant } from "../types.ts";
+import type { HassFloor, HomeAssistant } from "../types.ts";
 import { load3d } from "../load3d.ts";
 import type { WallMode } from "../viewer/viewer3d.ts";
 import { furnitureName } from "../furniture-names.ts";
@@ -160,9 +159,6 @@ const NO_STATE_TYPES = new Set(["parking", "stairwell", "rug", "grid_point"]);
 
 export class NfEditor extends LitElement {
   static properties = {
-    _shiftX: { state: true },
-    _shiftAll: { state: true },
-    _shiftZ: { state: true },
     hass: { attribute: false },
     building: { attribute: false },
     narrow: { type: Boolean },
@@ -182,14 +178,10 @@ export class NfEditor extends LitElement {
     _furnQuery: { state: true },
     _libOpen: { state: true },
     _expanded: { state: true },
-    _notice: { state: true },
-    _spots: { state: true },
     _ctx: { state: true },
     _fixedHint: { state: true },
-    _floorMenu: { state: true },
     _openingPreset: { state: true },
     _measureLen: { state: true },
-    _packages: { state: true },
     _rectSize: { state: true },
     _tool: { state: true },
     _draft: { state: true },
@@ -233,14 +225,6 @@ export class NfEditor extends LitElement {
   private declare _libOpen: Set<string>;
   /** Devices whose further entities are unfolded in the device list. */
   private declare _expanded: Set<string>;
-  /** Short confirmation shown after an action (e.g. closed gaps). */
-  private declare _notice: string | null;
-  /** Restore points, loaded when the backup section is opened. */
-  /** Selected room wall (id from generateWalls), to set its height. */
-  private declare _shiftX: number;
-  /** Shift and turn take every floor with them (roof, outdoor areas, meter included). */
-  private declare _shiftAll: boolean;
-  private declare _shiftZ: number;
   /** Open context menu (right-click, long press) at a plan point, for one item. */
   private declare _ctx: { x: number; y: number; kind: FixKind; id: string } | null;
   /** A drag on a fixed item was turned into panning: the hint line says why. */
@@ -250,16 +234,11 @@ export class NfEditor extends LitElement {
   private reframe3d = false;
   private pressTimer = 0;
   private pressStart: [number, number] | null = null;
-  /** The "add floor" menu with the floors of Home Assistant is open. */
-  private declare _floorMenu: boolean;
   /** Kind of opening the opening tool places (the last one chosen). */
   private declare _openingPreset: OpeningPreset;
   /** Length typed for the next wall when drawing by measure, and the size for "rectangle by size". */
   private declare _measureLen: number;
-  /** The package list of the selected room is open. */
-  private declare _packages: boolean;
   private declare _rectSize: [number, number];
-  private declare _spots: { type: FurnitureType; rows: number; cols: number; entity: string | null } | null;
   private declare _tool: Tool;
   private declare _draft: Vec2[];
   private declare _cursor: Vec2 | null;
@@ -270,6 +249,8 @@ export class NfEditor extends LitElement {
   private declare _canRedo: boolean;
 
   private readonly history = new EditHistory<Building>(100);
+  /** State of the floor and room forms in the side panel. */
+  private readonly side = new SideState(() => this.requestUpdate());
   /** What is selected in the plan. */
   private readonly sel = new Selection(() => this.requestUpdate());
   /** What the form modules in editor/forms see of this editor. */
@@ -311,12 +292,6 @@ export class NfEditor extends LitElement {
       // no storage: the defaults stand
     }
     this._expanded = new Set();
-    this._notice = null;
-    this._spots = null;
-    this._shiftX = 0;
-    this._shiftAll = false;
-    this._shiftZ = 0;
-    this._floorMenu = false;
     this._openingPreset = "door";
     let split = false;
     try {
@@ -344,7 +319,6 @@ export class NfEditor extends LitElement {
     this._sidePinned = pinned;
     this._preview = null;
     this._measureLen = 3;
-    this._packages = false;
     this._rectSize = [4, 3];
     this._tool = "select";
     this._draft = [];
@@ -409,7 +383,7 @@ export class NfEditor extends LitElement {
         editor.selectItem("room", null);
         editor.fit();
       },
-      say: (text) => (editor._notice = text),
+      say: (text) => (editor.side.notice = text),
       refresh: () => editor.requestUpdate(),
       packsChanged: () => editor.dispatchEvent(new CustomEvent("packs-changed", { bubbles: true, composed: true })),
     });
@@ -2028,57 +2002,6 @@ export class NfEditor extends LitElement {
 
   // ------------------------------------------------------------------ actions
 
-  /** Floors of Home Assistant's floor registry that no floor of the plan stands for yet, lowest first. */
-  private get freeHaFloors(): HassFloor[] {
-    const used = new Set(this._doc.floors.map((f) => f.ha_floor));
-    return Object.values(this.hass?.floors ?? {})
-      .filter((f) => !used.has(f.floor_id))
-      .sort((a, b) => (a.level ?? 99) - (b.level ?? 99) || a.name.localeCompare(b.name));
-  }
-
-  /** Areas of a floor's Home Assistant floor that have no room in the plan yet. */
-  private unplacedAreas(floor: Floor): HassArea[] {
-    if (!floor.ha_floor) return [];
-    const used = new Set(this._doc.floors.flatMap((f) => f.rooms.map((r) => r.area_id)));
-    return Object.values(this.hass?.areas ?? {})
-      .filter((a) => a.floor_id === floor.ha_floor && !used.has(a.area_id))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  private addFloor(ha: HassFloor | null = null): void {
-    const floors = this._doc.floors;
-    const id = uid("floor");
-    const name = ha?.name ?? (floors.length === 0 ? this.t("default_floor") : this.t("new_floor", { n: floors.length }));
-    const floor = { ...newFloor(id, name, floorElevation(floors, ha?.level)), ha_floor: ha?.floor_id ?? null };
-    const next = structuredClone(this._doc);
-    // floors are kept from bottom to top
-    const at = next.floors.findIndex((f) => f.elevation > floor.elevation);
-    next.floors.splice(at < 0 ? next.floors.length : at, 0, floor);
-    this.setDoc(next);
-    this._floorId = id;
-    this.sel.room = null;
-    this._floorMenu = false;
-    this.fit();
-  }
-
-  /** One room tile per unplaced area of the floor's Home Assistant floor, to drag into place. */
-  private addAreaRooms(floor: Floor): void {
-    const areas = this.unplacedAreas(floor);
-    if (!areas.length) return;
-    const rooms = roomTiles(floor, areas, () => uid("room"));
-    this.change((_, f) => f.rooms.push(...rooms));
-    this.fit();
-  }
-
-  private moveFloor(dir: -1 | 1): void {
-    const i = this._doc.floors.findIndex((f) => f.id === this._floorId);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= this._doc.floors.length) return;
-    const next = structuredClone(this._doc);
-    [next.floors[i], next.floors[j]] = [next.floors[j], next.floors[i]];
-    this.setDoc(next);
-  }
-
   private deleteFloor(): void {
     const floor = this.floor;
     if (!floor || !confirm(this.t("delete_floor_confirm", { name: floor.name }))) return;
@@ -2095,6 +2018,100 @@ export class NfEditor extends LitElement {
   private faceHit(face: RoofFace, p: Vec2): { u: number; s: number } | null {
     if (!face.wall) return pointOnFace(face, p);
     return { u: (p[0] - face.o[0]) * face.eu[0] + (p[1] - face.o[2]) * face.eu[2], s: Number.NaN };
+  }
+
+  // ------------------------------------------------------------------ floors and rooms
+
+  private addFloor(from: HassFloor | null = null): void {
+    const floor = newFloorFor(this._doc, from, { first: this.t("default_floor"), next: (n) => this.t("new_floor", { n }) });
+    const next = structuredClone(this._doc);
+    next.floors = floorsWith(next.floors, floor);
+    this.setDoc(next);
+    this._floorId = floor.id;
+    this.sel.room = null;
+    this.side.floorMenu = false;
+    this.fit();
+  }
+
+  /** One room tile per area of the floor's Home Assistant floor that has no room yet, to drag into place. */
+  private addAreaRooms(floor: Floor): void {
+    const areas = unplacedAreas(this._doc, floor, this.hass?.areas);
+    if (areas.length === 0) return;
+    const tiles = roomTiles(floor, areas, () => uid("room"));
+    this.change((_, f) => f.rooms.push(...tiles));
+    this.fit();
+  }
+
+  private moveFloor(direction: -1 | 1): void {
+    const id = this._floorId;
+    if (!id) return;
+    const order = floorsSwapped(this._doc.floors, id, direction);
+    if (order.every((f, i) => f.id === this._doc.floors[i].id)) return;
+    const next = structuredClone(this._doc);
+    next.floors = order.map((f) => next.floors.find((x) => x.id === f.id)!);
+    this.setDoc(next);
+  }
+
+  private floorActions(): FloorActions {
+    return {
+      openFloor: (id) => {
+        this._floorId = id;
+        this.sel.room = null;
+        this.sel.corner = null;
+        this._draft = [];
+        this.fit();
+      },
+      addFloor: (from) => this.addFloor(from),
+      moveFloor: (direction) => this.moveFloor(direction),
+      deleteFloor: () => this.deleteFloor(),
+      addAreaRooms: (floor) => this.addAreaRooms(floor),
+      closeGaps: () => this.closeFloorGaps(),
+      shift: () => this.shiftFloor(this.side.shiftX, this.side.shiftZ),
+      turn: () => this.turnFloor(),
+      rememberView: () => this.rememberFloorView(),
+    };
+  }
+
+  private roomActions(room: Room): RoomActions {
+    return {
+      select: (id) => this.selectItem("room", id),
+      patch: (patch) => this.updateRoom(patch),
+      setArea: (id) => this.setArea(id),
+      setRect: (field, value) => this.setRect(field, value),
+      setCorner: (index, axis, value) => this.setPoint(index, axis, value),
+      removeCorner: (index) => this.deleteVertex(index),
+      duplicate: () => this.duplicateRoom(),
+      remove: () => this.deleteRoom(),
+      rememberView: () => this.rememberRoomView(),
+      applyPackage: (pkg) => this.applyPackage(room, pkg),
+      openSpots: () => {
+        const lights = this.hass ? areaEntities(this.hass, room.area_id).filter((id) => id.startsWith("light.")) : [];
+        this.side.spots = suggestedSpots(room, lights);
+      },
+      placeSpots: () => this.placeSpots(room),
+      lockButton: this.fixButton("room", room.id),
+      wallHeights: this.renderEdgeHeights(room),
+      climate: this.renderRoomClimate(room),
+      corner: this.sel.corner,
+    };
+  }
+
+  /** Adds the furniture of a room package. Lamps link to the lights of the room by themselves. */
+  private applyPackage(room: Room, pkg: PackageId): void {
+    if (!this.isAdmin) return;
+    const items = furnishRoom(room, pkg, () => uid("furniture"));
+    this.change((_, floor) => floor.furniture.push(...items));
+    this.side.packages = false;
+    this.side.notice = this.t("pkg_done", { n: items.length });
+  }
+
+  private placeSpots(room: Room): void {
+    const draft = this.side.spots;
+    if (!draft || !this.isAdmin) return;
+    const items = spotItems(room, draft);
+    this.change((_, floor) => floor.furniture.push(...items));
+    this.side.spots = null;
+    this.side.notice = this.t("spots_placed", { n: items.length });
   }
 
   // ------------------------------------------------------------------ editing the plan
@@ -2276,15 +2293,15 @@ export class NfEditor extends LitElement {
   }
 
   private shiftScope(): Scope {
-    return { floorId: this._floorId, allFloors: this._shiftAll };
+    return { floorId: this._floorId, allFloors: this.side.shiftAll };
   }
 
   /** Moves everything on the floor (or on every floor) by the typed distance. */
   private shiftFloor(dx: number, dz: number): void {
     if (!this.isAdmin || (!dx && !dz)) return;
     this.change((doc) => moveScope(doc, this.shiftScope(), dx, dz));
-    this._shiftX = 0;
-    this._shiftZ = 0;
+    this.side.shiftX = 0;
+    this.side.shiftZ = 0;
   }
 
   /** Turns the floor, or the whole house, a quarter clockwise: for a floor that was drawn the wrong way round. */
@@ -2575,7 +2592,7 @@ export class NfEditor extends LitElement {
 
   /** Selects one item (or none of that kind) of the plan. */
   private selectItem(kind: ItemKind, id: string | null): void {
-    this._notice = null;
+    this.side.notice = null;
     // a selection made in the plan, or by a tool, opens the folded sidebar
     if (id) this._sideOpen = true;
     this.sel.select(kind, id, {
@@ -2765,7 +2782,7 @@ export class NfEditor extends LitElement {
     if (!floor || !this.isAdmin) return;
     const { rooms, gaps } = closeGaps(floor.rooms);
     if (!gaps.length) {
-      this._notice = this.t("gaps_none");
+      this.side.notice = this.t("gaps_none");
       return;
     }
     const thickness = suggestedThickness(gaps);
@@ -2773,7 +2790,7 @@ export class NfEditor extends LitElement {
       f.rooms = rooms;
       if (thickness) doc.settings.wall_interior = thickness;
     });
-    this._notice = thickness
+    this.side.notice = thickness
       ? this.t("gaps_closed_wall", { n: gaps.length, t: formatNumber(this.hass, thickness, 2) })
       : this.t("gaps_closed", { n: gaps.length });
   }
@@ -3570,10 +3587,8 @@ export class NfEditor extends LitElement {
   }
 
   private renderSide(floor: Floor | undefined) {
-    const floors = this._doc?.floors ?? [];
     const room = this.room;
     const admin = this.isAdmin;
-    const areas = Object.values(this.hass?.areas ?? {}).sort((a, b) => a.name.localeCompare(b.name));
     if (this._tool === "roof") return renderRoofPanel(this.roofDeps());
     if (this._tool === "energy") return this.renderEnergyPanel();
     // furnishing: the library and the selected item come first
@@ -3601,106 +3616,11 @@ export class NfEditor extends LitElement {
     }
     if (room && this._tool !== "measure") {
       return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("room", null)}>‹ ${this.t("back_to_floor")}</button>
-        ${this.renderRoomForm(room, areas)} ${this.renderDeviceList(room)}`;
+        ${renderRoomForm(this.host, this.side, room, this.roomActions(room))} ${this.renderDeviceList(room)}`;
     }
     return html`
       ${admin ? nothing : html`<p class="nf-note">${this.t("read_only")}</p>`}
-      <section>
-        <h3>${this.t("floors")}</h3>
-        <div class="nf-floor-list">
-          ${[...floors].reverse().map(
-            (f) => html`<button
-              class="nf-chip"
-              aria-pressed=${f.id === this._floorId}
-              @click=${() => {
-                this._floorId = f.id;
-                this.sel.room = null;
-                this.sel.corner = null;
-                this._draft = [];
-                this.fit();
-              }}
-            >
-              ${f.name}
-            </button>`,
-          )}
-          ${admin
-            ? html`<button
-                class="nf-btn"
-                aria-expanded=${this._floorMenu}
-                @click=${() => (this.freeHaFloors.length ? (this._floorMenu = !this._floorMenu) : this.addFloor())}
-              >
-                + ${this.t("add_floor")}
-              </button>`
-            : nothing}
-        </div>
-        ${admin && this._floorMenu
-          ? html`<div class="nf-floor-menu">
-              <p class="nf-sub">${this.t("floor_from_ha")}</p>
-              ${this.freeHaFloors.map(
-                (f) => html`<button class="nf-btn" @click=${() => this.addFloor(f)}>
-                  ${f.name}${f.level != null ? html` <span class="nf-sub">· ${this.t("level", { n: f.level })}</span>` : nothing}
-                </button>`,
-              )}
-              <button class="nf-btn" @click=${() => this.addFloor()}>${this.t("floor_empty")}</button>
-            </div>`
-          : nothing}
-        ${floor
-          ? html`<div class="nf-form">
-              <label class="nf-field nf-wide"
-                >${this.t("floor_name")}
-                <input .value=${floor.name} ?disabled=${!admin} @change=${(e: Event) => this.updateFloor({ name: (e.target as HTMLInputElement).value })}
-              /></label>
-              ${this.num(this.t("elevation"), floor.elevation, (v) => this.updateFloor({ elevation: v }))}
-              ${admin
-                ? html`<div class="nf-field nf-wide nf-shift" title=${this.t("floor_shift_hint")}>
-                    <span>${this.t("floor_shift")}</span>
-                    <input type="number" step="0.05" .value=${String(this._shiftX)} aria-label="X" @change=${(e: Event) => (this._shiftX = Number((e.target as HTMLInputElement).value) || 0)} />
-                    <input type="number" step="0.05" .value=${String(this._shiftZ)} aria-label="Z" @change=${(e: Event) => (this._shiftZ = Number((e.target as HTMLInputElement).value) || 0)} />
-                    <button class="nf-btn" ?disabled=${!this._shiftX && !this._shiftZ} @click=${() => this.shiftFloor(this._shiftX, this._shiftZ)}>${this.t("floor_shift_apply")}</button>
-                    <button class="nf-btn" title=${this.t("floor_turn_hint")} @click=${() => this.turnFloor()}>${this.t("floor_turn")}</button>
-                    <button class="nf-btn" title=${this.t("floor_start_view_hint")} @click=${() => this.rememberFloorView()}>${this.t("floor_start_view")}</button>
-                    ${floor.start_view ? html`<button class="nf-btn" title=${this.t("floor_start_view_reset")} @click=${() => this.updateFloor({ start_view: null })}>↺</button>` : nothing}
-                    <label class="nf-check nf-wide" title=${this.t("floor_shift_all_hint")}
-                      ><input type="checkbox" .checked=${this._shiftAll} @change=${(ev: Event) => (this._shiftAll = (ev.target as HTMLInputElement).checked)} />
-                      ${this.t("floor_shift_all")}</label
-                    >
-                  </div>`
-                : nothing}
-              ${this.num(this.t("height"), floor.height, (v) => this.updateFloor({ height: Math.max(1, v) }), 0.05, 1)}
-              ${Object.keys(this.hass?.floors ?? {}).length
-                ? html`<label class="nf-field nf-wide"
-                    >${this.t("ha_floor")}
-                    <select ?disabled=${!admin} @change=${(e: Event) => this.updateFloor({ ha_floor: (e.target as HTMLSelectElement).value || null })}>
-                      <option value="" ?selected=${!floor.ha_floor}>${this.t("no_ha_floor")}</option>
-                      ${Object.values(this.hass?.floors ?? {})
-                        .filter((f) => f.floor_id === floor.ha_floor || !floors.some((x) => x.ha_floor === f.floor_id))
-                        .map((f) => html`<option value=${f.floor_id} ?selected=${f.floor_id === floor.ha_floor}>${f.name}</option>`)}
-                    </select></label
-                  >`
-                : nothing}
-              ${admin && this.unplacedAreas(floor).length
-                ? html`<div class="nf-actions nf-wide">
-                    <button class="nf-btn nf-primary" title=${this.t("area_rooms_hint")} @click=${() => this.addAreaRooms(floor)}>
-                      ${this.t("area_rooms", { n: this.unplacedAreas(floor).length })}
-                    </button>
-                  </div>`
-                : nothing}
-              ${admin
-                ? html`<div class="nf-actions nf-wide">
-                    <button class="nf-btn" @click=${() => this.moveFloor(1)}>${this.t("move_up")}</button>
-                    <button class="nf-btn" @click=${() => this.moveFloor(-1)}>${this.t("move_down")}</button>
-                    <button class="nf-btn nf-danger" @click=${() => this.deleteFloor()}>${this.t("delete_floor")}</button>
-                  </div>
-                  <div class="nf-actions nf-wide">
-                    <button class="nf-btn" title=${this.t("gaps_hint")} ?disabled=${floor.rooms.length < 2} @click=${() => this.closeFloorGaps()}>
-                      ${this.t("gaps_close")}
-                    </button>
-                  </div>
-                  ${this._notice ? html`<p class="nf-sub nf-wide nf-notice">${this._notice}</p>` : nothing}`
-                : nothing}
-            </div>`
-          : nothing}
-      </section>
+      ${renderFloors(this.host, this.side, this.floorActions(), floor, this._floorId)}
       ${this._tool === "measure" && floor
         ? this.renderMeasureForm()
         : this.freeWall
@@ -3714,9 +3634,9 @@ export class NfEditor extends LitElement {
           : this.device
             ? this.renderDeviceForm(this.device)
           : room
-            ? html`${this.renderRoomForm(room, areas)} ${this.renderDeviceList(room)}`
+            ? html`${renderRoomForm(this.host, this.side, room, this.roomActions(room))} ${this.renderDeviceList(room)}`
             : floor
-              ? this.renderRoomList(floor)
+              ? renderRoomList(this.host, floor, { select: (id) => this.selectItem("room", id) })
               : nothing}
       ${admin ? renderStartView(this.host, () => this.paneView()) : nothing} ${admin ? renderFavorites(this.host) : nothing}
       ${renderHelpLinks(this.host)}
@@ -3724,160 +3644,6 @@ export class NfEditor extends LitElement {
       ${floor && admin ? renderBackgroundForm(this.host, this.bg, floor) : nothing} ${admin ? renderSettings(this.host, this.settingsActions) : nothing}
       ${admin ? renderBackup(this.host, this.backup) : nothing}
     `;
-  }
-
-  private renderRoomList(floor: Floor) {
-    if (!floor.rooms.length) return nothing;
-    return html`<section>
-      <h3>${this.t("rooms")}</h3>
-      <div class="nf-room-list">
-        ${floor.rooms.map(
-          (r) => html`<button class="nf-row" @click=${() => this.selectItem("room", r.id)}>
-            <span>${r.name}</span><span class="nf-muted">${this.t("area_m2", { a: formatNumber(this.hass, polygonArea(r.points), 1) })}</span>
-          </button>`,
-        )}
-      </div>
-    </section>`;
-  }
-
-  private renderRoomForm(room: Room, areas: { area_id: string; name: string }[]) {
-    const admin = this.isAdmin;
-    const rect = isAxisRect(room.points);
-    const b = bounds(room.points);
-    return html`<section>
-      <div class="nf-h3row"><h3>${this.t("room")}</h3>${this.fixButton("room", room.id)}</div>
-      <div class="nf-form">
-        <label class="nf-field nf-wide"
-          >${this.t("room_name")}
-          <input .value=${room.name} ?disabled=${!admin} @change=${(e: Event) => this.updateRoom({ name: (e.target as HTMLInputElement).value })}
-        /></label>
-        <label class="nf-field nf-wide"
-          >${this.t("area")}
-          <select ?disabled=${!admin} @change=${(e: Event) => this.setArea((e.target as HTMLSelectElement).value)}>
-            <option value="" ?selected=${!room.area_id}>${this.t("no_area")}</option>
-            ${areas.map((a) => html`<option value=${a.area_id} ?selected=${a.area_id === room.area_id}>${a.name}</option>`)}
-          </select></label
-        >
-        <label class="nf-field nf-wide"
-          >${this.t("material")}
-          <select ?disabled=${!admin} @change=${(e: Event) => this.updateRoom({ floor_material: (e.target as HTMLSelectElement).value })}>
-            ${FLOOR_MATERIALS.map((m) => html`<option value=${m} ?selected=${m === room.floor_material}>${this.t(`mat_${m}` as I18nKey)}</option>`)}
-          </select></label
-        >
-        ${rect
-          ? html`${this.num(this.t("x"), b.x0, (v) => this.setRect("x", v))} ${this.num(this.t("z"), b.z0, (v) => this.setRect("z", v))}
-            ${this.num(this.t("width"), b.x1 - b.x0, (v) => this.setRect("w", v), 0.01, 0.05)}
-            ${this.num(this.t("depth"), b.z1 - b.z0, (v) => this.setRect("d", v), 0.01, 0.05)}`
-          : nothing}
-      </div>
-      <div class="nf-actions">
-        <button class="nf-btn" title=${this.t("room_start_view_hint")} ?disabled=${!admin} @click=${() => this.rememberRoomView()}>${this.t("room_start_view")}</button>
-        ${room.start_view ? html`<button class="nf-btn" title=${this.t("room_start_view_reset")} ?disabled=${!admin} @click=${() => this.updateRoom({ start_view: null })}>↺</button>` : nothing}
-      </div>
-      ${this.renderEdgeHeights(room)} ${this.renderRoomClimate(room)}
-      <details class="nf-points" ?open=${!rect}>
-        <summary>${this.t("points")} (${room.points.length})</summary>
-        ${room.points.map(
-          (p, i) => html`<div class="nf-point ${i === this.sel.corner ? "nf-point-sel" : ""}">
-            <span class="nf-muted">${i + 1}</span>
-            ${this.num(this.t("x"), p[0], (v) => this.setPoint(i, 0, v))} ${this.num(this.t("z"), p[1], (v) => this.setPoint(i, 1, v))}
-            ${admin
-              ? html`<button class="nf-btn" title=${this.t("delete_point")} ?disabled=${room.points.length <= 3} @click=${() => this.deleteVertex(i)}>
-                  ×
-                </button>`
-              : nothing}
-          </div>`,
-        )}
-      </details>
-      ${admin
-        ? html`<div class="nf-actions">
-            <button class="nf-btn nf-primary" @click=${() => (this._packages = !this._packages)}>${this.t("pkg_open")}</button>
-            <button class="nf-btn" @click=${() => this.openSpotForm(room)}>${this.t("spots_place")}</button>
-            <button class="nf-btn" @click=${() => this.duplicateRoom()}>${this.t("duplicate")}</button>
-            <button class="nf-btn nf-danger" @click=${() => this.deleteRoom()}>${this.t("delete")}</button>
-          </div>`
-        : nothing}
-      ${this._spots ? this.renderSpotForm(room) : nothing}
-      ${this._packages
-        ? html`<div class="nf-packages">
-            ${PACKAGES.map(
-              (p) => html`<button class="nf-btn" @click=${() => this.applyPackage(room, p)}>
-                <b>${this.t(`pkg_${p}` as I18nKey)}</b><span>${this.t(`pkg_${p}_desc` as I18nKey)}</span>
-              </button>`,
-            )}
-            <p class="nf-sub">${this.t("pkg_hint")}</p>
-          </div>`
-        : nothing}
-    </section>`;
-  }
-
-  /** Adds the furniture of a room package (lamps link to the room's lights automatically). */
-  private applyPackage(room: Room, pkg: PackageId): void {
-    if (!this.isAdmin) return;
-    const items = furnishRoom(room, pkg, () => uid("furniture"));
-    this.change((_, floor) => floor.furniture.push(...items));
-    this._packages = false;
-    this._notice = this.t("pkg_done", { n: items.length });
-  }
-
-  /** Suggests about one spot per 1.2 m in each direction, and the room's first light. */
-  private openSpotForm(room: Room): void {
-    const b = bounds(room.points);
-    const lights = this.hass ? areaEntities(this.hass, room.area_id).filter((id) => id.startsWith("light.")) : [];
-    this._spots = {
-      type: "lamp_downlight",
-      rows: Math.max(1, Math.round((b.z1 - b.z0) / 1.2)),
-      cols: Math.max(1, Math.round((b.x1 - b.x0) / 1.2)),
-      entity: lights[0] ?? null,
-    };
-  }
-
-  private placeSpots(room: Room): void {
-    const f = this._spots;
-    if (!f || !this.isAdmin) return;
-    const [w, d, h] = FURNITURE_SIZE[f.type];
-    const items = spotGrid(room, f.rows, f.cols).map(([x, z]) => ({
-      id: uid("furniture"),
-      type: f.type,
-      x,
-      z,
-      rotation: 0,
-      w,
-      d,
-      h,
-      variant: null,
-      // every spot of the grid follows the same light (spots on one dimmer); "none" = not linked
-      entity: f.entity ?? "none",
-      power: null,
-    }));
-    this.change((_, floor) => floor.furniture.push(...items));
-    this._spots = null;
-    this._notice = this.t("spots_placed", { n: items.length });
-  }
-
-  private renderSpotForm(room: Room) {
-    const f = this._spots!;
-    const count = spotGrid(room, f.rows, f.cols).length;
-    const lights = this.entityOptions((id) => /^(light|switch|input_boolean)\./.test(id));
-    const set = (patch: Partial<NonNullable<NfEditor["_spots"]>>) => (this._spots = { ...f, ...patch });
-    return html`<div class="nf-form nf-spot-form">
-      <label class="nf-field nf-wide"
-        >${this.t("spots_type")}
-        <select @change=${(e: Event) => set({ type: (e.target as HTMLSelectElement).value as FurnitureType })}>
-          ${(["lamp_downlight", "lamp_spot", "lamp_panel", "lamp_ceiling"] as FurnitureType[]).map(
-            (t) => html`<option value=${t} ?selected=${t === f.type}>${this.t(`furn_${t}` as I18nKey)}</option>`,
-          )}
-        </select></label
-      >
-      ${this.num(this.t("spots_cols"), f.cols, (v) => set({ cols: Math.max(1, Math.min(12, Math.round(v))) }), 1, 1)}
-      ${this.num(this.t("spots_rows"), f.rows, (v) => set({ rows: Math.max(1, Math.min(12, Math.round(v))) }), 1, 1)}
-      ${this.entitySelect(this.t("furn_entity_light"), f.entity, undefined, lights, (v) => set({ entity: v === "none" ? null : v }))}
-      <div class="nf-actions nf-wide">
-        <button class="nf-btn nf-primary" ?disabled=${!count} @click=${() => this.placeSpots(room)}>${this.t("spots_add", { n: count })}</button>
-        <button class="nf-btn" @click=${() => (this._spots = null)}>${this.t("cancel")}</button>
-      </div>
-      <p class="nf-sub nf-wide">${this.t("spots_hint")}</p>
-    </div>`;
   }
 
   /** Whether an opening sits in an exterior wall (decides the automatic door style). */

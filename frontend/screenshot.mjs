@@ -95,6 +95,7 @@ e.turnFloor(); out.turned = e._doc.floors[0].furniture[0].rotation !== f.furnitu
 for (let i = 0; i < 40; i++) e.undo(); out.undoneAll = snap() === start;
 e.redo(); out.canRedo = e._canRedo;
 window.__smoke = out;` },
+  { name: "editor-room", query: "", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; e.selectItem('room', e._doc.floors[0].rooms[0].id); e.side.packages = true;" },
   { name: "editor-roof", query: "", width: 1500, height: 950, editor: true, click: "Dach" },
   { name: "extensions", query: "", width: 1280, height: 950, click: "✦ Erweiterungen", wait: 800 },
   // other devices

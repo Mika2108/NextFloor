@@ -1,84 +1,117 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { alertEntities, alertSources, alertText, findAlerts } from "./alerts.ts";
+import { alertColor, alertEntities, alertSources, alertText, findAlerts, RAIN_STATES } from "./alerts.ts";
 import type { OpeningEntities } from "./devices.ts";
 import { emptyBuilding, newFloor, type Opening } from "./model.ts";
 import type { HomeAssistant } from "./types.ts";
 
-function setup() {
-  const st = (entity_id: string, state: string, attributes: Record<string, unknown> = {}) => ({ entity_id, state, attributes });
+type Attrs = Record<string, unknown>;
+const entity = (entity_id: string, state: string, attributes: Attrs = {}) => ({ entity_id, state, attributes });
+
+/** A two-room house with a smoke detector, a leak sensor, a window contact, an alarm panel and a weather entity. */
+function house() {
   const hass = {
-    language: "de",
-    areas: { kueche: { area_id: "kueche", name: "Küche" }, bad: { area_id: "bad", name: "Bad" } },
+    language: "en",
+    areas: { lounge: { area_id: "lounge", name: "Lounge" }, wc: { area_id: "wc", name: "WC" } },
     entities: {
-      "binary_sensor.rauch": { entity_id: "binary_sensor.rauch", area_id: "kueche" },
-      "binary_sensor.wasser": { entity_id: "binary_sensor.wasser", area_id: "bad" },
-      "binary_sensor.fenster": { entity_id: "binary_sensor.fenster", area_id: "kueche" },
+      "binary_sensor.smoke": { entity_id: "binary_sensor.smoke", area_id: "lounge" },
+      "binary_sensor.leak": { entity_id: "binary_sensor.leak", area_id: "wc" },
+      "binary_sensor.casement": { entity_id: "binary_sensor.casement", area_id: "lounge" },
+      "sensor.smoke_level": { entity_id: "sensor.smoke_level", area_id: "lounge" },
     },
     states: {
-      "binary_sensor.rauch": st("binary_sensor.rauch", "off", { device_class: "smoke", friendly_name: "Rauchmelder" }),
-      "binary_sensor.wasser": st("binary_sensor.wasser", "off", { device_class: "moisture", friendly_name: "Wassermelder" }),
-      "binary_sensor.fenster": st("binary_sensor.fenster", "on", { device_class: "window", friendly_name: "Küche Fenster" }),
-      "weather.zuhause": st("weather.zuhause", "sunny"),
-      "alarm_control_panel.haus": st("alarm_control_panel.haus", "disarmed"),
+      "binary_sensor.smoke": entity("binary_sensor.smoke", "off", { device_class: "smoke", friendly_name: "Smoke detector" }),
+      "binary_sensor.leak": entity("binary_sensor.leak", "off", { device_class: "moisture", friendly_name: "Leak sensor" }),
+      "binary_sensor.casement": entity("binary_sensor.casement", "off", { device_class: "window", friendly_name: "Casement" }),
+      "sensor.smoke_level": entity("sensor.smoke_level", "3", { device_class: "smoke" }),
+      "weather.home": entity("weather.home", "sunny"),
+      "alarm_control_panel.house": entity("alarm_control_panel.house", "disarmed"),
     },
   } as unknown as HomeAssistant;
-  const b = emptyBuilding();
-  const floor = newFloor("eg", "EG", 0);
+
+  const building = emptyBuilding();
+  const floor = newFloor("g", "Ground", 0);
   floor.rooms = [
-    { id: "k", name: "Küche", area_id: "kueche", points: [[0, 0], [4, 0], [4, 3], [0, 3]], floor_material: "tiles" },
-    { id: "b", name: "Bad", area_id: "bad", points: [[4, 0], [7, 0], [7, 3], [4, 3]], floor_material: "tiles" },
+    { id: "lounge", name: "Lounge", area_id: "lounge", points: [[0, 0], [4, 0], [4, 3], [0, 3]], floor_material: "wood" },
+    { id: "wc", name: "WC", area_id: "wc", points: [[4, 0], [6, 0], [6, 3], [4, 3]], floor_material: "tiles" },
   ];
-  const win: Opening = { id: "w", room_id: "k", edge: 0, offset: 2, width: 1.2, type: "window", sill: 0.9, height: 1.3, hinge: "left", leaves: 1, swing: "in", cover: null, contact: "binary_sensor.fenster", contact2: null, tilt: null };
-  floor.openings = [win];
-  b.floors = [floor];
-  const links = new Map<string, OpeningEntities>([["w", { cover: null, contact: "binary_sensor.fenster", tilt: null }]]);
-  return { hass, b, links };
+  const window: Opening = { id: "w1", room_id: "lounge", edge: 0, offset: 1, width: 1.2, type: "window", sill: 0.9, height: 1.3, hinge: "left", leaves: 1, swing: "in", cover: null, contact: "binary_sensor.casement", contact2: null, tilt: null };
+  floor.openings = [window];
+  building.floors = [floor];
+  const links = new Map<string, OpeningEntities>([["w1", { cover: null, contact: "binary_sensor.casement", tilt: null }]]);
+  return { hass, building, links };
 }
 
-test("warning sensors, the alarm and the weather are found once and watched", () => {
-  const { hass, b } = setup();
-  const src = alertSources(hass, b);
-  assert.deepEqual(src.rooms.map((r) => [r.roomId, r.sensors]), [["k", ["binary_sensor.rauch"]], ["b", ["binary_sensor.wasser"]]]);
-  assert.deepEqual(src.alarms, ["alarm_control_panel.haus"]);
-  assert.equal(src.weather, "weather.zuhause");
-  assert.deepEqual(alertEntities(src).sort(), ["alarm_control_panel.haus", "binary_sensor.rauch", "binary_sensor.wasser", "weather.zuhause"]);
+const set = (hass: HomeAssistant, id: string, state: string) => {
+  hass.states[id] = { ...hass.states[id], state };
+};
+
+test("only binary sensors with a warning class are picked, per room", () => {
+  const { hass, building } = house();
+  const sources = alertSources(hass, building);
+  assert.deepEqual(sources.rooms, [
+    { floorId: "g", roomId: "lounge", sensors: ["binary_sensor.smoke"] },
+    { floorId: "g", roomId: "wc", sensors: ["binary_sensor.leak"] },
+  ]);
+  assert.deepEqual(sources.alarms, ["alarm_control_panel.house"]);
+  assert.equal(sources.weather, "weather.home");
+  assert.equal(alertEntities(sources).length, 4);
 });
 
-test("smoke and water raise room warnings, a triggered alarm a house-wide one", () => {
-  const { hass, b, links } = setup();
-  const src = alertSources(hass, b);
-  assert.deepEqual(findAlerts(hass, b, src, links), []);
-  hass.states["binary_sensor.rauch"].state = "on";
-  hass.states["binary_sensor.wasser"].state = "on";
-  hass.states["alarm_control_panel.haus"].state = "triggered";
-  const alerts = findAlerts(hass, b, src, links);
-  assert.deepEqual(
-    alerts.map((a) => [a.kind, a.roomId]),
-    [["smoke", "k"], ["water", "b"], ["alarm", null]],
-  );
-  assert.equal(alertText(hass, b, alerts[0]), "Küche · Rauch: Rauchmelder");
-  assert.equal(alertText(hass, b, alerts[2]), "Alarm ausgelöst");
-  hass.states["alarm_control_panel.haus"].state = "pending";
-  assert.equal(findAlerts(hass, b, src, links).at(-1)?.kind, "alarm_pending");
+test("the rain warning can be switched off, which also stops watching the weather", () => {
+  const { hass, building } = house();
+  building.settings.rain_warning = false;
+  const sources = alertSources(hass, building);
+  assert.equal(sources.weather, null);
+  assert.ok(!alertEntities(sources).includes("weather.home"));
 });
 
-test("an open window only warns while it rains", () => {
-  const { hass, b, links } = setup();
-  const src = alertSources(hass, b);
-  assert.equal(findAlerts(hass, b, src, links).length, 0);
-  hass.states["weather.zuhause"].state = "rainy";
-  const alerts = findAlerts(hass, b, src, links);
-  assert.deepEqual(alerts.map((a) => [a.kind, a.roomId, a.entity]), [["window_rain", "k", "binary_sensor.fenster"]]);
-  // a closed window is fine in the rain
-  hass.states["binary_sensor.fenster"].state = "off";
-  assert.equal(findAlerts(hass, b, src, links).length, 0);
+test("a quiet house has no warnings", () => {
+  const { hass, building, links } = house();
+  assert.deepEqual(findAlerts(hass, building, alertSources(hass, building), links), []);
 });
 
-test("the rain warning can be switched off on its own", () => {
-  const { hass, b, links } = setup();
-  hass.states["weather.zuhause"].state = "rainy";
-  b.settings.rain_warning = false;
-  const alerts = findAlerts(hass, b, alertSources(hass, b), links);
-  assert.equal(alerts.filter((a) => a.kind === "window_rain").length, 0);
+test("sensors and the alarm panel raise warnings, pending is its own kind", () => {
+  const { hass, building, links } = house();
+  const sources = alertSources(hass, building);
+  set(hass, "binary_sensor.smoke", "on");
+  set(hass, "binary_sensor.leak", "on");
+  set(hass, "alarm_control_panel.house", "pending");
+  let found = findAlerts(hass, building, sources, links);
+  assert.deepEqual(found.map((a) => [a.kind, a.roomId]), [["smoke", "lounge"], ["water", "wc"], ["alarm_pending", null]]);
+  set(hass, "alarm_control_panel.house", "triggered");
+  found = findAlerts(hass, building, sources, links);
+  assert.equal(found.at(-1)?.kind, "alarm");
+  assert.equal(found.at(-1)?.floorId, null);
+});
+
+test("an open window warns only while it rains", () => {
+  const { hass, building, links } = house();
+  const sources = alertSources(hass, building);
+  set(hass, "binary_sensor.casement", "on");
+  assert.equal(findAlerts(hass, building, sources, links).length, 0, "dry weather");
+  for (const rain of RAIN_STATES) {
+    set(hass, "weather.home", rain);
+    const [warning] = findAlerts(hass, building, sources, links);
+    assert.equal(warning?.kind, "window_rain");
+    assert.equal(warning?.roomId, "lounge");
+    assert.equal(warning?.entity, "binary_sensor.casement");
+  }
+  set(hass, "binary_sensor.casement", "off");
+  assert.equal(findAlerts(hass, building, sources, links).length, 0, "closed window in the rain");
+});
+
+test("colours: leaks are blue, pending is orange, the rest is red", () => {
+  assert.deepEqual(alertColor("smoke"), alertColor("alarm"));
+  assert.ok(alertColor("water")[2] > alertColor("water")[0]);
+  assert.ok(alertColor("alarm_pending")[0] > alertColor("alarm_pending")[2]);
+});
+
+test("the banner text names the room when there is one", () => {
+  const { hass, building } = house();
+  const inRoom = alertText(hass, building, { kind: "smoke", entity: "binary_sensor.smoke", roomId: "lounge", floorId: "g" });
+  assert.ok(inRoom.startsWith("Lounge · "), inRoom);
+  assert.ok(inRoom.includes("Smoke detector"), inRoom);
+  const houseWide = alertText(hass, building, { kind: "alarm", entity: "alarm_control_panel.house", roomId: null, floorId: null });
+  assert.ok(!houseWide.includes(" · "), houseWide);
 });

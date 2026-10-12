@@ -1,70 +1,89 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { Building, Room } from "./model.ts";
-import { emptyBuilding, newFloor } from "./model.ts";
+import { emptyBuilding, newFloor, type Building, type Room } from "./model.ts";
 import { floorCounts, floorInfoText, initials, personsInRooms, roomForState } from "./presence.ts";
-import type { HassEntity, HomeAssistant } from "./types.ts";
+import type { HomeAssistant } from "./types.ts";
 
-const st = (entity_id: string, state: string, attributes: Record<string, unknown> = {}): HassEntity => ({ entity_id, state, attributes });
+type Attrs = Record<string, unknown>;
+const entity = (entity_id: string, state: string, attributes: Attrs = {}) => ({ entity_id, state, attributes });
 
-function rect(id: string, name: string, area: string | null, x0: number): Room {
-  return { id, name, area_id: area, points: [[x0, 0], [x0 + 4, 0], [x0 + 4, 3], [x0, 3]], floor_material: "wood" };
-}
+const room = (id: string, name: string, area: string | null, x: number): Room => ({ id, name, area_id: area, points: [[x, 0], [x + 4, 0], [x + 4, 3], [x, 3]], floor_material: "wood" });
 
-function setup(): { hass: HomeAssistant; building: Building } {
-  const building = emptyBuilding();
-  building.floors = [{ ...newFloor("eg", "EG", 0), rooms: [rect("r1", "Wohnen", "living_room", 0), rect("r2", "Küche", "kitchen", 4)] }];
+function home(states: Record<string, [string, Attrs?]>) {
+  const building: Building = emptyBuilding();
+  const floor = newFloor("g", "Ground", 0);
+  floor.rooms = [room("lr", "Living Room", "living_room", 0), room("ki", "Kitchen", "kitchen", 4)];
+  building.floors = [floor];
   building.presence = [
-    { person: "person.mia", sensor: "sensor.mia_area" },
-    { person: "person.tom", sensor: "sensor.tom_room" },
-    { person: "person.lea", sensor: "sensor.lea_area" },
+    { person: "person.ann", sensor: "sensor.ann_room" },
+    { person: "person.bob", sensor: "sensor.bob_room" },
+    { person: "person.cy", sensor: null },
   ];
-  const hass: HomeAssistant = {
-    language: "de",
-    connection: {} as HomeAssistant["connection"],
-    callWS: async () => undefined as never,
-    callService: async () => undefined,
-    areas: { living_room: { area_id: "living_room", name: "Wohnzimmer" }, kitchen: { area_id: "kitchen", name: "Kitchen" } },
-    entities: { "light.a": { entity_id: "light.a", area_id: "kitchen" } },
-    states: Object.fromEntries(
-      [
-        st("person.mia", "home", { friendly_name: "Mia Muster" }),
-        st("sensor.mia_area", "Wohnzimmer"),
-        st("person.tom", "home", { friendly_name: "Tom" }),
-        st("sensor.tom_room", "kitchen"),
-        st("person.lea", "not_home", { friendly_name: "Lea" }),
-        st("sensor.lea_area", "Wohnzimmer"),
-        st("light.a", "on"),
-      ].map((s) => [s.entity_id, s]),
-    ),
-  };
+  const hass = {
+    language: "en",
+    areas: { living_room: { area_id: "living_room", name: "Lounge" }, kitchen: { area_id: "kitchen", name: "Kitchen" } },
+    states: Object.fromEntries(Object.entries(states).map(([id, [state, attrs]]) => [id, entity(id, state, attrs)])),
+  } as unknown as HomeAssistant;
   return { hass, building };
 }
 
-test("room sensor states match room names, area names and area ids", () => {
-  const { hass, building } = setup();
-  assert.equal(roomForState(hass, building, "Wohnzimmer")?.room.id, "r1");
-  assert.equal(roomForState(hass, building, "living_room")?.room.id, "r1");
-  assert.equal(roomForState(hass, building, "küche")?.room.id, "r2");
-  assert.equal(roomForState(hass, building, "not_home"), null);
+test("a sensor state finds a room by its name, its area name or its area id, ignoring case and dashes", () => {
+  const { hass, building } = home({});
+  assert.equal(roomForState(hass, building, "kitchen")?.room.id, "ki");
+  assert.equal(roomForState(hass, building, "LIVING-ROOM")?.room.id, "lr");
+  assert.equal(roomForState(hass, building, "living_room")?.room.id, "lr");
+  assert.equal(roomForState(hass, building, "Lounge")?.room.id, "lr");
+  assert.equal(roomForState(hass, building, "Garage"), null);
 });
 
-test("people at home are placed in their room; away people are not", () => {
-  const { hass, building } = setup();
+test("states that name no room never match", () => {
+  const { hass, building } = home({});
+  for (const state of ["", "unknown", "unavailable", "not_home", "Away"]) assert.equal(roomForState(hass, building, state), null, state);
+});
+
+test("initials of one, two and many words", () => {
+  assert.equal(initials("ann"), "AN");
+  assert.equal(initials("Ann Bell"), "AB");
+  assert.equal(initials("Ann Marie van Bell"), "AB");
+  assert.equal(initials("   "), "?");
+});
+
+test("people at home are placed in their room, those away or without a sensor are not", () => {
+  const { hass, building } = home({
+    "person.ann": ["home", { friendly_name: "Ann Bell", entity_picture: "/ann.png" }],
+    "sensor.ann_room": ["kitchen"],
+    "person.bob": ["not_home", { friendly_name: "Bob" }],
+    "sensor.bob_room": ["kitchen"],
+    "person.cy": ["home"],
+  });
   const people = personsInRooms(hass, building);
-  assert.deepEqual(
-    people.map((p) => [p.id, p.roomId, p.initials]),
-    [
-      ["person.mia", "r1", "MM"],
-      ["person.tom", "r2", "TO"],
-    ],
-  );
-  assert.equal(initials("anna"), "AN");
+  assert.equal(people.length, 1);
+  assert.deepEqual([people[0].id, people[0].name, people[0].initials, people[0].picture, people[0].roomId], ["person.ann", "Ann Bell", "AB", "/ann.png", "ki"]);
+  // the marker stands inside the kitchen (x 4..8, z 0..3)
+  assert.ok(people[0].x > 4 && people[0].x < 8 && people[0].z > 0 && people[0].z < 3);
 });
 
-test("floor labels count rooms, lights on, open windows and people", () => {
-  const { hass, building } = setup();
-  const counts = floorCounts(hass, building, new Map(), personsInRooms(hass, building)).get("eg")!;
-  assert.deepEqual(counts, { rooms: 2, lightsOn: 1, open: 0, persons: 2 });
-  assert.equal(floorInfoText(hass, counts), "2 Räume · 1 Licht an · 2 Pers.");
+test("two people in one room do not stand on the same spot", () => {
+  const { hass, building } = home({
+    "person.ann": ["home"], "sensor.ann_room": ["kitchen"],
+    "person.bob": ["home"], "sensor.bob_room": ["Kitchen"],
+  });
+  const [a, b] = personsInRooms(hass, building);
+  assert.notDeepEqual([a.x, a.z], [b.x, b.z]);
+});
+
+test("floor counts and their text leave out what is zero", () => {
+  const { hass, building } = home({
+    "person.ann": ["home"], "sensor.ann_room": ["kitchen"],
+    "light.one": ["on"], "light.two": ["off"],
+  });
+  building.floors[0].placements = [
+    { entity_id: "light.one", x: 1, z: 1, y: null, mount: null },
+    { entity_id: "light.two", x: 2, z: 1, y: null, mount: null },
+  ];
+  const counts = floorCounts(hass, building, new Map(), personsInRooms(hass, building)).get("g");
+  assert.deepEqual(counts, { rooms: 2, lightsOn: 1, open: 0, persons: 1 });
+  const text = floorInfoText(hass, counts!);
+  assert.equal(text.split(" · ").length, 3, text);
+  assert.equal(floorInfoText(hass, { rooms: 2, lightsOn: 0, open: 0, persons: 0 }).includes(" · "), false);
 });

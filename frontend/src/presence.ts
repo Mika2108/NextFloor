@@ -1,10 +1,9 @@
-// Presence and floor summaries: which room a person is in (from a room sensor such as ESPresense or
-// Bermuda, whose state names a room or area), and the counts shown on the floor labels.
+// People and floor summaries. A room sensor (ESPresense, Bermuda ...) reports the room a person is in as
+// its state; this finds that room in the plan. Also the counts on the floor labels of the house view.
 
 import { areaEntities, kindOf, openingState, primaryEntities, type OpeningEntities } from "./devices.ts";
 import { translate } from "./i18n.ts";
-import type { Building, Room } from "./model.ts";
-import { centroid } from "./model.ts";
+import { centroid, type Building, type Floor, type Room } from "./model.ts";
 import type { HomeAssistant } from "./types.ts";
 
 export interface PersonMarker {
@@ -18,59 +17,60 @@ export interface PersonMarker {
   z: number;
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim();
+/** Spelling-insensitive form of a room name: underscores and dashes read as spaces. */
+const canonical = (text: string) => text.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 
-/** Room whose name, area name or area id matches a room sensor's state. */
+/** A sensor state that names no room. */
+const NO_ROOM = new Set(["", "unknown", "unavailable", "not home", "away"]);
+
+/** The room whose name, area name or area id equals a room sensor's state. */
 export function roomForState(hass: HomeAssistant, building: Building, state: string): { floorId: string; room: Room } | null {
-  const want = norm(state);
-  if (!want || want === "unknown" || want === "unavailable" || want === "not home" || want === "away") return null;
+  const wanted = canonical(state);
+  if (NO_ROOM.has(wanted)) return null;
   for (const floor of building.floors) {
     for (const room of floor.rooms) {
-      const names = [room.name, room.area_id ?? "", room.area_id ? (hass.areas?.[room.area_id]?.name ?? "") : ""].filter(Boolean).map(norm);
-      if (names.includes(want)) return { floorId: floor.id, room };
+      const areaName = room.area_id ? hass.areas?.[room.area_id]?.name : undefined;
+      const labels = [room.name, room.area_id, areaName].map((label) => canonical(label ?? ""));
+      if (labels.includes(wanted)) return { floorId: floor.id, room };
     }
   }
   return null;
 }
 
+/** Up to two letters for an avatar: first and last word's initials, or the first two letters of one word. */
 export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "?";
-  return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2)).toUpperCase();
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  const letters = words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[words.length - 1][0];
+  return letters.toUpperCase();
 }
 
-/** People at home whose room sensor names a room of the plan, spread around the room centre. */
+/** Where the n-th person of a room stands: on a small circle around the centre, next to the room label. */
+function spotInRoom(room: Room, n: number): [number, number] {
+  const [cx, cz] = centroid(room.points);
+  const angle = n * 1.15 - Math.PI / 2 + 0.9;
+  return [cx + 0.75 * Math.cos(angle), cz + 0.75 * Math.sin(angle)];
+}
+
+/** People who are home and whose room sensor names a room of the plan. */
 export function personsInRooms(hass: HomeAssistant, building: Building): PersonMarker[] {
-  const out: PersonMarker[] = [];
-  const perRoom = new Map<string, number>();
-  for (const link of building.presence) {
-    const person = hass.states[link.person];
-    if (!person || !link.sensor) continue;
-    // a person who is away is not in any room, whatever the room sensor still says
-    if (person.state !== "home" && person.state !== "on") continue;
-    const sensor = hass.states[link.sensor];
-    if (!sensor) continue;
-    const hit = roomForState(hass, building, sensor.state);
-    if (!hit) continue;
-    const i = perRoom.get(hit.room.id) ?? 0;
-    perRoom.set(hit.room.id, i + 1);
-    const [cx, cz] = centroid(hit.room.points);
-    // next to the room label, one after another on a small circle
-    const a = -Math.PI / 2 + 0.9 + i * 1.15;
-    const r = 0.75;
-    const name = (person.attributes.friendly_name as string | undefined) ?? link.person;
-    out.push({
-      id: link.person,
-      name,
-      initials: initials(name),
-      picture: (person.attributes.entity_picture as string | undefined) ?? null,
-      floorId: hit.floorId,
-      roomId: hit.room.id,
-      x: cx + Math.cos(a) * r,
-      z: cz + Math.sin(a) * r,
-    });
+  const markers: PersonMarker[] = [];
+  const inRoom = new Map<string, number>();
+  for (const { person: personId, sensor: sensorId } of building.presence) {
+    const person = hass.states[personId];
+    const sensor = sensorId ? hass.states[sensorId] : undefined;
+    // someone who is away is in no room, whatever the room sensor still says
+    if (!person || !sensor || (person.state !== "home" && person.state !== "on")) continue;
+    const found = roomForState(hass, building, sensor.state);
+    if (!found) continue;
+    const n = inRoom.get(found.room.id) ?? 0;
+    inRoom.set(found.room.id, n + 1);
+    const [x, z] = spotInRoom(found.room, n);
+    const name = String(person.attributes.friendly_name ?? personId);
+    const picture = person.attributes.entity_picture;
+    markers.push({ id: personId, name, initials: initials(name), picture: typeof picture === "string" ? picture : null, floorId: found.floorId, roomId: found.room.id, x, z });
   }
-  return out;
+  return markers;
 }
 
 export interface FloorCounts {
@@ -80,38 +80,50 @@ export interface FloorCounts {
   persons: number;
 }
 
-/** Counts per floor for the floor labels in the house view. */
-export function floorCounts(hass: HomeAssistant, building: Building, links: Map<string, OpeningEntities>, persons: PersonMarker[]): Map<string, FloorCounts> {
-  const out = new Map<string, FloorCounts>();
-  const on = (id: string | null) => !!id && hass.states[id]?.state === "on";
-  for (const floor of building.floors) {
-    const lights = new Set<string>();
-    // main entities only: a LED strip with 30 segment entities is one light
-    for (const room of floor.rooms) for (const id of primaryEntities(hass, areaEntities(hass, room.area_id))) if (kindOf(id) === "light") lights.add(id);
-    for (const pl of floor.placements) if (kindOf(pl.entity_id) === "light") lights.add(pl.entity_id);
-    const open = floor.openings.filter((o) => {
-      const l = links.get(o.id);
-      if (!l) return false;
-      // a garage door counts as open while its cover is not (almost) down
-      if (o.type === "garage") return (openingState(hass, l, "garage").cover ?? 1) < 0.95;
-      if (o.type === "door") return on(l.contact) || on(l.contact2 ?? null);
-      const s = openingState(hass, l, "window");
-      return s.open > 0.5 || s.tilt > 0.5 || s.open2 > 0.5 || s.tilt2 > 0.5;
-    }).length;
-    out.set(floor.id, {
-      rooms: floor.rooms.length,
-      lightsOn: [...lights].filter((id) => hass.states[id]?.state === "on").length,
-      open,
-      persons: persons.filter((p) => p.floorId === floor.id).length,
-    });
+function lightsOnFloor(hass: HomeAssistant, floor: Floor): number {
+  const lights = new Set<string>();
+  // only the main entity of a device counts: an LED strip with 30 segment entities is one light
+  for (const room of floor.rooms) {
+    for (const id of primaryEntities(hass, areaEntities(hass, room.area_id))) if (kindOf(id) === "light") lights.add(id);
   }
-  return out;
+  for (const placed of floor.placements) if (kindOf(placed.entity_id) === "light") lights.add(placed.entity_id);
+  return [...lights].filter((id) => hass.states[id]?.state === "on").length;
 }
 
+function openingsOnFloor(hass: HomeAssistant, floor: Floor, links: Map<string, OpeningEntities>): number {
+  const isOn = (id: string | null | undefined) => !!id && hass.states[id]?.state === "on";
+  let count = 0;
+  for (const opening of floor.openings) {
+    const link = links.get(opening.id);
+    if (!link) continue;
+    if (opening.type === "garage") {
+      // open while the door is not (nearly) all the way down
+      if ((openingState(hass, link, "garage").cover ?? 1) < 0.95) count++;
+    } else if (opening.type === "door") {
+      if (isOn(link.contact) || isOn(link.contact2)) count++;
+    } else {
+      const s = openingState(hass, link, "window");
+      if (Math.max(s.open, s.tilt, s.open2, s.tilt2) > 0.5) count++;
+    }
+  }
+  return count;
+}
+
+/** Room, light, open-window and person counts per floor, for the floor labels. */
+export function floorCounts(hass: HomeAssistant, building: Building, links: Map<string, OpeningEntities>, persons: PersonMarker[]): Map<string, FloorCounts> {
+  return new Map(
+    building.floors.map((floor) => [
+      floor.id,
+      { rooms: floor.rooms.length, lightsOn: lightsOnFloor(hass, floor), open: openingsOnFloor(hass, floor, links), persons: persons.filter((p) => p.floorId === floor.id).length },
+    ]),
+  );
+}
+
+/** The label text: "3 rooms · 2 lights on · 1 open · 1 person", leaving out what is zero. */
 export function floorInfoText(hass: HomeAssistant | undefined, c: FloorCounts): string {
   const parts = [c.rooms === 1 ? translate(hass, "floor_rooms_one") : translate(hass, "floor_rooms", { n: c.rooms })];
-  if (c.lightsOn) parts.push(translate(hass, "floor_lights", { n: c.lightsOn }));
-  if (c.open) parts.push(translate(hass, "floor_open", { n: c.open }));
-  if (c.persons) parts.push(translate(hass, "floor_persons", { n: c.persons }));
+  if (c.lightsOn > 0) parts.push(translate(hass, "floor_lights", { n: c.lightsOn }));
+  if (c.open > 0) parts.push(translate(hass, "floor_open", { n: c.open }));
+  if (c.persons > 0) parts.push(translate(hass, "floor_persons", { n: c.persons }));
   return parts.join(" · ");
 }

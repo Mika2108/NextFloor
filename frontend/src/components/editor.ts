@@ -60,6 +60,7 @@ import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWall
 import { outdoorRectangleAfter } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
 import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
+import { snapToPlan } from "./editor/ops/snapping.ts";
 import { draftLayer, guidesLayer } from "./editor/canvas/draft.ts";
 import { devicesLayer, furnitureLayer } from "./editor/canvas/items.ts";
 import { openingsLayer } from "./editor/canvas/openings.ts";
@@ -899,79 +900,13 @@ export class NfEditor extends LitElement {
 
   // ------------------------------------------------------------------ snapping
 
+  /** The place in the plan a point lands on: corners and walls of other rooms, then the grid. `free` skips all of that. */
   private snap(p: Vec2, skip?: { roomId: string; index?: number }, free = false): Vec2 {
     this._guides = {};
     if (free) return p;
-    const thr = SNAP_PX / this._view.scale;
-    const rooms = this.floor?.rooms ?? [];
-    const others: Vec2[] = [];
-    for (const r of rooms) {
-      r.points.forEach((q, i) => {
-        if (skip && r.id === skip.roomId && (skip.index === undefined || skip.index === i)) return;
-        others.push(q);
-      });
-    }
-    // 1. corners of rooms
-    let best: Vec2 | null = null;
-    let bestD = thr;
-    for (const q of others) {
-      const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
-      if (d < bestD) {
-        bestD = d;
-        best = q;
-      }
-    }
-    if (best) {
-      this._guides = { point: best };
-      return [best[0], best[1]];
-    }
-    // 2. edges of other rooms (so walls can meet in a T)
-    for (const r of rooms) {
-      if (skip && r.id === skip.roomId) continue;
-      for (let i = 0; i < r.points.length; i++) {
-        const a = r.points[i];
-        const b = r.points[(i + 1) % r.points.length];
-        const dx = b[0] - a[0];
-        const dz = b[1] - a[1];
-        const l2 = dx * dx + dz * dz;
-        if (l2 < 1e-9) continue;
-        const t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2;
-        if (t <= 0 || t >= 1) continue;
-        const q: Vec2 = [a[0] + t * dx, a[1] + t * dz];
-        const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
-        const g = this._doc.settings.grid;
-        if (Math.abs(dz) < 1e-9) q[0] = Math.min(Math.max(Math.round(q[0] / g) * g, Math.min(a[0], b[0])), Math.max(a[0], b[0]));
-        if (Math.abs(dx) < 1e-9) q[1] = Math.min(Math.max(Math.round(q[1] / g) * g, Math.min(a[1], b[1])), Math.max(a[1], b[1]));
-        if (d < bestD) {
-          bestD = d;
-          best = q;
-        }
-      }
-    }
-    if (best) {
-      this._guides = { point: best };
-      return [round(best[0]), round(best[1])];
-    }
-    // 3. grid, with alignment to other corners per axis
-    const g = this._doc.settings.grid;
-    const out: Vec2 = [round(Math.round(p[0] / g) * g), round(Math.round(p[1] / g) * g)];
-    let ax = thr;
-    let az = thr;
-    const guides: Guides = {};
-    for (const q of others) {
-      if (Math.abs(q[0] - p[0]) < ax) {
-        ax = Math.abs(q[0] - p[0]);
-        out[0] = q[0];
-        guides.x = q[0];
-      }
-      if (Math.abs(q[1] - p[1]) < az) {
-        az = Math.abs(q[1] - p[1]);
-        out[1] = q[1];
-        guides.z = q[1];
-      }
-    }
-    this._guides = guides;
-    return out;
+    const snapped = snapToPlan(p, { rooms: this.floor?.rooms ?? [], grid: this._doc.settings.grid, reach: SNAP_PX / this._view.scale, skip });
+    this._guides = snapped.guides;
+    return snapped.point;
   }
 
   // ------------------------------------------------------------------ pointer input

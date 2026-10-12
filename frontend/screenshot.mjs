@@ -80,6 +80,21 @@ const shots = [
   { name: "editor-sections", query: "", width: 1500, height: 950, editor: true, openDetails: true, scrollSide: true },
   { name: "editor-roof-sections", query: "", width: 1500, height: 950, editor: true, click: "Dach", editorScript: "e._floorId = e._doc.floors[0].id; e.roof.useSections(); e.roof.sectionId = e._doc.settings.roof.sections[0].id;" },
   { name: "editor-solar-form", query: "?pv=5400&flows", width: 1500, height: 950, editor: true, click: "Energie", editorScript: "e.roof.selectField(e._doc.settings.roof.solar[0].id);" },
+  { name: "editor-smoke", query: "", width: 1500, height: 950, editor: true, editorScript: `const f = e._doc.floors[0]; e._floorId = f.id;
+const out = {}; const snap = () => JSON.stringify(e._doc); const start = snap();
+const room = f.rooms[0]; e.selectItem("room", room.id);
+out.nudged = e.nudgeSelection(0.5, 0); out.dx = e._doc.floors[0].rooms[0].points[0][0] - room.points[0][0];
+e.duplicateRoom(); out.rooms = e._doc.floors[0].rooms.length - f.rooms.length;
+e.deleteRoom(); out.afterDelete = e._doc.floors[0].rooms.length - f.rooms.length;
+e.addRoom([[30,30],[33,30],[33,33]]); out.added = e._doc.floors[0].rooms.length - f.rooms.length;
+e.addFurniture("sofa"); out.furniture = e._doc.floors[0].furniture.length - f.furniture.length;
+e.rotateFurniture(90); out.rot = e._doc.floors[0].furniture.at(-1).rotation;
+e.duplicateFurniture(); e.deleteFurniture(); out.selFurn = e.sel.furniture !== null;
+e._shiftAll = false; e.shiftFloor(1, 2); out.shifted = e._doc.floors[0].rooms[0].points[0][0] - f.rooms[0].points[0][0];
+e.turnFloor(); out.turned = e._doc.floors[0].furniture[0].rotation !== f.furniture[0].rotation;
+for (let i = 0; i < 40; i++) e.undo(); out.undoneAll = snap() === start;
+e.redo(); out.canRedo = e._canRedo;
+window.__smoke = out;` },
   { name: "editor-roof", query: "", width: 1500, height: 950, editor: true, click: "Dach" },
   { name: "extensions", query: "", width: 1280, height: 950, click: "✦ Erweiterungen", wait: 800 },
   // other devices

@@ -2,7 +2,7 @@
 
 import { html, LitElement, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
 import { fetchImage, storeImage } from "../api.ts";
-import { areaEntities, autoPlace, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, openingEntities, otherAreaEntities, roomClimateSensors, unassignedEntities, windowPosition, type ClimateKey } from "../devices.ts";
+import { areaEntities, CLIMATE_CLASSES, defaultHeight, entityName, entityAreaId, furnitureEntities, groupByDevice, hasScreen, isMediaFurniture, isPlaceable, isRoomClimateSensor, kindOf, openingEntities, otherAreaEntities, roomClimateSensors, unassignedEntities, windowPosition, type ClimateKey } from "../devices.ts";
 import { furnitureSymbol } from "./furniture2d.ts";
 import { closeGaps, suggestedThickness } from "../geometry/gaps.ts";
 import { keepInRoom, snapToWall } from "../geometry/snap.ts";
@@ -94,6 +94,11 @@ import { RoofController } from "./editor/roof-controller.ts";
 import { importEnergyPrefs } from "./editor/ops/energy-import.ts";
 import { newEnergyDevice } from "./editor/ops/energy-devices.ts";
 import { EditHistory } from "./editor/history.ts";
+import { copyOfFurniture, copyOfOutdoorArea, deviceForFurniture, furnitureForDevice, newFloorOpening, newFreeWall, newFurniture, newOutdoorArea, offsetOnEdge, openingKindPatch, parkingSpotFor, placeInRoom, removeDevice, roomCentre, turnedBy } from "./editor/ops/items.ts";
+import { NO_CHANGE, NOTHING_TO_MOVE, nudge, type NudgeTarget } from "./editor/ops/nudge.ts";
+import { areaChoice, copyOfRoom, cornerMoved, evenCeilingLights, newRoom, rectangleAfter, removeCorner, removeRoom, type RectField } from "./editor/ops/rooms.ts";
+import { translate as moveScope, turnQuarterClockwise, type Scope } from "./editor/ops/transform.ts";
+import { Selection, type ItemKind } from "./editor/selection.ts";
 import { editorStyles } from "./editor/styles.ts";
 import "./entity-picker.ts";
 import type { HassArea, HassFloor, HomeAssistant } from "../types.ts";
@@ -173,11 +178,6 @@ export class NfEditor extends LitElement {
     _sidePinned: { state: true },
     _sideOpen: { state: true },
     _floorId: { state: true },
-    _roomId: { state: true },
-    _vertex: { state: true },
-    _openingId: { state: true },
-    _furnitureId: { state: true },
-    _deviceId: { state: true },
     _deviceQuery: { state: true },
     _devSource: { state: true },
     _energyNote: { state: true },
@@ -186,9 +186,6 @@ export class NfEditor extends LitElement {
     _expanded: { state: true },
     _notice: { state: true },
     _spots: { state: true },
-    _outdoorId: { state: true },
-    _wallId: { state: true },
-    _edgeHi: { state: true },
     _ctx: { state: true },
     _fixedHint: { state: true },
     _floorMenu: { state: true },
@@ -229,11 +226,6 @@ export class NfEditor extends LitElement {
   private declare _sidePinned: boolean;
   private declare _sideOpen: boolean;
   private declare _floorId: string | null;
-  private declare _roomId: string | null;
-  private declare _vertex: number | null;
-  private declare _openingId: string | null;
-  private declare _furnitureId: string | null;
-  private declare _deviceId: string | null;
   private declare _deviceQuery: string;
   /** Which devices the room form lists: its own area, other areas, or entities without an area. */
   private declare _devSource: "area" | "other" | "none";
@@ -247,13 +239,7 @@ export class NfEditor extends LitElement {
   /** Short confirmation shown after an action (e.g. closed gaps). */
   private declare _notice: string | null;
   /** Restore points, loaded when the backup section is opened. */
-  /** Open "place spots" form of the selected room. */
-  private declare _outdoorId: string | null;
-  /** Selected free-standing wall. */
-  private declare _wallId: string | null;
   /** Selected room wall (id from generateWalls), to set its height. */
-  /** Edge of the selected room highlighted from the wall height list. */
-  private declare _edgeHi: number | null;
   private declare _shiftX: number;
   /** Shift and turn take every floor with them (roof, outdoor areas, meter included). */
   private declare _shiftAll: boolean;
@@ -297,6 +283,8 @@ export class NfEditor extends LitElement {
   private declare _canRedo: boolean;
 
   private readonly history = new EditHistory<Building>(100);
+  /** What is selected in the plan. */
+  private readonly sel = new Selection(() => this.requestUpdate());
   /** What the form modules in editor/forms see of this editor. */
   private readonly host: EditorHost = this.makeHost();
   private readonly backup: BackupService = this.makeBackup();
@@ -319,11 +307,6 @@ export class NfEditor extends LitElement {
     super();
     this.narrow = false;
     this._floorId = null;
-    this._roomId = null;
-    this._vertex = null;
-    this._openingId = null;
-    this._furnitureId = null;
-    this._deviceId = null;
     this._deviceQuery = "";
     this._devSource = "area";
     this.roof.sectionId = null;
@@ -342,9 +325,6 @@ export class NfEditor extends LitElement {
     this._expanded = new Set();
     this._notice = null;
     this._spots = null;
-    this._outdoorId = null;
-    this._wallId = null;
-    this._edgeHi = null;
     this._shiftX = 0;
     this._shiftAll = false;
     this._bgEdit = false;
@@ -488,7 +468,7 @@ export class NfEditor extends LitElement {
       this._doc = this.building;
       this._doc3d = this.building;
       if (!this._doc.floors.some((f) => f.id === this._floorId)) this._floorId = this._doc.floors[0]?.id ?? null;
-      if (!this.floor?.rooms.some((r) => r.id === this._roomId)) this._roomId = null;
+      if (!this.floor?.rooms.some((r) => r.id === this.sel.room)) this.sel.room = null;
     }
   }
 
@@ -755,8 +735,8 @@ export class NfEditor extends LitElement {
         ?furnish=${this.isAdmin}
         .surfaceGrab=${this.isAdmin && this.houseTool ? this.surfaceGrabber : null}
         .furnishTypes=${this._tool === "energy" ? ENERGY_DEVICES : this._tool === "roof" ? [] : null}
-        .selectedFurniture=${this._furnitureId}
-        .selectedDevice=${this._deviceId}
+        .selectedFurniture=${this.sel.furniture}
+        .selectedDevice=${this.sel.device}
         .quality=${"auto"}
         .floorThumbs=${false}
         .roomLabels=${true}
@@ -766,12 +746,12 @@ export class NfEditor extends LitElement {
         .scenes=${false}
         @furniture-select=${(e: CustomEvent<{ id: string | null }>) => {
           if (e.detail.id) this.selectFrom3d("furniture", e.detail.id);
-          else if (this._furnitureId) this.selectFrom3d("furniture", null);
+          else if (this.sel.furniture) this.selectFrom3d("furniture", null);
         }}
         @furniture-move=${this.onFurnitureMoved3d}
         @device-select=${(e: CustomEvent<{ id: string | null }>) => {
           if (e.detail.id) this.selectFrom3d("device", e.detail.id);
-          else if (this._deviceId) this.selectFrom3d("device", null);
+          else if (this.sel.device) this.selectFrom3d("device", null);
         }}
         @device-move=${this.onDeviceMoved3d}
         @floor-tap=${(e: CustomEvent<{ floorId: string | null }>) => {
@@ -816,7 +796,7 @@ export class NfEditor extends LitElement {
   }
 
   private get room(): Room | undefined {
-    return this.floor?.rooms.find((r) => r.id === this._roomId);
+    return this.floor?.rooms.find((r) => r.id === this.sel.room);
   }
 
   private get isAdmin(): boolean {
@@ -858,8 +838,8 @@ export class NfEditor extends LitElement {
   private restore(doc: Building): void {
     this._doc = doc;
     if (!doc.floors.some((f) => f.id === this._floorId)) this._floorId = doc.floors[0]?.id ?? null;
-    if (!this.floor?.rooms.some((r) => r.id === this._roomId)) this._roomId = null;
-    this._vertex = null;
+    if (!this.floor?.rooms.some((r) => r.id === this.sel.room)) this.sel.room = null;
+    this.sel.corner = null;
     this.syncHistoryButtons();
     this.dispatchEvent(new CustomEvent("building-changed", { detail: { building: doc }, bubbles: true, composed: true }));
   }
@@ -1228,8 +1208,8 @@ export class NfEditor extends LitElement {
     const vertexEl = target.closest("[data-vertex]");
     const midEl = target.closest("[data-mid]");
     if (vertexEl && this.room && this.isAdmin) {
-      this._vertex = Number(vertexEl.getAttribute("data-vertex"));
-      this.drag = { kind: "vertex", roomId: this.room.id, index: this._vertex, base: this._doc, moved: false };
+      this.sel.corner = Number(vertexEl.getAttribute("data-vertex"));
+      this.drag = { kind: "vertex", roomId: this.room.id, index: this.sel.corner, base: this._doc, moved: false };
       return;
     }
     if (midEl && this.room && this.isAdmin) {
@@ -1261,7 +1241,7 @@ export class NfEditor extends LitElement {
         base,
         false,
       );
-      this._vertex = i + 1;
+      this.sel.corner = i + 1;
       this.drag = { kind: "vertex", roomId, index: i + 1, base, moved: true };
       return;
     }
@@ -1293,7 +1273,7 @@ export class NfEditor extends LitElement {
     }
     const roomId = target.closest("[data-room]")?.getAttribute("data-room") ?? this.roomAt(world);
     if (roomId) {
-      if (roomId !== this._roomId) this._vertex = null;
+      if (roomId !== this.sel.room) this.sel.corner = null;
       this.selectItem("room", roomId);
       this.drag =
         this.isAdmin && this._tool !== "furniture"
@@ -1616,7 +1596,7 @@ export class NfEditor extends LitElement {
         const o = baseFloor?.openings.find((x) => x.id === drag.id);
         const host = o && baseFloor ? openingHost(o, baseFloor.rooms, baseFloor.walls ?? []) : null;
         if (!o || !host) return;
-        const offset = this.offsetOnEdge(host.room, host.edge, world, o.width, e.altKey);
+        const offset = this.dropOffset(host.room, host.edge, world, o.width, e.altKey);
         this.change((_, floor) => Object.assign(floor.openings.find((x) => x.id === drag.id)!, { offset }), drag.base, false);
         break;
       }
@@ -1931,32 +1911,24 @@ export class NfEditor extends LitElement {
     </section>`;
   }
 
-  /** A free-standing wall from a to b (a partition through part of a room). */
-  private addFreeWall(a: Vec2, b: Vec2): void {
-    if (!this.floor) return;
-    const wall: FreeWall = { id: uid("wall"), a: [round(a[0]), round(a[1])], b: [round(b[0]), round(b[1])], thickness: null };
-    this.change((_, floor) => (floor.walls = [...(floor.walls ?? []), wall]));
-    this.selectItem("wall", wall.id);
-  }
-
   private get freeWall(): FreeWall | undefined {
-    return this._wallId ? (this.floor?.walls ?? []).find((w) => w.id === this._wallId) : undefined;
+    return this.sel.wall ? (this.floor?.walls ?? []).find((w) => w.id === this.sel.wall) : undefined;
   }
 
   private updateFreeWall(patch: Partial<FreeWall>): void {
-    const id = this._wallId;
+    const id = this.sel.wall;
     if (!id) return;
     this.change((_, floor) => Object.assign((floor.walls ?? []).find((w) => w.id === id)!, patch));
   }
 
   private deleteFreeWall(): void {
-    const id = this._wallId;
+    const id = this.sel.wall;
     if (!id || !this.isAdmin || !this.confirmFixedDelete("wall", id)) return;
     this.change((_, floor) => {
       floor.walls = (floor.walls ?? []).filter((w) => w.id !== id);
       floor.openings = floor.openings.filter((o) => o.wall !== id);
     });
-    this._wallId = null;
+    this.sel.wall = null;
   }
 
   /** The plan symbol of free walls: a wide invisible hit line, and end handles when selected. */
@@ -1964,7 +1936,7 @@ export class NfEditor extends LitElement {
     return svg`<g>${(floor.walls ?? []).map((w) => {
       const [x0, y0] = this.toScreen(w.a);
       const [x1, y1] = this.toScreen(w.b);
-      const sel = w.id === this._wallId;
+      const sel = w.id === this.sel.wall;
       return svg`<g data-free-wall=${w.id} class=${`nf-free-wall${sel ? " nf-free-wall-sel" : ""}`}>
         <line class="nf-hit" x1=${x0} y1=${y0} x2=${x1} y2=${y1} />
         <line class="nf-free-wall-line" x1=${x0} y1=${y0} x2=${x1} y2=${y1} />
@@ -2000,67 +1972,20 @@ export class NfEditor extends LitElement {
     </section>`;
   }
 
-  /** A floor opening (stairwell, gallery): a hole in this floor's floor, drawn as a rectangle. */
-  private addHole(lo: Vec2, hi: Vec2): void {
-    if (!this.floor) return;
-    const item: Furniture = {
-      id: uid("hole"),
-      type: "stairwell",
-      x: round((lo[0] + hi[0]) / 2),
-      z: round((lo[1] + hi[1]) / 2),
-      w: round(hi[0] - lo[0]),
-      d: round(hi[1] - lo[1]),
-      h: 0.02,
-      rotation: 0,
-      variant: null,
-    };
-    this.change((_, floor) => floor.furniture.push(item));
-    this.selectItem("furniture", item.id);
-    this._tool = "select";
-  }
-
-  private addOutdoor(points: Vec2[]): void {
-    if (!this.floor) return;
-    const area: OutdoorArea = { id: uid("outdoor"), type: "lawn", points: points.map(([x, z]) => [round(x), round(z)]) };
-    this.change((_, floor) => floor.outdoor.push(area));
-    this.selectItem("outdoor", area.id);
-    this._tool = "select";
-  }
-
   private get outdoorArea(): OutdoorArea | undefined {
-    return this._outdoorId ? this.floor?.outdoor.find((o) => o.id === this._outdoorId) : undefined;
+    return this.sel.outdoor ? this.floor?.outdoor.find((o) => o.id === this.sel.outdoor) : undefined;
   }
 
   private updateOutdoor(patch: Partial<OutdoorArea>): void {
-    const id = this._outdoorId;
+    const id = this.sel.outdoor;
     this.change((_, floor) => Object.assign(floor.outdoor.find((o) => o.id === id)!, patch));
   }
 
   private deleteOutdoor(): void {
-    const id = this._outdoorId;
+    const id = this.sel.outdoor;
     if (!id || !this.isAdmin || !this.confirmFixedDelete("outdoor", id)) return;
     this.change((_, floor) => (floor.outdoor = floor.outdoor.filter((o) => o.id !== id)));
-    this._outdoorId = null;
-  }
-
-  private duplicateOutdoor(): void {
-    const a = this.outdoorArea;
-    if (!a || !this.isAdmin) return;
-    const copy: OutdoorArea = { ...a, id: uid("outdoor"), points: a.points.map(([x, z]) => [round(x + 0.5), round(z + 0.5)]) };
-    this.change((_, floor) => floor.outdoor.push(copy));
-    this.selectItem("outdoor", copy.id);
-  }
-
-  private addRoom(points: Vec2[]): void {
-    if (!this.floor) return;
-    const id = uid("room");
-    const n = this.floor.rooms.length + 1;
-    this.change((_, floor) =>
-      floor.rooms.push({ id, name: this.t("new_room", { n }), area_id: null, points: points.map(([x, z]) => [round(x), round(z)]), floor_material: "wood" }),
-    );
-    this._roomId = id;
-    this._vertex = null;
-    this._tool = "select";
+    this.sel.outdoor = null;
   }
 
   // ------------------------------------------------------------------ keyboard
@@ -2081,24 +2006,24 @@ export class NfEditor extends LitElement {
       e.preventDefault();
       this.duplicateRoom();
     } else if (e.key === "Delete" || (e.key === "Backspace" && (this._tool === "select" || this._tool === "furniture"))) {
-      if (this._deviceId) this.deleteItem("device", this._deviceId);
-      else if (this._outdoorId) this.deleteOutdoor();
-      else if (this._wallId) this.deleteFreeWall();
-      else if (this._openingId) this.deleteOpening();
-      else if (this._furnitureId) this.deleteFurniture();
-      else if (this._vertex !== null) this.deleteVertex(this._vertex);
+      if (this.sel.device) this.deleteItem("device", this.sel.device);
+      else if (this.sel.outdoor) this.deleteOutdoor();
+      else if (this.sel.wall) this.deleteFreeWall();
+      else if (this.sel.opening) this.deleteOpening();
+      else if (this.sel.furniture) this.deleteFurniture();
+      else if (this.sel.corner !== null) this.deleteVertex(this.sel.corner);
       else this.deleteRoom();
     } else if (e.key.toLowerCase() === "l" && !mod && this._tool === "roof" && this.roof.section && !this._doc.settings.lock_plan) {
       this.roof.patchSection({ locked: !this.roof.section.locked });
-    } else if (e.key.toLowerCase() === "l" && !mod && (this._furnitureId || this._deviceId)) {
-      const s = this.selectedFix!;
-      this.toggleFixed(s.kind, s.id);
+    } else if (e.key.toLowerCase() === "l" && !mod && (this.sel.furniture || this.sel.device)) {
+      const target = this.sel.target!;
+      this.toggleFixed(target.kind, target.id);
     } else if (Object.hasOwn(ARROWS, e.key) && !mod && (this._tool === "select" || this._tool === "furniture")) {
       // arrow keys nudge the selection: one grid step, Shift 10 cm, Alt 1 cm
       const step = e.altKey ? 0.01 : e.shiftKey ? 0.1 : this._doc.settings.grid;
       const [dx, dz] = ARROWS[e.key];
-      if (this.nudge(dx * step, dz * step)) e.preventDefault();
-    } else if (e.key.toLowerCase() === "r" && !mod && this._furnitureId) {
+      if (this.nudgeSelection(dx * step, dz * step)) e.preventDefault();
+    } else if (e.key.toLowerCase() === "r" && !mod && this.sel.furniture) {
       this.rotateFurniture(e.shiftKey ? -90 : 90);
     } else if (e.key === "Backspace" && this._tool === "polygon") {
       this._draft = this._draft.slice(0, -1);
@@ -2117,73 +2042,6 @@ export class NfEditor extends LitElement {
   };
 
   // ------------------------------------------------------------------ actions
-
-  /** Moves the selected item by (dx, dz) metres; false when nothing movable is selected. */
-  private nudge(dx: number, dz: number): boolean {
-    const floor = this.floor;
-    if (!floor || !this.isAdmin) return false;
-    const fix = this.selectedFix;
-    if (fix && this.isFixedItem(fix.kind, fix.id)) {
-      this._fixedHint = true;
-      return true;
-    }
-    const mv = (p: Vec2): Vec2 => [round(p[0] + dx), round(p[1] + dz)];
-    if (this._deviceId) {
-      const id = this._deviceId;
-      if (!floor.placements.some((p) => p.entity_id === id)) return false;
-      this.change((_, f) => {
-        const p = f.placements.find((x) => x.entity_id === id)!;
-        [p.x, p.z] = mv([p.x, p.z]);
-      });
-    } else if (this._furnitureId) {
-      const id = this._furnitureId;
-      this.change((_, f) => {
-        const m = f.furniture.find((x) => x.id === id);
-        if (m) [m.x, m.z] = mv([m.x, m.z]);
-      });
-    } else if (this._openingId) {
-      const o = this.opening;
-      const host = o ? openingHost(o, floor.rooms, floor.walls ?? []) : null;
-      if (!o || !host) return false;
-      const a = host.room.points[host.edge];
-      const b = host.room.points[(host.edge + 1) % host.room.points.length];
-      const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-      // along the wall: the arrow's share in the wall direction
-      const along = (dx * (b[0] - a[0]) + dz * (b[1] - a[1])) / len;
-      if (Math.abs(along) < 1e-9) return true;
-      const half = Math.min(o.width, len) / 2;
-      this.updateOpening({ offset: round(Math.min(len - half, Math.max(half, o.offset + along))) });
-    } else if (this._wallId) {
-      const id = this._wallId;
-      this.change((_, f) => {
-        const w = (f.walls ?? []).find((x) => x.id === id);
-        if (w) [w.a, w.b] = [mv(w.a), mv(w.b)];
-      });
-    } else if (this._outdoorId) {
-      const id = this._outdoorId;
-      this.change((_, f) => {
-        const area = f.outdoor.find((x) => x.id === id);
-        if (area) area.points = area.points.map(mv);
-      });
-    } else if (this._roomId) {
-      const id = this._roomId;
-      const vertex = this._vertex;
-      const room = floor.rooms.find((r) => r.id === id);
-      if (!room) return false;
-      // a selected corner moves alone; otherwise the room moves with the devices in it
-      const inside = new Set(floor.placements.filter((pl) => pointInPolygon([pl.x, pl.z], room.points)).map((pl) => pl.entity_id));
-      this.change((_, f) => {
-        const r = f.rooms.find((x) => x.id === id)!;
-        if (vertex !== null && vertex < r.points.length) {
-          r.points[vertex] = mv(r.points[vertex]);
-          return;
-        }
-        r.points = r.points.map(mv);
-        for (const pl of f.placements) if (inside.has(pl.entity_id)) [pl.x, pl.z] = mv([pl.x, pl.z]);
-      });
-    } else return false;
-    return true;
-  }
 
   /** Floors of Home Assistant's floor registry that no floor of the plan stands for yet, lowest first. */
   private get freeHaFloors(): HassFloor[] {
@@ -2213,7 +2071,7 @@ export class NfEditor extends LitElement {
     next.floors.splice(at < 0 ? next.floors.length : at, 0, floor);
     this.setDoc(next);
     this._floorId = id;
-    this._roomId = null;
+    this.sel.room = null;
     this._floorMenu = false;
     this.fit();
   }
@@ -2243,28 +2101,7 @@ export class NfEditor extends LitElement {
     next.floors = next.floors.filter((f) => f.id !== floor.id);
     this.setDoc(next);
     this._floorId = next.floors[0]?.id ?? null;
-    this._roomId = null;
-  }
-
-  private deleteRoom(): void {
-    const id = this._roomId;
-    if (!id || !this.isAdmin || !this.confirmFixedDelete("room", id)) return;
-    this.change((_, floor) => {
-      const room = floor.rooms.find((r) => r.id === id);
-      floor.rooms = floor.rooms.filter((r) => r.id !== id);
-      floor.openings = floor.openings.filter((o) => o.room_id !== id || o.wall);
-      if (room) floor.placements = floor.placements.filter((pl) => !pointInPolygon([pl.x, pl.z], room.points));
-    });
-    this._roomId = null;
-    this._vertex = null;
-  }
-
-  private duplicateRoom(): void {
-    const room = this.room;
-    if (!room || !this.isAdmin) return;
-    const id = uid("room");
-    this.change((_, floor) => floor.rooms.push({ ...structuredClone(room), id, points: room.points.map(([x, z]) => [round(x + 0.5), round(z + 0.5)]) }));
-    this._roomId = id;
+    this.sel.room = null;
   }
 
   // ------------------------------------------------------------------ roof sections
@@ -2273,6 +2110,225 @@ export class NfEditor extends LitElement {
   private faceHit(face: RoofFace, p: Vec2): { u: number; s: number } | null {
     if (!face.wall) return pointOnFace(face, p);
     return { u: (p[0] - face.o[0]) * face.eu[0] + (p[1] - face.o[2]) * face.eu[2], s: Number.NaN };
+  }
+
+  // ------------------------------------------------------------------ editing the plan
+
+  /** The plan point in the middle of what is on screen. */
+  private viewCentre(): Vec2 {
+    return this.toWorld(this._size.w / 2, this._size.h / 2);
+  }
+
+  /** Adds a free-standing wall between two plan points and selects it. */
+  private addFreeWall(a: Vec2, b: Vec2): void {
+    if (!this.floor) return;
+    const wall = newFreeWall(a, b);
+    this.change((_, floor) => (floor.walls = [...(floor.walls ?? []), wall]));
+    this.selectItem("wall", wall.id);
+  }
+
+  /** A hole in the floor of this level, drawn as a rectangle. */
+  private addHole(lo: Vec2, hi: Vec2): void {
+    if (!this.floor) return;
+    const hole = newFloorOpening(lo, hi);
+    this.change((_, floor) => floor.furniture.push(hole));
+    this.selectItem("furniture", hole.id);
+    this._tool = "select";
+  }
+
+  private addOutdoor(points: Vec2[]): void {
+    if (!this.floor) return;
+    const area = newOutdoorArea(points);
+    this.change((_, floor) => floor.outdoor.push(area));
+    this.selectItem("outdoor", area.id);
+    this._tool = "select";
+  }
+
+  private duplicateOutdoor(): void {
+    const original = this.outdoorArea;
+    if (!original || !this.isAdmin) return;
+    const copy = copyOfOutdoorArea(original);
+    this.change((_, floor) => floor.outdoor.push(copy));
+    this.selectItem("outdoor", copy.id);
+  }
+
+  private addRoom(points: Vec2[]): void {
+    if (!this.floor) return;
+    const room = newRoom(points, this.t("new_room", { n: this.floor.rooms.length + 1 }));
+    this.change((_, floor) => floor.rooms.push(room));
+    this.sel.room = room.id;
+    this.sel.corner = null;
+    this._tool = "select";
+  }
+
+  private deleteRoom(): void {
+    const id = this.sel.room;
+    if (!id || !this.isAdmin || !this.confirmFixedDelete("room", id)) return;
+    this.change((_, floor) => removeRoom(floor, id));
+    this.sel.room = null;
+    this.sel.corner = null;
+  }
+
+  private duplicateRoom(): void {
+    const original = this.room;
+    if (!original || !this.isAdmin) return;
+    const copy = copyOfRoom(original);
+    this.change((_, floor) => floor.rooms.push(copy));
+    this.sel.room = copy.id;
+  }
+
+  private deleteVertex(index: number): void {
+    const room = this.room;
+    if (!room) return;
+    this.change((_, floor) => removeCorner(floor, room.id, index));
+    this.sel.corner = null;
+  }
+
+  /** Moves the selected item by (dx, dz) metres. False when nothing movable is selected, so the key keeps its normal job. */
+  private nudgeSelection(dx: number, dz: number): boolean {
+    const floor = this.floor;
+    if (!floor || !this.isAdmin) return false;
+    const target = this.sel.target;
+    if (target && this.isFixedItem(target.kind, target.id)) {
+      this._fixedHint = true;
+      return true;
+    }
+    const nudgeTarget: NudgeTarget | null = !target ? null : target.kind === "room" ? { kind: "room", id: target.id, corner: this.sel.corner } : { kind: target.kind, id: target.id };
+    const result = nudgeTarget ? nudge(floor, nudgeTarget, dx, dz) : NOTHING_TO_MOVE;
+    if (result === NOTHING_TO_MOVE) return false;
+    if (result !== NO_CHANGE) this.change((_, f) => result.apply(f));
+    return true;
+  }
+
+  private addFurniture(type: string): void {
+    const floor = this.floor;
+    if (!floor || !this.isAdmin) return;
+    const room = this.room;
+    const item = newFurniture(type, this._doc, floor, room ? centroid(room.points) : this.viewCentre());
+    this.change((_, f) => f.furniture.push(item));
+    this.selectItem("furniture", item.id);
+    // small things are easy to lose in a large plan: bring the new one into view
+    this.showPoint(item.x, item.z);
+  }
+
+  private rotateFurniture(delta: number): void {
+    const item = this.furnitureItem;
+    if (item && this.isAdmin) this.updateFurniture({ rotation: turnedBy(item.rotation, delta) });
+  }
+
+  private duplicateFurniture(): void {
+    const item = this.furnitureItem;
+    if (!item || !this.isAdmin) return;
+    const copy = copyOfFurniture(item);
+    this.change((_, floor) => floor.furniture.push(copy));
+    this.selectItem("furniture", copy.id);
+  }
+
+  /** A vehicle placed as plain furniture becomes a parking spot holding it. */
+  private vehicleToSpot(vehicle: Furniture): void {
+    if (!this.isAdmin) return;
+    const spot = parkingSpotFor(vehicle);
+    this.change((_, floor) => {
+      floor.furniture = floor.furniture.filter((m) => m.id !== vehicle.id);
+      floor.furniture.push(spot);
+    });
+    this.selectItem("furniture", spot.id);
+  }
+
+  /** Replaces a placed device by a piece of furniture linked to it, where its pin stood, as one undo step. */
+  private deviceToFurniture(placed: Placement, type: string): void {
+    if (!this.isAdmin) return;
+    const item = furnitureForDevice(placed, type);
+    this.change((_, floor) => {
+      floor.placements = floor.placements.filter((p) => p.entity_id !== placed.entity_id);
+      floor.furniture.push(item);
+    });
+    this.sel.device = null;
+    this.selectItem("furniture", item.id);
+  }
+
+  /** Turns a piece of furniture linked by hand back into a plain device pin at its place. */
+  private furnitureToDevice(item: Furniture): void {
+    const entityId = item.entity;
+    if (!this.isAdmin || !entityId || entityId === "none") return;
+    const pin = deviceForFurniture(item, entityId);
+    this.change((_, floor) => {
+      floor.furniture = floor.furniture.filter((m) => m.id !== item.id);
+      if (!floor.placements.some((p) => p.entity_id === entityId)) floor.placements.push(pin);
+    });
+    this.sel.furniture = null;
+    this.selectItem("device", entityId);
+  }
+
+  /** Places entities in the selected room. An entity placed elsewhere moves here. */
+  private placeDevices(entityIds: string[]): void {
+    const room = this.room;
+    if (!room || entityIds.length === 0 || !this.isAdmin) return;
+    this.change((doc, floor) => placeInRoom(doc, floor, room, entityIds));
+  }
+
+  private removeDevice(entityId: string): void {
+    this.change((doc) => removeDevice(doc, entityId));
+  }
+
+  /** Moves the selected device to the middle of the room it is in. */
+  private centreDevice(): void {
+    const placed = this.device;
+    const room = placed ? this.floor?.rooms.find((r) => r.id === this.roomAt([placed.x, placed.z])) : undefined;
+    if (!placed || !room) return;
+    const [x, z] = roomCentre(room);
+    this.updateDevice({ x, z });
+  }
+
+  private spreadCeilingLights(room: Room): void {
+    const floor = this.floor;
+    if (!floor) return;
+    const spots = evenCeilingLights(room, floor.placements);
+    if (spots.length === 0) return;
+    this.change((_, f) => {
+      for (const spot of spots) Object.assign(f.placements.find((p) => p.entity_id === spot.entityId)!, { x: spot.x, z: spot.z });
+    });
+  }
+
+  private shiftScope(): Scope {
+    return { floorId: this._floorId, allFloors: this._shiftAll };
+  }
+
+  /** Moves everything on the floor (or on every floor) by the typed distance. */
+  private shiftFloor(dx: number, dz: number): void {
+    if (!this.isAdmin || (!dx && !dz)) return;
+    this.change((doc) => moveScope(doc, this.shiftScope(), dx, dz));
+    this._shiftX = 0;
+    this._shiftZ = 0;
+  }
+
+  /** Turns the floor, or the whole house, a quarter clockwise: for a floor that was drawn the wrong way round. */
+  private turnFloor(): void {
+    if (!this.floor || !this.isAdmin) return;
+    this.change((doc) => turnQuarterClockwise(doc, this.shiftScope()));
+  }
+
+  private setArea(areaId: string): void {
+    const room = this.room;
+    if (room) this.updateRoom(areaChoice(room, areaId, this.hass?.areas ?? {}));
+  }
+
+  private setRect(field: RectField, value: number): void {
+    const room = this.room;
+    const points = room ? rectangleAfter(room, field, value) : null;
+    if (points) this.updateRoom({ points });
+  }
+
+  private setPoint(index: number, axis: 0 | 1, value: number): void {
+    const room = this.room;
+    const points = room ? cornerMoved(room, index, axis, value) : null;
+    if (points) this.updateRoom({ points });
+  }
+
+  /** Turns an opening into another kind: door, double door, window, terrace door, garage door. */
+  private setOpeningPreset(opening: Opening, preset: OpeningPreset): void {
+    this._openingPreset = preset;
+    this.updateOpening(openingKindPatch(opening, preset));
   }
 
   // ------------------------------------------------------------------ helpers the forms of this file still share
@@ -2369,7 +2425,7 @@ export class NfEditor extends LitElement {
   private renderEnergyPanel() {
     const field = this.roof.solarId ? this._doc.settings.roof.solar?.find((x) => x.id === this.roof.solarId) : undefined;
     if (field) return renderSolarForm(this.roofDeps(), field);
-    const device = this._furnitureId ? this.floor?.furniture.find((x) => x.id === this._furnitureId && (ENERGY_DEVICES as readonly string[]).includes(x.type)) : undefined;
+    const device = this.sel.furniture ? this.floor?.furniture.find((x) => x.id === this.sel.furniture && (ENERGY_DEVICES as readonly string[]).includes(x.type)) : undefined;
     if (device)
       return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("furniture", null)}>‹ ${this.t("tool_energy")}</button>
         ${this.renderFurnitureForm(device)}`;
@@ -2425,17 +2481,6 @@ export class NfEditor extends LitElement {
     this.change((doc) => (doc.settings.lock_plan = !doc.settings.lock_plan));
   }
 
-  /** The selected item (for the L key and nudging), the most specific selection first. */
-  private get selectedFix(): { kind: FixKind; id: string } | null {
-    if (this._deviceId) return { kind: "device", id: this._deviceId };
-    if (this._openingId) return { kind: "opening", id: this._openingId };
-    if (this._furnitureId) return { kind: "furniture", id: this._furnitureId };
-    if (this._wallId) return { kind: "wall", id: this._wallId };
-    if (this._outdoorId) return { kind: "outdoor", id: this._outdoorId };
-    if (this._roomId) return { kind: "room", id: this._roomId };
-    return null;
-  }
-
   /** A fixed item is only deleted after asking. */
   private confirmFixedDelete(kind: FixKind, id: string): boolean {
     return !this.isFixedItem(kind, id) || confirm(this.t("fixed_delete_confirm"));
@@ -2472,7 +2517,7 @@ export class NfEditor extends LitElement {
     }
     const [kind, id] = hit;
     this.selectItem(kind, id);
-    if (kind === "opening" || kind === "furniture") this._roomId = this._roomId ?? room;
+    if (kind === "opening" || kind === "furniture") this.sel.room = this.sel.room ?? room;
     this._ctx = { x: local[0], y: local[1], kind, id };
   }
 
@@ -2480,7 +2525,7 @@ export class NfEditor extends LitElement {
     if (kind === "device") {
       if (!this.confirmFixedDelete(kind, id)) return;
       this.removeDevice(id);
-      this._deviceId = null;
+      this.sel.device = null;
       return;
     }
     // the delete methods ask themselves for fixed items
@@ -2534,44 +2579,35 @@ export class NfEditor extends LitElement {
     </button>`;
   }
 
-  /** Select a room, an opening or a furniture item (only one at a time). */
-  private selectItem(kind: "room" | "opening" | "furniture" | "device" | "outdoor" | "wall", id: string | null): void {
+  /** Where along a room edge an opening of this width sits when it is dropped at `world`; `free` skips the grid. */
+  private dropOffset(room: Room, edge: number, world: Vec2, width: number, free: boolean): number {
+    const a = room.points[edge];
+    const b = room.points[(edge + 1) % room.points.length];
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const along = ((world[0] - a[0]) * (b[0] - a[0]) + (world[1] - a[1]) * (b[1] - a[1])) / length;
+    return offsetOnEdge(length, along, width, free ? 0.01 : this._doc.settings.grid);
+  }
+
+  /** Selects one item (or none of that kind) of the plan. */
+  private selectItem(kind: ItemKind, id: string | null): void {
     this._notice = null;
-    // a selection made in the plan (or by a tool) opens the folded sidebar
+    // a selection made in the plan, or by a tool, opens the folded sidebar
     if (id) this._sideOpen = true;
-    this._outdoorId = kind === "outdoor" ? id : null;
-    this._wallId = kind === "wall" ? id : null;
-    this._edgeHi = null;
-    if (kind === "outdoor" || kind === "wall") this._roomId = null;
-    if (kind !== "room" || id !== this._roomId) this._vertex = null;
-    this._roomId = kind === "room" ? id : this._roomId;
-    this._openingId = kind === "opening" ? id : null;
-    this._furnitureId = kind === "furniture" ? id : null;
-    this._deviceId = kind === "device" ? id : null;
-    if (kind === "device" && id) {
-      const pl = this.floor?.placements.find((x) => x.entity_id === id);
-      this._roomId = (pl && this.roomAt([pl.x, pl.z])) ?? this._roomId;
-    }
-    if (kind === "opening" && id) this._roomId = this.floor?.openings.find((o) => o.id === id)?.room_id ?? this._roomId;
+    this.sel.select(kind, id, {
+      roomOfDevice: (entityId) => {
+        const placed = this.floor?.placements.find((p) => p.entity_id === entityId);
+        return (placed && this.roomAt([placed.x, placed.z])) ?? null;
+      },
+      roomOfOpening: (openingId) => this.floor?.openings.find((o) => o.id === openingId)?.room_id ?? null,
+    });
   }
 
   private get opening(): Opening | undefined {
-    return this._openingId ? this.floor?.openings.find((o) => o.id === this._openingId) : undefined;
+    return this.sel.opening ? this.floor?.openings.find((o) => o.id === this.sel.opening) : undefined;
   }
 
   private get furnitureItem(): Furniture | undefined {
-    return this._furnitureId ? this.floor?.furniture.find((f) => f.id === this._furnitureId) : undefined;
-  }
-
-  /** Centre offset on a room edge closest to `world`, keeping the opening inside the edge. */
-  private offsetOnEdge(room: Room, edge: number, world: Vec2, width: number, free: boolean): number {
-    const a = room.points[edge];
-    const b = room.points[(edge + 1) % room.points.length];
-    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-    const t = ((world[0] - a[0]) * (b[0] - a[0]) + (world[1] - a[1]) * (b[1] - a[1])) / len;
-    const g = free ? 0.01 : this._doc.settings.grid;
-    const half = Math.min(width, len) / 2;
-    return round(Math.min(len - half, Math.max(half, Math.round(t / g) * g)));
+    return this.sel.furniture ? this.floor?.furniture.find((f) => f.id === this.sel.furniture) : undefined;
   }
 
   /** Add a door or window on the room edge nearest to a screen point. */
@@ -2600,7 +2636,7 @@ export class NfEditor extends LitElement {
         const t = Math.min(1, Math.max(0, ((screen[0] - ax) * (bx - ax) + (screen[1] - ay) * (by - ay)) / l2));
         const d = Math.hypot(screen[0] - ax - (bx - ax) * t, screen[1] - ay - (by - ay) * t);
         // the selected room wins on shared edges
-        const score = d - (room.id === this._roomId ? 0.5 : 0);
+        const score = d - (room.id === this.sel.room ? 0.5 : 0);
         if (d < SNAP_PX * 2.2 && (!best || score < best.d)) best = { room, edge: i, d: score };
       }
     }
@@ -2617,7 +2653,7 @@ export class NfEditor extends LitElement {
       room_id: best.roomId ?? room.id,
       edge,
       ...(wall ? { wall } : {}),
-      offset: this.offsetOnEdge(room, edge, this.toWorld(...screen), width, false),
+      offset: this.dropOffset(room, edge, this.toWorld(...screen), width, false),
       width,
       type,
       sill: defaults.sill,
@@ -2636,25 +2672,16 @@ export class NfEditor extends LitElement {
     return true;
   }
 
-  /** Turns an opening into another kind (door, double door, window, terrace door, garage door). */
-  private setOpeningPreset(o: Opening, preset: OpeningPreset): void {
-    const d = OPENING_PRESETS[preset];
-    this._openingPreset = preset;
-    const sameWidth = openingPreset(o) === preset;
-    const style = "style" in d ? d.style : null;
-    this.updateOpening({ type: d.type, leaves: d.leaves, sill: d.sill, height: d.height, style, ...(sameWidth ? {} : { width: d.width }) });
-  }
-
   private updateOpening(patch: Partial<Opening>): void {
-    const id = this._openingId;
+    const id = this.sel.opening;
     this.change((_, floor) => Object.assign(floor.openings.find((o) => o.id === id)!, patch));
   }
 
   private deleteOpening(): void {
-    const id = this._openingId;
+    const id = this.sel.opening;
     if (!id || !this.isAdmin || !this.confirmFixedDelete("opening", id)) return;
     this.change((_, floor) => (floor.openings = floor.openings.filter((o) => o.id !== id)));
-    this._openingId = null;
+    this.sel.opening = null;
   }
 
   /** How strongly a lamp glows in 3D, in percent (#181): many bright LED strips need not outshine the room. */
@@ -2694,44 +2721,6 @@ export class NfEditor extends LitElement {
     return all.filter((x) => fits(x.type)).sort((a, b) => a.label.localeCompare(b.label));
   }
 
-  /** A vehicle placed as plain furniture becomes a parking spot with this vehicle (presence and Auto live there). */
-  private vehicleToSpot(f: Furniture): void {
-    if (!this.isAdmin) return;
-    const [w, d, h] = furnitureSize("parking");
-    const spot: Furniture = { id: uid("furniture"), type: "parking", x: f.x, z: f.z, rotation: f.rotation, w: Math.max(w, round(f.w + 0.5)), d: Math.max(d, round(f.d + 0.4)), h, variant: null, vehicle: f.type, ...(f.name ? { name: f.name } : {}) };
-    this.change((_, floor) => {
-      floor.furniture = floor.furniture.filter((m) => m.id !== f.id);
-      floor.furniture.push(spot);
-    });
-    this.selectItem("furniture", spot.id);
-  }
-
-  /** Replace a placed device by a furniture item linked to it, where the pin stood (one undo step). */
-  private deviceToFurniture(pl: Placement, type: string): void {
-    if (!this.isAdmin) return;
-    const [w, d, h] = furnitureSize(type);
-    const item: Furniture = { id: uid("furniture"), type, x: pl.x, z: pl.z, rotation: pl.rotation ?? 0, w, d, h, variant: null, entity: pl.entity_id, name: pl.name ?? null, ...(pl.locked ? { locked: true } : {}) };
-    this.change((_, f) => {
-      f.placements = f.placements.filter((p) => p.entity_id !== pl.entity_id);
-      f.furniture.push(item);
-    });
-    this._deviceId = null;
-    this.selectItem("furniture", item.id);
-  }
-
-  /** Turn a furniture item linked by hand back into a plain device pin at its place. */
-  private furnitureToDevice(f: Furniture): void {
-    const id = f.entity;
-    if (!this.isAdmin || !id || id === "none") return;
-    const pl: Placement = { entity_id: id, x: f.x, z: f.z, y: null, rotation: f.rotation, ...(f.name ? { name: f.name } : {}) };
-    this.change((_, floor) => {
-      floor.furniture = floor.furniture.filter((m) => m.id !== f.id);
-      if (!floor.placements.some((p) => p.entity_id === id)) floor.placements.push(pl);
-    });
-    this._furnitureId = null;
-    this.selectItem("device", id);
-  }
-
   private renderAsFurniture(pl: Placement) {
     if (!this.isAdmin) return nothing;
     const options = this.furnitureFor(pl.entity_id);
@@ -2750,22 +2739,6 @@ export class NfEditor extends LitElement {
     >`;
   }
 
-  private addFurniture(type: string): void {
-    const floor = this.floor;
-    if (!floor || !this.isAdmin) return;
-    const [w, d, h0] = furnitureSize(type);
-    // stairs reach up to the next floor
-    const above = this._doc.floors.filter((f) => f.elevation > floor.elevation).sort((p, q) => p.elevation - q.elevation)[0];
-    const h = type === "stairs" ? round(above ? above.elevation - floor.elevation : floor.height + 0.25) : h0;
-    const room = this.room;
-    const [x, z] = room ? centroid(room.points) : this.toWorld(this._size.w / 2, this._size.h / 2);
-    const item: Furniture = { id: uid("furniture"), type, x: round(x), z: round(z), rotation: 0, w, d, h, variant: null };
-    this.change((_, f) => f.furniture.push(item));
-    this.selectItem("furniture", item.id);
-    // small items are easy to lose in a large plan: bring the new one into view
-    this.showPoint(item.x, item.z);
-  }
-
   /**
    * Snap a furniture item against the nearest wall of its room: back to the wall (or a side, when it
    * stands sideways), flush with the wall face. Null when no wall is close enough.
@@ -2775,7 +2748,7 @@ export class NfEditor extends LitElement {
   }
 
   private updateFurniture(patch: Partial<Furniture>): void {
-    const id = this._furnitureId;
+    const id = this.sel.furniture;
     this.change((_, floor) => Object.assign(floor.furniture.find((f) => f.id === id)!, patch));
   }
 
@@ -2785,93 +2758,20 @@ export class NfEditor extends LitElement {
     this.updateFurniture({ mirror: !f.mirror });
   }
 
-  private rotateFurniture(delta: number): void {
-    const f = this.furnitureItem;
-    if (!f || !this.isAdmin) return;
-    this.updateFurniture({ rotation: (((f.rotation + delta) % 360) + 360) % 360 });
-  }
-
   private deleteFurniture(): void {
-    const id = this._furnitureId;
+    const id = this.sel.furniture;
     if (!id || !this.isAdmin || !this.confirmFixedDelete("furniture", id)) return;
     this.change((_, floor) => (floor.furniture = floor.furniture.filter((f) => f.id !== id)));
-    this._furnitureId = null;
-  }
-
-  private duplicateFurniture(): void {
-    const f = this.furnitureItem;
-    if (!f || !this.isAdmin) return;
-    const copy = { ...structuredClone(f), id: uid("furniture"), x: round(f.x + 0.3), z: round(f.z + 0.3) };
-    this.change((_, floor) => floor.furniture.push(copy));
-    this.selectItem("furniture", copy.id);
-  }
-
-  /** Place entities in the selected room; an entity already placed elsewhere moves here. */
-  private placeDevices(entityIds: string[]): void {
-    const room = this.room;
-    if (!room || !entityIds.length || !this.isAdmin) return;
-    const ids = new Set(entityIds);
-    this.change((doc, floor) => {
-      for (const f of doc.floors) {
-        f.placements = f.placements.filter((pl) => !ids.has(pl.entity_id));
-        f.furniture = f.furniture.filter((m) => !(isLamp(m.type) && m.entity && ids.has(m.entity)));
-      }
-      const taken = [...floor.placements.map((pl) => [pl.x, pl.z] as Vec2), ...floor.furniture.filter((m) => isLamp(m.type)).map((m) => [m.x, m.z] as Vec2)];
-      for (const pl of autoPlace(room, entityIds, taken)) {
-        if (!pl.entity_id.startsWith("light.")) {
-          floor.placements.push(pl);
-          continue;
-        }
-        // a light becomes a ceiling lamp that is tapped directly in 3D
-        const [w, d, h] = FURNITURE_SIZE.lamp_ceiling;
-        floor.furniture.push({ id: uid("furniture"), type: "lamp_ceiling", x: pl.x, z: pl.z, rotation: 0, w, d, h, variant: null, entity: pl.entity_id, power: null });
-      }
-    });
+    this.sel.furniture = null;
   }
 
   private get device(): Placement | undefined {
-    return this._deviceId ? this.floor?.placements.find((p) => p.entity_id === this._deviceId) : undefined;
+    return this.sel.device ? this.floor?.placements.find((p) => p.entity_id === this.sel.device) : undefined;
   }
 
   private updateDevice(patch: Partial<Placement>): void {
-    const id = this._deviceId;
+    const id = this.sel.device;
     this.change((_, floor) => Object.assign(floor.placements.find((p) => p.entity_id === id)!, patch));
-  }
-
-  /** Move the selected device to the middle of its room. */
-  private centreDevice(): void {
-    const pl = this.device;
-    const roomId = pl ? this.roomAt([pl.x, pl.z]) : null;
-    const room = this.floor?.rooms.find((r) => r.id === roomId);
-    if (!pl || !room) return;
-    const [x, z] = centroid(room.points);
-    this.updateDevice({ x: round(x), z: round(z) });
-  }
-
-  /** Spread the room's ceiling lights evenly over it (grid of cells, one light per cell). */
-  private spreadCeilingLights(room: Room): void {
-    const floor = this.floor;
-    if (!floor) return;
-    const lights = floor.placements.filter(
-      (p) => kindOf(p.entity_id) === "light" && (p.mount ?? "ceiling") === "ceiling" && pointInPolygon([p.x, p.z], room.points),
-    );
-    if (lights.length < 2) return;
-    const b = bounds(room.points);
-    const w = b.x1 - b.x0;
-    const d = b.z1 - b.z0;
-    const cols = Math.max(1, Math.round(Math.sqrt((lights.length * w) / Math.max(0.1, d))));
-    const rows = Math.ceil(lights.length / cols);
-    const spots = lights.map((_, i) => {
-      const r = Math.floor(i / cols);
-      // a last row that is not full is spread over the whole width as well
-      const inRow = r === rows - 1 ? lights.length - cols * (rows - 1) : cols;
-      const c = i - r * cols;
-      return [round(b.x0 + (w / inRow) * (c + 0.5)), round(b.z0 + (d / rows) * (r + 0.5))] as Vec2;
-    });
-    const ids = lights.map((l) => l.entity_id);
-    this.change((_, f) => {
-      ids.forEach((id, i) => Object.assign(f.placements.find((p) => p.entity_id === id)!, { x: spots[i][0], z: spots[i][1] }));
-    });
   }
 
   /** Close gaps between rooms of this floor and take the gap as interior wall thickness. */
@@ -2893,157 +2793,13 @@ export class NfEditor extends LitElement {
       : this.t("gaps_closed", { n: gaps.length });
   }
 
-  private removeDevice(entityId: string): void {
-    this.change((doc) => {
-      for (const f of doc.floors) {
-        f.placements = f.placements.filter((pl) => pl.entity_id !== entityId);
-        f.furniture = f.furniture.filter((m) => !(isLamp(m.type) && m.entity === entityId));
-      }
-    });
-  }
-
-  private deleteVertex(index: number): void {
-    const room = this.room;
-    if (!room || room.points.length <= 3) return;
-    const n = room.points.length;
-    const prev = (index - 1 + n) % n;
-    this.change((_, floor) => {
-      const target = floor.rooms.find((r) => r.id === room.id)!;
-      target.points.splice(index, 1);
-      // the edge starting at the removed corner goes away; the one before it keeps its height
-      if (target.wall_heights) target.wall_heights.splice(index, 1);
-      if (target.wall_thickness) target.wall_thickness.splice(index, 1);
-      // the two edges at the removed corner merge; openings on them cannot keep their place
-      floor.openings = floor.openings
-        .filter((o) => o.room_id !== room.id || o.wall || (o.edge !== index && o.edge !== prev))
-        .map((o) => (o.room_id === room.id && !o.wall && o.edge > index ? { ...o, edge: o.edge - 1 } : o));
-    });
-    this._vertex = null;
-  }
-
-  /** Move everything on the floor by (dx, dz): rooms, furniture, devices, outdoor areas, free walls and the background. */
-  private shiftFloor(dx: number, dz: number): void {
-    if (!this.isAdmin || (!dx && !dz)) return;
-    const mv = (p: Vec2): Vec2 => [round(p[0] + dx), round(p[1] + dz)];
-    const one = (floor: Floor) => {
-      for (const r of floor.rooms) r.points = r.points.map(mv);
-      for (const f of floor.furniture) {
-        f.x = round(f.x + dx);
-        f.z = round(f.z + dz);
-      }
-      for (const p of floor.placements) {
-        p.x = round(p.x + dx);
-        p.z = round(p.z + dz);
-      }
-      for (const a of floor.outdoor) a.points = a.points.map(mv);
-      for (const w of floor.walls ?? []) {
-        w.a = mv(w.a);
-        w.b = mv(w.b);
-      }
-      if (floor.background) {
-        floor.background.x = round(floor.background.x + dx);
-        floor.background.z = round(floor.background.z + dz);
-      }
-    };
-    if (this._shiftAll) {
-      // the whole house: every floor, the roof sections and the meter
-      this.change((doc) => {
-        for (const f of doc.floors) one(f);
-        this.moveHouseExtras(doc, mv);
-      });
-    } else this.change((_, floor) => one(floor));
-    this._shiftX = 0;
-    this._shiftZ = 0;
-  }
-
-  /** What belongs to the house as a whole and moves with "all floors": roof sections and the meter. */
-  private moveHouseExtras(doc: Building, mv: (p: Vec2) => Vec2): void {
-    for (const s of doc.settings.roof.sections ?? []) {
-      const corners = [mv([s.x0, s.z0]), mv([s.x1, s.z0]), mv([s.x1, s.z1]), mv([s.x0, s.z1])];
-      s.x0 = Math.min(...corners.map((c) => c[0]));
-      s.x1 = Math.max(...corners.map((c) => c[0]));
-      s.z0 = Math.min(...corners.map((c) => c[1]));
-      s.z1 = Math.max(...corners.map((c) => c[1]));
-      if (s.points) s.points = s.points.map(mv);
-    }
-    if (doc.energy.meter) [doc.energy.meter.x, doc.energy.meter.z] = mv([doc.energy.meter.x, doc.energy.meter.z]);
-  }
-
-  /** Turn everything on the floor by 90° (clockwise in the plan) about the middle of its rooms: when a floor was drawn the wrong way round. */
-  private turnFloor(): void {
-    const floor = this.floor;
-    if (!floor || !this.isAdmin) return;
-    // with "all floors" the house turns about the middle of every room on every floor
-    const pts = (this._shiftAll ? this._doc.floors : [floor]).flatMap((f) => f.rooms.flatMap((r) => r.points));
-    if (!pts.length) return;
-    const xs = pts.map((p) => p[0]);
-    const zs = pts.map((p) => p[1]);
-    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
-    const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
-    const mv = (p: Vec2): Vec2 => [round(cx - (p[1] - cz)), round(cz + (p[0] - cx))];
-    const one = (f: Floor) => {
-      for (const r of f.rooms) r.points = r.points.map(mv);
-      for (const m of f.furniture) {
-        [m.x, m.z] = mv([m.x, m.z]);
-        m.rotation = (m.rotation + 90) % 360;
-      }
-      for (const p of f.placements) {
-        [p.x, p.z] = mv([p.x, p.z]);
-        p.rotation = ((p.rotation ?? 0) + 90) % 360;
-      }
-      for (const a of f.outdoor) a.points = a.points.map(mv);
-      for (const w of f.walls ?? []) {
-        w.a = mv(w.a);
-        w.b = mv(w.b);
-      }
-      if (f.background) {
-        [f.background.x, f.background.z] = mv([f.background.x, f.background.z]);
-        f.background.rotation = ((f.background.rotation ?? 0) + 90) % 360;
-      }
-    };
-    if (this._shiftAll) {
-      this.change((doc) => {
-        for (const f of doc.floors) one(f);
-        this.moveHouseExtras(doc, mv);
-      });
-    } else this.change((_, f) => one(f));
-  }
-
   private updateFloor(patch: Partial<Floor>): void {
     this.change((_, floor) => Object.assign(floor, patch));
   }
 
   private updateRoom(patch: Partial<Room>): void {
-    const id = this._roomId;
+    const id = this.sel.room;
     this.change((_, floor) => Object.assign(floor.rooms.find((r) => r.id === id)!, patch));
-  }
-
-  private setArea(areaId: string): void {
-    const room = this.room;
-    if (!room) return;
-    const area = areaId ? this.hass?.areas?.[areaId] : undefined;
-    const generic = !room.name || /^(Raum|Room) \d+$/.test(room.name) || Object.values(this.hass?.areas ?? {}).some((a) => a.name === room.name);
-    this.updateRoom({ area_id: areaId || null, ...(area && generic ? { name: area.name } : {}) });
-  }
-
-  private setRect(field: "x" | "z" | "w" | "d", value: number): void {
-    const room = this.room;
-    if (!room || !Number.isFinite(value)) return;
-    const b = bounds(room.points);
-    let { x0, z0, x1, z1 } = b;
-    if (field === "x") [x0, x1] = [value, value + (x1 - x0)];
-    if (field === "z") [z0, z1] = [value, value + (z1 - z0)];
-    if (field === "w" && value > 0.05) x1 = x0 + value;
-    if (field === "d" && value > 0.05) z1 = z0 + value;
-    this.updateRoom({ points: [[round(x0), round(z0)], [round(x1), round(z0)], [round(x1), round(z1)], [round(x0), round(z1)]] });
-  }
-
-  private setPoint(index: number, axis: 0 | 1, value: number): void {
-    const room = this.room;
-    if (!room || !Number.isFinite(value)) return;
-    const points = room.points.map((p) => [...p] as Vec2);
-    points[index][axis] = round(value);
-    this.updateRoom({ points });
   }
 
   private async loadImage(imageId: string): Promise<void> {
@@ -3134,11 +2890,11 @@ export class NfEditor extends LitElement {
               ${floor ? this.renderFreeWalls(floor) : nothing}
               ${floor && walls ? this.renderOpenings(floor, walls.walls) : nothing} ${floor ? this.renderMeter(floor) : nothing}
               ${floor && this._tool === "select" ? this.renderDevices(floor) : nothing}
-              ${this.room && this.isAdmin && this._tool === "select" && !this._openingId && !this._furnitureId && !this.isFixedItem("room", this.room.id) ? this.renderHandles(this.room) : nothing}
+              ${this.room && this.isAdmin && this._tool === "select" && !this.sel.opening && !this.sel.furniture && !this.isFixedItem("room", this.room.id) ? this.renderHandles(this.room) : nothing}
               ${floor ? this.renderOutdoorHandles(floor) : nothing}
               ${this.room && this._tool === "select" ? this.renderSplitMarks(this.room) : nothing}
               ${floor ? headroomLayer(this.canvasContext(), floor) : nothing}
-              ${this._tool === "roof" ? svg`${roofSectionsLayer(this.canvasContext(), this.roof)}${roofWindowsLayer(this.canvasContext(), this.roof)}` : this._tool === "energy" ? svg`${roofSectionsLayer(this.canvasContext(), this.roof)}${solarLayer(this.canvasContext(), this.roof)}${energyMarkersLayer(this.canvasContext(), this.floor, this._furnitureId)}` : nothing} ${this.renderDraft()} ${this.renderGuides()}
+              ${this._tool === "roof" ? svg`${roofSectionsLayer(this.canvasContext(), this.roof)}${roofWindowsLayer(this.canvasContext(), this.roof)}` : this._tool === "energy" ? svg`${roofSectionsLayer(this.canvasContext(), this.roof)}${solarLayer(this.canvasContext(), this.roof)}${energyMarkersLayer(this.canvasContext(), this.floor, this.sel.furniture)}` : nothing} ${this.renderDraft()} ${this.renderGuides()}
             </svg>
             ${this.renderContext()}
             <p class="nf-hint ${this._fixedHint ? "nf-hint-fixed" : ""}">${!floor ? this.t("hint_empty") : this._fixedHint ? this.t("fixed_drag_hint") : this.t(`hint_${this._tool}` as I18nKey)}</p>
@@ -3452,8 +3208,8 @@ export class NfEditor extends LitElement {
         const b = room.points[(i + 1) % n];
         const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
         const entry = room.wall_heights?.[i] ?? null;
-        const on = () => (this._edgeHi = i);
-        const off = () => (this._edgeHi = null);
+        const on = () => (this.sel.edge = i);
+        const off = () => (this.sel.edge = null);
         // an edge another room splits: one row per part, each with its own height (#77)
         const starts = this.edgeParts(room, i);
         const parts = starts.length > 1 ? starts.map((_, k) => k) : [undefined];
@@ -3462,7 +3218,7 @@ export class NfEditor extends LitElement {
           const partLen = part === undefined ? len : (starts[part + 1] ?? len) - starts[part];
           const set = (v: number | null) => this.setEdgeHeight(room, i, v, part);
           return html`<div
-            class="nf-edge-height${i === this._edgeHi ? " nf-edge-on" : ""}${h !== null ? " nf-edge-low" : ""}"
+            class="nf-edge-height${i === this.sel.edge ? " nf-edge-on" : ""}${h !== null ? " nf-edge-low" : ""}"
             @mouseenter=${on}
             @mouseleave=${off}
             @focusin=${on}
@@ -3505,7 +3261,7 @@ export class NfEditor extends LitElement {
 
   /** Corner handles of the selected outdoor area (a rectangle stays a rectangle while dragging). */
   private renderOutdoorHandles(floor: Floor) {
-    const a = this._outdoorId ? floor.outdoor.find((x) => x.id === this._outdoorId) : undefined;
+    const a = this.sel.outdoor ? floor.outdoor.find((x) => x.id === this.sel.outdoor) : undefined;
     if (!a || !this.isAdmin || this._tool !== "select" || this._doc.settings.lock_plan) return nothing;
     return svg`${a.points.map((p, i) => {
       const [x, y] = this.toScreen(p);
@@ -3519,7 +3275,7 @@ export class NfEditor extends LitElement {
       const [cx, cy] = this.toScreen(centroid(a.points));
       const b = bounds(a.points);
       const big = Math.min(b.x1 - b.x0, b.z1 - b.z0) * this._view.scale > 40;
-      return svg`<g data-outdoor=${a.id} class=${`nf-out nf-out-${a.type}${a.id === this._outdoorId ? " nf-out-sel" : ""}`}>
+      return svg`<g data-outdoor=${a.id} class=${`nf-out nf-out-${a.type}${a.id === this.sel.outdoor ? " nf-out-sel" : ""}`}>
         <polygon points=${pts} />
         ${big ? svg`<text x=${cx} y=${cy + 4}>${this.t(`out_${a.type}` as I18nKey)}</text>` : nothing}
       </g>`;
@@ -3600,7 +3356,7 @@ export class NfEditor extends LitElement {
     return svg`
       <g>${floor.rooms.map((r) => {
         const pts = r.points.map((p) => this.toScreen(p).join(",")).join(" ");
-        return svg`<polygon data-room=${r.id} class=${r.id === this._roomId ? "nf-room nf-room-sel" : "nf-room"} points=${pts} />`;
+        return svg`<polygon data-room=${r.id} class=${r.id === this.sel.room ? "nf-room nf-room-sel" : "nf-room"} points=${pts} />`;
       })}</g>
       ${this.renderEdgeHighlight()}
       <g pointer-events="none">${floor.rooms.map((r) => {
@@ -3614,7 +3370,7 @@ export class NfEditor extends LitElement {
   /** The wall of the selected room whose row in the wall height list is hovered. */
   private renderEdgeHighlight() {
     const r = this.room;
-    const i = this._edgeHi;
+    const i = this.sel.edge;
     if (!r || i === null || i >= r.points.length) return nothing;
     const [x1, y1] = this.toScreen(r.points[i]);
     const [x2, y2] = this.toScreen(r.points[(i + 1) % r.points.length]);
@@ -3634,7 +3390,7 @@ export class NfEditor extends LitElement {
   private renderFurniture(floor: Floor) {
     const k = this._view.scale;
     return svg`<g>${floor.furniture.map((f) => {
-      const sel = f.id === this._furnitureId;
+      const sel = f.id === this.sel.furniture;
       const [cx, cy] = this.toScreen([f.x, f.z]);
       const big = Math.min(f.w, f.d) * k > 44;
       // the handle sits in front of the item; dragging it turns the item
@@ -3697,7 +3453,7 @@ export class NfEditor extends LitElement {
       if (hit) across = hit.wall.free || hit.wall.roomLeft === room.id ? [hit.wall.left, hit.wall.right] : [hit.wall.right, hit.wall.left];
       const q = (p: Vec2, k: number) => this.toScreen([p[0] + n[0] * k, p[1] + n[1] * k]);
       const gap = [q(p0, across[0] + 0.01), q(p1, across[0] + 0.01), q(p1, -across[1] - 0.01), q(p0, -across[1] - 0.01)];
-      const sel = o.id === this._openingId;
+      const sel = o.id === this.sel.opening;
       const style = openingStyle(o, hit?.wall.exterior ?? false);
       const front = o.type === "door" && isFrontDoor(style);
       const cls = `nf-open nf-open-${o.type}${front ? " nf-open-front" : ""}${sel ? " nf-open-sel" : ""}`;
@@ -3782,7 +3538,7 @@ export class NfEditor extends LitElement {
       if (!kind) return nothing;
       const [x, y] = this.toScreen([pl.x, pl.z]);
       const on = this.hass?.states[pl.entity_id]?.state === "on";
-      const sel = pl.entity_id === this._deviceId;
+      const sel = pl.entity_id === this.sel.device;
       const cls = `nf-device${on ? " nf-device-on" : ""}${sel ? " nf-device-sel" : ""}`;
       return svg`${kind === "camera" ? this.renderCameraWedge(pl, sel) : nothing}<g data-device=${pl.entity_id} class=${cls} transform="translate(${x} ${y})">
         <title>${entityName(this.hass, pl.entity_id)}</title>
@@ -3849,7 +3605,7 @@ export class NfEditor extends LitElement {
     });
     const vertices = pts.map((p, i) => {
       const [x, y] = this.toScreen(p);
-      return svg`<g data-vertex=${i} class=${i === this._vertex ? "nf-vertex nf-vertex-sel" : "nf-vertex"}><circle cx=${x} cy=${y} r="16" class="nf-hit" /><circle cx=${x} cy=${y} r="6" /></g>
+      return svg`<g data-vertex=${i} class=${i === this.sel.corner ? "nf-vertex nf-vertex-sel" : "nf-vertex"}><circle cx=${x} cy=${y} r="16" class="nf-hit" /><circle cx=${x} cy=${y} r="6" /></g>
         <text class="nf-vertex-no" x=${x + 9} y=${y - 9}>${i + 1}</text>`;
     });
     return svg`<g>${edges}${vertices}</g>`;
@@ -3929,7 +3685,7 @@ export class NfEditor extends LitElement {
     if (!open) {
       return html`<aside class="nf-side nf-side-strip">
         <button class="nf-strip-btn" title=${this.t("side_open")} @click=${() => (this._sideOpen = true)}>☰</button>
-        ${this._furnitureId || this._deviceId || this._openingId
+        ${this.sel.furniture || this.sel.device || this.sel.opening
           ? html`<button class="nf-strip-btn nf-strip-hot" title=${this.t("side_details")} @click=${() => (this._sideOpen = true)}>⚙</button>`
           : nothing}
         <button class="nf-strip-btn" title=${this.t("tool_furniture")} @click=${() => ((this._tool = "furniture"), (this._draft = []), (this._sideOpen = true))}>🛋</button>
@@ -3981,7 +3737,7 @@ export class NfEditor extends LitElement {
                   ? this.renderFreeWallForm(this.freeWall)
                   : null;
     if (item) {
-      return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("room", this._roomId)}>‹ ${this.t(room ? "back_to_room" : "back_to_floor", { room: room?.name ?? "" })}</button>
+      return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("room", this.sel.room)}>‹ ${this.t(room ? "back_to_room" : "back_to_floor", { room: room?.name ?? "" })}</button>
         ${item}`;
     }
     if (room && this._tool !== "measure") {
@@ -3999,8 +3755,8 @@ export class NfEditor extends LitElement {
               aria-pressed=${f.id === this._floorId}
               @click=${() => {
                 this._floorId = f.id;
-                this._roomId = null;
-                this._vertex = null;
+                this.sel.room = null;
+                this.sel.corner = null;
                 this._draft = [];
                 this.fit();
               }}
@@ -4163,7 +3919,7 @@ export class NfEditor extends LitElement {
       <details class="nf-points" ?open=${!rect}>
         <summary>${this.t("points")} (${room.points.length})</summary>
         ${room.points.map(
-          (p, i) => html`<div class="nf-point ${i === this._vertex ? "nf-point-sel" : ""}">
+          (p, i) => html`<div class="nf-point ${i === this.sel.corner ? "nf-point-sel" : ""}">
             <span class="nf-muted">${i + 1}</span>
             ${this.num(this.t("x"), p[0], (v) => this.setPoint(i, 0, v))} ${this.num(this.t("z"), p[1], (v) => this.setPoint(i, 1, v))}
             ${admin
@@ -5038,7 +4794,7 @@ export class NfEditor extends LitElement {
               class="nf-btn nf-danger"
               @click=${() => {
                 this.removeDevice(pl.entity_id);
-                this._deviceId = null;
+                this.sel.device = null;
               }}
             >
               ${this.t("devices_remove")}

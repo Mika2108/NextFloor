@@ -41,6 +41,8 @@ import type { Building, Floor, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
 import { centroid, pointInPolygon, openingStyle, WALL_LAMP_Y } from "../model.ts";
 import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
+import { addCameraWedge, addLampHalo, addSpotCone, hiddenInCut, type HaloPoints } from "./scene/halos.ts";
+import { sunlightPatches, sunSignature } from "./scene/sunlight.ts";
 import { LAMP_SIZE, HANGING_LAMPS } from "./scene/lamp-data.ts";
 import { lightSourcesOf } from "./scene/light-sources.ts";
 import { makeFloorMaterials, type FloorMaterials } from "./scene/materials.ts";
@@ -1789,72 +1791,17 @@ export class NextFloorViewer {
    * projected along the sun's rays onto the floor as a warm, soft patch.
    */
   private buildSun(fv: FloorView): void {
-    // the patches of sunlight can be switched off in the settings (#266)
+    // the patches of sunlight can be switched off in the settings
     const sun = this.building?.settings.sun_patches === false ? null : this.sun;
-    const north = (this.building?.settings.north ?? 0) * DEG;
-    // clouds take most of the sunlight
+    const north = this.building?.settings.north ?? 0;
     const cloud = this.weatherLayer?.cloud ?? 0;
-    const sig = sun ? `${sun.elevation.toFixed(1)},${sun.azimuth.toFixed(1)},${north},${cloud.toFixed(2)},${[...fv.openings.values()].map((o) => (o.cover ?? 0).toFixed(2)).join(",")}` : "";
-    if (sig === fv.sunSig) return;
-    fv.sunSig = sig;
-    const buf = new GeoBuffer();
-    if (sun && sun.elevation > 2 && cloud < 0.97) {
-      const day = Math.min(1, sun.elevation / 12) * (1 - 0.8 * cloud);
-      const el = sun.elevation * DEG;
-      const az = sun.azimuth * DEG;
-      // horizontal direction towards the sun in plan coordinates (x right, z down, "up" = -z)
-      const toSun: [number, number] = [Math.sin(north + az), -Math.cos(north + az)];
-      const reach = 1 / Math.tan(el);
-      for (const info of fv.geo.openings) {
-        if (info.opening.type !== "window" || !info.exterior) continue;
-        const out: [number, number] = [-info.toRoom[0], -info.toRoom[1]];
-        const facing = out[0] * toSun[0] + out[1] * toSun[1];
-        if (facing < 0.05) continue;
-        const st = fv.openings.get(info.opening.id);
-        const top = info.top - (st?.cover ?? 0) * (info.top - info.sill);
-        if (top - info.sill < 0.05) continue;
-        const at = (s: number, y: number) => {
-          const d = Math.min(7, y * reach);
-          return [
-            info.start[0] + info.axis[0] * s + info.toRoom[0] * info.faceRoom - toSun[0] * d,
-            0.02,
-            info.start[1] + info.axis[1] * s + info.toRoom[1] * info.faceRoom - toSun[1] * d,
-          ];
-        };
-        const k = 0.14 * day * Math.min(1, facing * 1.5);
-        const near = new Color(1 * k, 0.82 * k, 0.55 * k);
-        const far = near.clone().multiplyScalar(0.45);
-        // the patch stays inside the window's room: it is laid in small cells, and only cells whose
-        // centre lies in the room are drawn (so it never crosses walls or leaves the house)
-        const room = fv.floor.rooms.find((r) => r.id === info.opening.room_id);
-        if (!room || room.points.length < 3) continue;
-        const rows = Math.max(1, Math.ceil(Math.min(7, top * reach) / 0.25));
-        const cols = Math.max(1, Math.ceil(info.width / 0.3));
-        for (let i = 0; i < rows; i++) {
-          const y0 = info.sill + ((top - info.sill) * i) / rows;
-          const y1 = info.sill + ((top - info.sill) * (i + 1)) / rows;
-          const t0 = i / rows;
-          const t1 = (i + 1) / rows;
-          const c0 = near.clone().lerp(far, t0);
-          const c1 = near.clone().lerp(far, t1);
-          for (let j = 0; j < cols; j++) {
-            const s0 = (info.width * j) / cols;
-            const s1 = (info.width * (j + 1)) / cols;
-            const m = at((s0 + s1) / 2, (y0 + y1) / 2);
-            if (!pointInPolygon([m[0], m[2]], room.points)) continue;
-            const a = at(s0, y0);
-            const b = at(s1, y0);
-            const c = at(s1, y1);
-            const d = at(s0, y1);
-            buf.tri(a, b, c, c0, c0, c1);
-            buf.tri(a, c, d, c0, c1, c1);
-          }
-        }
-      }
-    }
+    const signature = sunSignature(sun, north, cloud, fv.openings.values());
+    if (signature === fv.sunSig) return;
+    fv.sunSig = signature;
+    const patches = sunlightPatches({ floor: fv.floor, openings: fv.geo.openings, states: fv.openings, sun, northDegrees: north, cloud });
     fv.sunMesh.geometry.dispose();
-    fv.sunMesh.geometry = buf.geometry();
-    fv.sunMesh.visible = buf.count > 0;
+    fv.sunMesh.geometry = patches.geometry();
+    fv.sunMesh.visible = patches.count > 0;
   }
 
   /** Glow points at lit shades (not at the tablet level) and light cones under spots (level "High"). */
@@ -1864,116 +1811,34 @@ export class NextFloorViewer {
       fv.coneMesh.visible = false;
       return;
     }
-    const H = fv.floor.height;
-    const hp: number[] = [];
-    const hc: number[] = [];
+    const points: HaloPoints = { positions: [], colours: [] };
     const cones = new GeoBuffer();
-    const coneTris: FloorView["coneTris"] = [];
-    for (const d of this.devices) {
-      if (d.model && d.floorId === fv.floor.id) {
-        if (d.model === "camera_ceiling" && this.wallMode === "cut") continue;
-        if (d.cone === false) continue;
-        // the camera's field of view on the floor: a faint wedge, red while it sees motion
-        const a = (d.rotation ?? 0) * DEG;
-        const dir: [number, number] = [-Math.sin(a), Math.cos(a)];
-        const dome = d.model === "camera_ceiling";
-        const reach = d.reach ?? (dome ? 3 : 4.5);
-        const half = ((d.fov ?? (dome ? 360 : 90)) * DEG) / 2;
-        const near = d.motion ? new Color(0.9, 0.12, 0.16) : new Color(0.04, 0.22, 0.28);
-        const far = new Color(0, 0, 0);
-        const n = Math.max(4, Math.round(half / 0.15));
-        const y = 0.015;
-        // the wedge ends at the first wall in each direction: a camera does not see through walls
-        const walls = fv.geo.walls2d;
-        const reachAt = (t: number): number => {
-          const rx = dir[0] * Math.cos(t) - dir[1] * Math.sin(t);
-          const rz = dir[1] * Math.cos(t) + dir[0] * Math.sin(t);
-          let best = reach;
-          for (const w of walls) {
-            const ex = w.b[0] - w.a[0];
-            const ez = w.b[1] - w.a[1];
-            const den = rx * ez - rz * ex;
-            if (Math.abs(den) < 1e-9) continue;
-            const s = ((w.a[0] - d.x) * ez - (w.a[1] - d.z) * ex) / den;
-            const u = ((w.a[0] - d.x) * rz - (w.a[1] - d.z) * rx) / den;
-            // the wall the camera hangs on (a camera just inside an outer wall looks out through it) does not count
-            if (s > 0.45 && s < best && u >= 0 && u <= 1) best = s;
-          }
-          return best;
-        };
-        const rim = (t: number) => {
-          const r = reachAt(t);
-          return [d.x + (dir[0] * Math.cos(t) - dir[1] * Math.sin(t)) * r, y, d.z + (dir[1] * Math.cos(t) + dir[0] * Math.sin(t)) * r];
-        };
-        const start = cones.count;
-        for (let i = 0; i < n; i++) cones.tri([d.x, y, d.z], rim(-half + (2 * half * (i + 1)) / n), rim(-half + (2 * half * i) / n), near, far, far);
-        coneTris.push({ id: d.id, start, end: cones.count });
+    const wedges: FloorView["coneTris"] = [];
+    const cut = this.wallMode === "cut";
+    for (const marker of this.devices) {
+      if (marker.model && marker.floorId === fv.floor.id) {
+        // a camera: its field of view on the floor
+        if ((marker.model === "camera_ceiling" && cut) || marker.cone === false) continue;
+        wedges.push({ id: marker.id, ...addCameraWedge(cones, marker, fv.geo.walls2d) });
         continue;
       }
-      const glow = this.glowOf(d);
-      if (d.floorId !== fv.floor.id || !d.lamp || !glow) continue;
-      if (HANGING_LAMPS.has(d.lamp) && this.wallMode === "cut") continue;
-      const [w, dd, h] = d.size ?? LAMP_SIZE[d.lamp];
-      const base = d.base ?? 0;
-      const ang = (d.rotation ?? 0) * DEG;
-      const y = {
-        ceiling: H - 0.07,
-        downlight: H - 0.03,
-        spot: H - h,
-        panel: H - 0.03,
-        pendant: Math.max(0.4, H - h) + 0.08,
-        floor: base + h - 0.15,
-        uplight: base + h,
-        table: base + h - 0.09,
-        wall: base + h / 2,
-        strip: base + Math.max(0.02, h) - 0.01,
-        bollard: base + h - 0.08,
-        garden: base + h - 0.03,
-      }[d.lamp];
-      // a wall light glows in front of the wall
-      const push = (x: number, z: number, k = 1) => {
-        hp.push(x, y, z);
-        hc.push(...glow.color.map((c) => c * glow.level * 0.7 * k));
-      };
-      if (d.lamp === "strip")
-        for (const t of [-0.4, -0.13, 0.13, 0.4]) {
-          if (d.upright) {
-            // an upright strip glows up its length
-            hp.push(d.x, base + w * (0.5 + t), d.z);
-            hc.push(...glow.color.map((c) => c * glow.level * 0.7 * 0.6));
-          } else push(d.x + Math.cos(ang) * w * t, d.z + Math.sin(ang) * w * t, 0.6);
-        }
-      else if (d.lamp === "wall") push(d.x - Math.sin(ang) * (dd / 2 + 0.05), d.z + Math.cos(ang) * (dd / 2 + 0.05));
-      else push(d.x, d.z);
-      if (this.highQuality && (d.lamp === "downlight" || d.lamp === "spot")) {
-        // soft cone from the lamp to the floor, fading towards the floor
-        const top = new Color(...glow.color.map((c) => c * 0.09 * glow.level) as [number, number, number]);
-        const bottom = new Color(0, 0, 0);
-        const r0 = Math.max(0.03, w / 2);
-        const r1 = 0.45 + 0.35 * glow.level;
-        const n = 16;
-        for (let i = 0; i < n; i++) {
-          const a0 = (i / n) * Math.PI * 2;
-          const a1 = ((i + 1) / n) * Math.PI * 2;
-          const t0 = [d.x + Math.cos(a0) * r0, y, d.z + Math.sin(a0) * r0];
-          const t1 = [d.x + Math.cos(a1) * r0, y, d.z + Math.sin(a1) * r0];
-          const b0 = [d.x + Math.cos(a0) * r1, 0.02, d.z + Math.sin(a0) * r1];
-          const b1 = [d.x + Math.cos(a1) * r1, 0.02, d.z + Math.sin(a1) * r1];
-          cones.tri(t0, b0, b1, top, bottom, bottom);
-          cones.tri(t0, b1, t1, top, bottom, top);
-        }
-      }
+      const glow = this.glowOf(marker);
+      if (marker.floorId !== fv.floor.id || !marker.lamp || !glow) continue;
+      if (cut && hiddenInCut(marker.lamp)) continue;
+      const lamp = marker as DeviceMarker & { lamp: LampModel };
+      addLampHalo(points, lamp, glow, fv.floor.height);
+      if (this.highQuality && (marker.lamp === "downlight" || marker.lamp === "spot")) addSpotCone(cones, lamp, glow, fv.floor.height);
     }
-    const g = new Geometry();
-    g.setAttribute("position", new Float32BufferAttribute(hp, 3));
-    g.setAttribute("color", new Float32BufferAttribute(hc, 3));
+    const geometry = new Geometry();
+    geometry.setAttribute("position", new Float32BufferAttribute(points.positions, 3));
+    geometry.setAttribute("color", new Float32BufferAttribute(points.colours, 3));
     fv.haloMesh.geometry.dispose();
-    fv.haloMesh.geometry = g;
-    fv.haloMesh.visible = hp.length > 0;
+    fv.haloMesh.geometry = geometry;
+    fv.haloMesh.visible = points.positions.length > 0;
     fv.coneMesh.geometry.dispose();
     fv.coneMesh.geometry = cones.geometry();
     fv.coneMesh.visible = cones.count > 0;
-    fv.coneTris = coneTris;
+    fv.coneTris = wedges;
   }
 
   /** Lit screens of a floor: a bright panel in the app colour and a faint glow around it. */

@@ -1,41 +1,59 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { emptyBuilding, newFloor } from "./model.ts";
-import { exportFile, parseExport } from "./transfer.ts";
+import { emptyBuilding, newFloor, type Building } from "./model.ts";
+import { exportFile, EXPORT_FORMAT, parseExport, storedImageIds, withoutEntities } from "./transfer.ts";
 
-function building() {
+function linked(): Building {
   const b = emptyBuilding();
-  const f = newFloor("eg", "EG", 0);
-  f.rooms = [{ id: "r", name: "Wohnen", area_id: "living_room", points: [[0, 0], [4, 0], [4, 3], [0, 3]], floor_material: "wood" }];
-  f.furniture = [{ id: "m", type: "lamp_ceiling", x: 2, z: 1.5, rotation: 0, w: 0.4, d: 0.4, h: 0.08, variant: null, entity: "light.decke", power: null }];
-  f.placements = [{ entity_id: "sensor.temp", x: 1, z: 1, y: null }];
-  f.background = { image_id: "img", x: 0, z: 0, width: 10, opacity: 0.5 };
-  b.floors = [f];
-  b.energy.grid = "sensor.grid";
-  b.presence = [{ person: "person.mia", sensor: "sensor.mia" }];
+  const floor = newFloor("g", "Ground", 0);
+  floor.rooms = [{ id: "r", name: "Room", area_id: "living", points: [[0, 0], [4, 0], [4, 3], [0, 3]], floor_material: "wood" }];
+  floor.placements = [{ entity_id: "light.a", x: 1, z: 1, y: null, mount: null }];
+  floor.furniture = [{ id: "tv", type: "tv", x: 1, z: 1, rotation: 0, w: 1, d: 0.1, h: 0.6, variant: null, entity: "media_player.tv", power: "sensor.tv_power", pictures: [{ entity: "", state: "", image: "abc123" }, { entity: "", state: "", image: "https://example.org/a.png" }, { entity: "", state: "", image: "camera:front" }] }];
+  floor.background = { image_id: "bg1", x: 0, z: 0, width: 10, rotation: 0, opacity: 0.5 } as never;
+  b.floors = [floor];
+  b.presence = [{ person: "person.a", sensor: "sensor.a" }];
+  b.energy = { ...b.energy, grid: "sensor.grid", solar: "sensor.solar" };
   return b;
 }
 
-test("a shareable export has no entities, areas or images", () => {
-  const file = exportFile(building(), true);
-  const f = file.building.floors[0];
-  assert.equal(f.rooms[0].area_id, null);
-  assert.equal(f.furniture[0].entity, null);
-  assert.deepEqual(f.placements, []);
-  assert.equal(f.background, null);
-  assert.equal(file.building.energy.grid, null);
-  assert.deepEqual(file.building.presence, []);
-  // the room shape and the lamp stay
-  assert.equal(f.rooms[0].points.length, 4);
-  assert.equal(f.furniture[0].type, "lamp_ceiling");
+test("a shareable copy has no entity, area, person or background left", () => {
+  const original = linked();
+  const copy = withoutEntities(original);
+  assert.equal(copy.floors[0].placements.length, 0);
+  assert.equal(copy.floors[0].rooms[0].area_id, null);
+  assert.equal(copy.floors[0].furniture[0].entity, null);
+  assert.equal(copy.floors[0].furniture[0].power, null);
+  assert.equal(copy.floors[0].background, null);
+  assert.deepEqual([copy.presence, copy.energy.grid, copy.energy.solar], [[], null, null]);
+  // the original stays as it was
+  assert.equal(original.floors[0].rooms[0].area_id, "living");
+  assert.equal(original.energy.grid, "sensor.grid");
 });
 
-test("import reads export files and plain buildings, and rejects anything else", () => {
-  const full = exportFile(building(), false);
-  const back = parseExport(JSON.stringify(full));
-  assert.equal(back.floors[0].furniture[0].entity, "light.decke");
-  assert.equal(back.floors[0].background, null, "images are not imported");
-  assert.equal(parseExport(JSON.stringify(building())).floors.length, 1);
-  assert.throws(() => parseExport("{}"));
-  assert.throws(() => parseExport("kein json"));
+test("exportFile wraps the plan and shareable or not decides about the links", () => {
+  const full = exportFile(linked(), false);
+  assert.equal(full.format, EXPORT_FORMAT);
+  assert.equal(full.building.floors[0].placements.length, 1);
+  assert.equal(exportFile(linked(), true).building.floors[0].placements.length, 0);
+  assert.ok(!Number.isNaN(Date.parse(full.exported_at)));
+});
+
+test("a written file reads back, with or without the wrapper", () => {
+  const wrapped = parseExport(JSON.stringify(exportFile(linked(), false)));
+  assert.equal(wrapped.floors[0].name, "Ground");
+  assert.equal(wrapped.floors[0].background, null, "pictures do not travel");
+  assert.equal(parseExport(JSON.stringify(linked())).floors.length, 1);
+});
+
+test("garbage is told apart: not JSON versus JSON that is no plan", () => {
+  assert.throws(() => parseExport("{oops"), /not_json/);
+  assert.throws(() => parseExport("[1,2]"), /not_plan/);
+  assert.throws(() => parseExport(JSON.stringify({ version: 2, floors: [], settings: {} })), /not_plan/);
+  assert.throws(() => parseExport("null"), /not_plan/);
+});
+
+test("stored picture ids come from backgrounds and screens, once, never URLs or cameras", () => {
+  const b = linked();
+  b.floors[0].furniture[0].pictures!.push({ entity: "", state: "", image: "abc123" });
+  assert.deepEqual(storedImageIds(b).sort(), ["abc123", "bg1"]);
 });

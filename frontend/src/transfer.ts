@@ -1,5 +1,5 @@
-// Export and import of the building as a JSON file. Without entities, a plan can be shared with others:
-// areas, lights, sensors and every other link to this Home Assistant are removed.
+// Plan files: save the building as JSON and load it again. A shareable copy has every link to this
+// Home Assistant removed (entities, areas, energy sensors, people), so it can go to someone else.
 
 import { normalizeBuilding, type Building } from "./model.ts";
 
@@ -12,57 +12,65 @@ export interface ExportFile {
   building: Building;
 }
 
-/** A copy of the building without any link to entities or areas (background images stay out anyway). */
-export function withoutEntities(b: Building): Building {
-  const out = structuredClone(b);
-  out.energy = { ...out.energy, grid: null, solar: null, battery: null, battery_soc: null, tariff: null };
-  out.presence = [];
-  for (const f of out.floors) {
-    f.placements = [];
-    f.background = null;
-    f.rooms = f.rooms.map((r) => ({ ...r, area_id: null }));
-    f.furniture = f.furniture.map((m) => ({ ...m, entity: null, power: null }));
-    f.openings = f.openings.map((o) => ({ ...o, cover: null, contact: null, tilt: null }));
+/** The building with all links to entities and areas cut. Background pictures are dropped as well. */
+export function withoutEntities(source: Building): Building {
+  const copy = structuredClone(source);
+  copy.energy = { ...copy.energy, grid: null, solar: null, battery: null, battery_soc: null, tariff: null };
+  copy.presence = [];
+  for (const floor of copy.floors) {
+    floor.background = null;
+    floor.placements = [];
+    floor.rooms.forEach((room) => (room.area_id = null));
+    floor.furniture.forEach((piece) => Object.assign(piece, { entity: null, power: null }));
+    floor.openings.forEach((opening) => Object.assign(opening, { cover: null, contact: null, tilt: null }));
   }
-  return out;
+  return copy;
 }
 
-export function exportFile(b: Building, shareable: boolean): ExportFile {
-  return { format: EXPORT_FORMAT, version: 1, exported_at: new Date().toISOString(), building: shareable ? withoutEntities(b) : structuredClone(b) };
+export function exportFile(building: Building, shareable: boolean): ExportFile {
+  return {
+    format: EXPORT_FORMAT,
+    version: 1,
+    exported_at: new Date().toISOString(),
+    building: shareable ? withoutEntities(building) : structuredClone(building),
+  };
 }
 
-/** Reads an export file; throws "not_json" or "not_plan" when it is none. */
+const looksLikePlan = (b: Building | undefined): b is Building => !!b && b.version === 1 && Array.isArray(b.floors) && !!b.settings;
+
+/** Reads an export file (or a bare building). Throws Error("not_json") or Error("not_plan"). */
 export function parseExport(text: string): Building {
-  let data: unknown;
+  let parsed: unknown;
   try {
-    data = JSON.parse(text);
+    parsed = JSON.parse(text);
   } catch {
     throw new Error("not_json");
   }
-  const file = data as Partial<ExportFile>;
-  const b = (file?.format === EXPORT_FORMAT ? file.building : data) as Building | undefined;
-  if (!b || b.version !== 1 || !Array.isArray(b.floors) || !b.settings) throw new Error("not_plan");
-  // background images are not part of an export
-  for (const f of b.floors) f.background = null;
-  return normalizeBuilding(b);
+  const wrapped = parsed as Partial<ExportFile> | null;
+  const candidate = (wrapped?.format === EXPORT_FORMAT ? wrapped.building : parsed) as Building | undefined;
+  if (!looksLikePlan(candidate)) throw new Error("not_plan");
+  candidate.floors.forEach((floor) => (floor.background = null)); // pictures never travel with a file
+  return normalizeBuilding(candidate);
 }
 
-/** Ids of the stored pictures a plan uses: floor backgrounds and screen pictures (not URLs or cameras). */
-export function storedImageIds(b: Building): string[] {
+const isStoredImage = (ref: string) => !/^https?:\/\//.test(ref) && !ref.startsWith("camera:");
+
+/** Ids of the uploaded pictures a plan uses: floor backgrounds and pictures on screens (not URLs, not cameras). */
+export function storedImageIds(building: Building): string[] {
   const ids = new Set<string>();
-  for (const f of b.floors) {
-    if (f.background?.image_id) ids.add(f.background.image_id);
-    for (const m of f.furniture) for (const r of m.pictures ?? []) if (r.image && !/^https?:\/\//.test(r.image) && !r.image.startsWith("camera:")) ids.add(r.image);
+  for (const floor of building.floors) {
+    if (floor.background?.image_id) ids.add(floor.background.image_id);
+    const refs = floor.furniture.flatMap((piece) => piece.pictures ?? []);
+    for (const { image } of refs) if (image && isStoredImage(image)) ids.add(image);
   }
   return [...ids];
 }
 
-/** Starts a download of a text file in the browser. */
-export function download(name: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+/** Offers a text as a file download. */
+export function download(filename: string, text: string): void {
+  const link = document.createElement("a");
+  const href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  Object.assign(link, { href, download: filename });
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
 }

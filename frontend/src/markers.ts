@@ -1,153 +1,184 @@
-// Turns placements and entity states into device markers for the 3D view, and formats short state
-// texts shared by markers and the room panel.
+// Device markers for the 3D view, built from placed entities and their states, plus the short state
+// texts that markers and the room panel share.
 
 import { defaultHeight, entityName, isActive, isUnavailable, kindOf, lightGlow, tempUnit } from "./devices.ts";
 import { formatNumber, translate, type I18nKey } from "./i18n.ts";
 import { iconSvg, mdiIcon } from "./icons.ts";
-import type { Building } from "./model.ts";
-import { pointInPolygon } from "./model.ts";
+import { pointInPolygon, type Building, type Floor, type Placement, type Room } from "./model.ts";
 import type { HassEntity, HomeAssistant } from "./types.ts";
 import type { DeviceMarker } from "./viewer/viewer3d.ts";
 
-const t = (hass: HomeAssistant | undefined, key: I18nKey) => translate(hass, key);
+type Hass = HomeAssistant | undefined;
 
-/** Short, localised state text for a marker or a panel row. */
-export function stateText(hass: HomeAssistant | undefined, st: HassEntity | undefined): string {
-  if (!st || isUnavailable(st)) return t(hass, "state_unavailable");
-  const a = st.attributes;
+const say = (hass: Hass, key: I18nKey) => translate(hass, key);
+const onOff = (hass: Hass, on: boolean) => say(hass, on ? "state_on" : "state_off");
+
+/** A state word translated when there is a translation, else shown as it is. */
+function stateWord(hass: Hass, state: string): string {
+  const key = `state_${state}` as I18nKey;
+  const word = translate(hass, key);
+  return word === key ? state : word;
+}
+
+const OPENING_CLASSES = new Set(["door", "window", "opening", "garage_door"]);
+const MEDIA_RUNNING = new Set(["playing", "paused", "on", "idle"]);
+
+function lightText(hass: Hass, st: HassEntity): string {
+  if (st.state !== "on") return say(hass, "state_off");
+  const brightness = st.attributes.brightness;
+  return typeof brightness === "number" ? `${Math.round((brightness / 255) * 100)} %` : say(hass, "state_on");
+}
+
+function coverText(hass: Hass, st: HassEntity): string {
+  const position = st.attributes.current_position;
+  const moving = st.state === "opening" || st.state === "closing";
+  return typeof position === "number" && !moving ? `${position} %` : stateWord(hass, st.state);
+}
+
+function climateText(hass: Hass, st: HassEntity): string {
+  const current = st.attributes.current_temperature;
+  const reading = typeof current === "number" ? `${formatNumber(hass, current, 1)} ${hass ? tempUnit(hass) : "°C"}` : null;
+  if (st.state === "off") return reading ? `${reading} · ${say(hass, "state_off")}` : say(hass, "state_off");
+  return reading ?? stateWord(hass, st.state);
+}
+
+function mediaText(hass: Hass, st: HassEntity): string {
+  // while something runs: the app (Netflix ...), else the title, else the input source
+  const label = [st.attributes.app_name, st.attributes.media_title, st.attributes.source].find((v): v is string => typeof v === "string" && v !== "");
+  return MEDIA_RUNNING.has(st.state) && label ? label : stateWord(hass, st.state);
+}
+
+function binaryText(hass: Hass, st: HassEntity): string {
+  const on = st.state === "on";
+  if (OPENING_CLASSES.has(String(st.attributes.device_class))) return say(hass, on ? "state_open" : "state_closed");
+  return say(hass, on ? "state_detected" : "state_clear");
+}
+
+function sensorText(hass: Hass, st: HassEntity): string {
+  const value = Number(st.state);
+  if (!Number.isFinite(value)) return st.state;
+  // the decimals chosen in Home Assistant win (a gas meter reads 1234.567 m³)
+  const digits = hass?.entities?.[st.entity_id]?.display_precision ?? 1;
+  const unit = st.attributes.unit_of_measurement;
+  return `${formatNumber(hass, value, digits)}${typeof unit === "string" && unit ? ` ${unit}` : ""}`;
+}
+
+/** Short state text, in the user's language, for a marker or a row of the room panel. */
+export function stateText(hass: Hass, st: HassEntity | undefined): string {
+  if (!st || isUnavailable(st)) return say(hass, "state_unavailable");
   switch (kindOf(st.entity_id)) {
     case "light":
-      if (st.state !== "on") return t(hass, "state_off");
-      return typeof a.brightness === "number" ? `${Math.round((a.brightness / 255) * 100)} %` : t(hass, "state_on");
+      return lightText(hass, st);
     case "switch":
     case "fan":
-      return t(hass, st.state === "on" ? "state_on" : "state_off");
+      return onOff(hass, st.state === "on");
     case "cover":
-      if (typeof a.current_position === "number" && st.state !== "opening" && st.state !== "closing") return `${a.current_position} %`;
-      return translateState(hass, st.state);
-    case "climate": {
-      const cur = typeof a.current_temperature === "number" ? `${formatNumber(hass, a.current_temperature, 1)} ${hass ? tempUnit(hass) : "°C"}` : null;
-      if (st.state === "off") return cur ? `${cur} · ${t(hass, "state_off")}` : t(hass, "state_off");
-      return cur ?? translateState(hass, st.state);
-    }
-    case "media": {
-      // what is running: the app (Netflix, YouTube, …), else the title or the input source
-      const running = st.state === "playing" || st.state === "paused" || st.state === "on" || st.state === "idle";
-      const what = [a.app_name, a.media_title, a.source].find((v) => typeof v === "string" && v) as string | undefined;
-      return running && what ? what : translateState(hass, st.state);
-    }
+      return coverText(hass, st);
+    case "climate":
+      return climateText(hass, st);
+    case "media":
+      return mediaText(hass, st);
     case "lock":
     case "camera":
-      return translateState(hass, st.state);
-    case "binary": {
-      const opening = ["door", "window", "opening", "garage_door"].includes(a.device_class as string);
-      if (opening) return t(hass, st.state === "on" ? "state_open" : "state_closed");
-      return t(hass, st.state === "on" ? "state_detected" : "state_clear");
-    }
-    case "sensor": {
-      const v = Number(st.state);
-      const unit = (a.unit_of_measurement as string | undefined) ?? "";
-      // the decimals set in Home Assistant win (a gas meter reads 1234.567 m³)
-      const digits = hass?.entities?.[st.entity_id]?.display_precision ?? 1;
-      return Number.isFinite(v) ? `${formatNumber(hass, v, digits)}${unit ? ` ${unit}` : ""}` : st.state;
-    }
+      return stateWord(hass, st.state);
+    case "binary":
+      return binaryText(hass, st);
+    case "sensor":
+      return sensorText(hass, st);
     default:
       return "";
   }
 }
 
-function translateState(hass: HomeAssistant | undefined, state: string): string {
-  const key = `state_${state}` as I18nKey;
-  const s = translate(hass, key);
-  return s === key ? state : s;
+const roomAt = (floor: Floor, x: number, z: number): Room | null => floor.rooms.find((room) => room.points.length >= 3 && pointInPolygon([x, z], room.points)) ?? null;
+
+/** A lamp's glow made stronger or weaker by its own factor, so a row of LED strips need not outshine a room. */
+export function scaleGlow<T extends { level: number }>(glow: T | null, factor: number | null | undefined): T | null {
+  if (!glow || factor == null || factor === 1) return glow;
+  return { ...glow, level: Math.min(1.5, Math.max(0.02, glow.level * factor)) };
 }
 
-/** Markers for every placed entity that still exists. */
+function markerFor(hass: HomeAssistant, floor: Floor, placed: Placement): DeviceMarker | null {
+  const kind = kindOf(placed.entity_id);
+  const st = hass.states[placed.entity_id];
+  if (!kind || !st) return null;
+  const room = roomAt(floor, placed.x, placed.z);
+  const areaName = room?.area_id ? hass.areas?.[room.area_id]?.name : undefined;
+  const isCamera = kind === "camera";
+  return {
+    id: placed.entity_id,
+    floorId: floor.id,
+    roomId: room?.id ?? null,
+    x: placed.x,
+    z: placed.z,
+    y: placed.y ?? defaultHeight(kind, floor.height, placed.mount ?? null),
+    lamp: kind === "light" ? (placed.mount ?? "ceiling") : null,
+    model: isCamera ? (placed.mount === "ceiling" ? "camera_ceiling" : "camera_wall") : undefined,
+    motion: isCamera ? cameraMotion(hass, placed.entity_id) : undefined,
+    fov: placed.fov ?? undefined,
+    reach: placed.reach ?? undefined,
+    tilt: placed.tilt ?? undefined,
+    rotation: placed.rotation ?? 0,
+    icon: placed.icon ? mdiIcon(placed.icon) : iconSvg(kind),
+    cone: isCamera && placed.cone === false ? false : undefined,
+    name: placed.name || entityName(hass, placed.entity_id, areaName),
+    ownName: placed.name || undefined,
+    showName: !!placed.show_name,
+    text: stateText(hass, st),
+    active: isActive(st),
+    unavailable: isUnavailable(st),
+    glow: kind === "light" ? scaleGlow(lightGlow(st), placed.glow_scale) : null,
+    show: placed.marker ?? undefined,
+    fixed: !!placed.locked,
+  };
+}
+
+/** One marker per placed entity that still exists in Home Assistant. */
 export function buildMarkers(hass: HomeAssistant, building: Building): DeviceMarker[] {
-  const out: DeviceMarker[] = [];
-  for (const floor of building.floors) {
-    for (const pl of floor.placements) {
-      const kind = kindOf(pl.entity_id);
-      const st = hass.states[pl.entity_id];
-      if (!kind || !st) continue;
-      const room = floor.rooms.find((r) => r.points.length >= 3 && pointInPolygon([pl.x, pl.z], r.points)) ?? null;
-      const areaName = room?.area_id ? hass.areas?.[room.area_id]?.name : undefined;
-      out.push({
-        id: pl.entity_id,
-        floorId: floor.id,
-        roomId: room?.id ?? null,
-        x: pl.x,
-        z: pl.z,
-        y: pl.y ?? defaultHeight(kind, floor.height, pl.mount ?? null),
-        lamp: kind === "light" ? (pl.mount ?? "ceiling") : null,
-        model: kind === "camera" ? (pl.mount === "ceiling" ? "camera_ceiling" : "camera_wall") : undefined,
-        motion: kind === "camera" ? cameraMotion(hass, pl.entity_id) : undefined,
-        fov: pl.fov ?? undefined,
-        reach: pl.reach ?? undefined,
-        tilt: pl.tilt ?? undefined,
-        rotation: pl.rotation ?? 0,
-        icon: pl.icon ? mdiIcon(pl.icon) : iconSvg(kind),
-        cone: kind === "camera" && pl.cone === false ? false : undefined,
-        name: pl.name || entityName(hass, pl.entity_id, areaName),
-        ownName: pl.name || undefined,
-        showName: !!pl.show_name,
-        text: stateText(hass, st),
-        active: isActive(st),
-        unavailable: isUnavailable(st),
-        glow: kind === "light" ? scaleGlow(lightGlow(st), pl.glow_scale) : null,
-        show: pl.marker ?? undefined,
-        fixed: !!pl.locked,
-      });
-    }
-  }
-  return out;
+  return building.floors.flatMap((floor) => floor.placements.map((placed) => markerFor(hass, floor, placed)).filter((m): m is DeviceMarker => m !== null));
 }
 
-/** What a camera's detection sensor reports: a person, a vehicle, an animal or plain motion (by its id and name). */
+/** What a camera's detection sensor looks for. */
 export type DetectionKind = "person" | "car" | "pet" | "motion";
 
+const DETECTION_WORDS: [DetectionKind, RegExp][] = [
+  ["person", /person|people|human|pedestrian/],
+  ["car", /\bcar\b|vehicle|truck|bus|motorcycle|bicycle|fahrzeug|auto\b/],
+  ["pet", /\bdog\b|\bcat\b|\bpet\b|animal|bird|hund|katze|tier/],
+];
+
+/** Person, vehicle, animal or plain motion, judged from the sensor's id and friendly name. */
 export function detectionKind(hass: HomeAssistant, sensorId: string): DetectionKind {
-  // ids join their words with underscores: "einfahrt_car_occupancy"
-  const text = `${sensorId} ${String(hass.states[sensorId]?.attributes.friendly_name ?? "")}`.toLowerCase().replace(/[_.-]/g, " ");
-  if (/person|people|human|pedestrian/.test(text)) return "person";
-  if (/\bcar\b|vehicle|truck|bus|motorcycle|bicycle|fahrzeug|auto\b/.test(text)) return "car";
-  if (/\bdog\b|\bcat\b|\bpet\b|animal|bird|hund|katze|tier/.test(text)) return "pet";
-  return "motion";
+  const name = String(hass.states[sensorId]?.attributes.friendly_name ?? "");
+  // ids glue words with underscores ("driveway_car_occupancy")
+  const text = `${sensorId} ${name}`.toLowerCase().replace(/[_.-]/g, " ");
+  return DETECTION_WORDS.find(([, pattern]) => pattern.test(text))?.[0] ?? "motion";
 }
 
-/** Whether a camera's device reports motion or a person right now (its motion/occupancy sensors). */
-export function cameraMotion(hass: HomeAssistant, cameraId: string): boolean {
-  return cameraMotionSensors(hass, cameraId).some((id) => hass.states[id]?.state === "on");
-}
-
-/** The motion, occupancy and presence sensors of a camera's device. */
+/** The motion, occupancy and presence sensors that belong to the device of a camera. */
 export function cameraMotionSensors(hass: HomeAssistant, cameraId: string): string[] {
-  const device = hass.entities?.[cameraId]?.device_id;
+  const entities = hass.entities ?? {};
+  const device = entities[cameraId]?.device_id;
   if (!device) return [];
-  return Object.values(hass.entities ?? {})
+  const motionClasses = new Set(["motion", "occupancy", "presence"]);
+  return Object.values(entities)
     .filter((e) => e.device_id === device && e.entity_id.startsWith("binary_sensor."))
     .map((e) => e.entity_id)
-    .filter((id) => ["motion", "occupancy", "presence"].includes(String(hass.states[id]?.attributes.device_class)));
+    .filter((id) => motionClasses.has(String(hass.states[id]?.attributes.device_class)));
 }
 
-/** Entity ids placed anywhere in the building (to notice relevant state changes cheaply). */
-export function placedEntities(building: Building): string[] {
-  return building.floors.flatMap((f) => f.placements.map((p) => p.entity_id));
-}
+/** Whether the camera's device currently reports motion, a person or presence. */
+export const cameraMotion = (hass: HomeAssistant, cameraId: string): boolean => cameraMotionSensors(hass, cameraId).some((id) => hass.states[id]?.state === "on");
 
-/** Opens Home Assistant's more-info dialog for an entity. */
+/** Every entity that is placed somewhere in the building. */
+export const placedEntities = (building: Building): string[] => building.floors.flatMap((floor) => floor.placements.map((p) => p.entity_id));
+
+/** Opens the more-info dialog of Home Assistant for an entity. */
 export function openMoreInfo(from: HTMLElement, entityId: string): void {
   from.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true }));
 }
 
-/** Toggle an entity with its own domain's toggle service (light.toggle, switch.toggle, …). */
+/** Switches an entity with the toggle service of its own domain. */
 export function toggleEntity(hass: HomeAssistant, entityId: string): Promise<unknown> {
-  const domain = entityId.slice(0, entityId.indexOf("."));
-  return hass.callService(domain, "toggle", { entity_id: entityId });
-}
-
-/** A glow made weaker or stronger by the lamp's own factor (#181): many LED strips need not outshine the room. */
-export function scaleGlow<T extends { level: number }>(glow: T | null, scale: number | null | undefined): T | null {
-  if (!glow || scale == null || scale === 1) return glow;
-  return { ...glow, level: Math.max(0.02, Math.min(1.5, glow.level * scale)) };
+  return hass.callService(entityId.split(".")[0], "toggle", { entity_id: entityId });
 }

@@ -4,29 +4,73 @@ import { emptyBuilding, newFloor } from "./model.ts";
 import { searchIndex, searchItems } from "./search.ts";
 import type { HomeAssistant } from "./types.ts";
 
-test("search finds rooms and placed devices by name, room and without accents", () => {
+function demo() {
   const hass = {
-    language: "de",
+    language: "en",
     states: {
-      "light.decke": { entity_id: "light.decke", state: "on", attributes: { friendly_name: "Deckenlicht Küche" } },
-      "sensor.t": { entity_id: "sensor.t", state: "21", attributes: { friendly_name: "Temperatur" } },
+      "light.ceiling": { entity_id: "light.ceiling", state: "on", attributes: { friendly_name: "Ceiling light Kitchen" } },
+      "sensor.temp": { entity_id: "sensor.temp", state: "21", attributes: { friendly_name: "Temperature" } },
+      "sensor.hall": { entity_id: "sensor.hall", state: "5", attributes: { friendly_name: "Hall sensor" } },
     },
   } as unknown as HomeAssistant;
-  const b = emptyBuilding();
-  const floor = newFloor("eg", "EG", 0);
-  floor.rooms = [{ id: "k", name: "Küche", area_id: null, points: [[0, 0], [4, 0], [4, 3], [0, 3]], floor_material: "wood" }];
-  floor.placements = [{ entity_id: "sensor.t", x: 1, z: 1, y: null, mount: null }];
-  floor.furniture = [{ id: "l", type: "lamp_ceiling", x: 2, z: 2, rotation: 0, w: 0.4, d: 0.4, h: 0.1, variant: null, entity: "light.decke", power: null }];
-  b.floors = [floor];
-  const index = searchIndex(hass, b);
-  assert.equal(index.length, 3);
-  // the room comes first, then its devices; "kuche" matches "Küche"
-  const hits = searchItems(index, "kuche");
-  assert.equal(hits[0].kind, "room");
-  assert.ok(hits.some((h) => h.entity === "light.decke"));
-  // devices know their room
-  const temp = searchItems(index, "temp")[0];
-  assert.equal(temp.entity, "sensor.t");
-  assert.equal(temp.where, "Küche");
-  assert.deepEqual(searchItems(index, "  "), []);
+  const building = emptyBuilding();
+  const ground = newFloor("g", "Ground", 0);
+  ground.rooms = [
+    { id: "k", name: "Kitchen", area_id: null, points: [[0, 0], [4, 0], [4, 3], [0, 3]], floor_material: "wood" },
+    { id: "bad", name: "Broken", area_id: null, points: [[0, 0], [1, 1]], floor_material: "wood" },
+  ];
+  ground.placements = [
+    { entity_id: "sensor.temp", x: 1, z: 1, y: null, mount: null },
+    { entity_id: "sensor.temp", x: 2, z: 2, y: null, mount: null },
+    { entity_id: "sensor.missing", x: 1, z: 1, y: null, mount: null },
+    { entity_id: "sensor.hall", x: 9, z: 9, y: null, mount: null },
+  ];
+  ground.furniture = [{ id: "l", type: "lamp_ceiling", x: 2, z: 2, rotation: 0, w: 0.4, d: 0.4, h: 0.1, variant: null, entity: "light.ceiling", power: null }];
+  building.floors = [ground];
+  return { hass, building };
+}
+
+test("the index lists valid rooms and each known entity once", () => {
+  const { hass, building } = demo();
+  const index = searchIndex(hass, building);
+  assert.deepEqual(index.map((i) => i.name).sort(), ["Ceiling light Kitchen", "Hall sensor", "Kitchen", "Temperature"]);
+  assert.equal(index.filter((i) => i.entity === "sensor.temp").length, 1);
+});
+
+test("a device knows the room it stands in, a device outside every room has none", () => {
+  const { hass, building } = demo();
+  const index = searchIndex(hass, building);
+  assert.equal(index.find((i) => i.entity === "sensor.temp")?.where, "Kitchen");
+  assert.equal(index.find((i) => i.entity === "sensor.hall")?.roomId, null);
+});
+
+test("the place also names the floor once the building has several", () => {
+  const { hass, building } = demo();
+  building.floors.push(newFloor("o", "Upstairs", 3));
+  const index = searchIndex(hass, building);
+  assert.equal(index.find((i) => i.entity === "sensor.temp")?.where, "Kitchen · Ground");
+  assert.equal(index.find((i) => i.kind === "room")?.where, "Ground");
+});
+
+test("accents and case do not matter, every word has to match", () => {
+  const { hass, building } = demo();
+  building.floors[0].rooms[0].name = "Küche";
+  const index = searchIndex(hass, building);
+  assert.equal(searchItems(index, "KUCHE")[0].kind, "room");
+  assert.equal(searchItems(index, "ceiling kuche").length, 1);
+  assert.equal(searchItems(index, "ceiling garage").length, 0);
+});
+
+test("best matches first: prefix before contains, rooms before devices, and the limit holds", () => {
+  const { hass, building } = demo();
+  const index = searchIndex(hass, building);
+  const hits = searchItems(index, "kitchen");
+  assert.equal(hits[0].name, "Kitchen");
+  assert.equal(hits[1].name, "Ceiling light Kitchen");
+  assert.equal(searchItems(index, "e", 2).length, 2);
+});
+
+test("an empty query finds nothing", () => {
+  const { hass, building } = demo();
+  assert.deepEqual(searchItems(searchIndex(hass, building), "   "), []);
 });

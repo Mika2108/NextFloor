@@ -1,73 +1,74 @@
-<p align="center"><img src="custom_components/nextfloor/brand/icon@2x.png" width="120" alt="NextFloor logo"></p>
+<p align="center"><img src="custom_components/nextfloor/brand/icon@2x.png" width="110" alt="NextFloor logo"></p>
 
-# NextFloor
+<h1 align="center">NextFloor</h1>
 
-Draw your home right inside Home Assistant and watch it live in 3D: a lamp switches on and the lamp in the model lights its room in the same colour, blinds move, doors and windows open, the TV shows what is playing, rain falls outside when it rains. No external tools, no cloud, made for wall tablets.
+<p align="center"><b>Draw your home inside Home Assistant and watch it live in 3D.</b><br>
+Lamps light their room, blinds move, doors open, the TV shows what plays, rain falls outside.<br>
+Free, open source, no cloud, no account. Made for wall tablets.</p>
 
-Free and open source (MIT). No account, no cloud, no licence keys.
+<p align="center">
+<a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=therealMRBK&repository=NextFloor&category=integration"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open in HACS"></a>
+<a href="https://therealmrbk.github.io/NextFloor/"><img src="https://img.shields.io/badge/%E2%96%B6-Online%20demo-00b4d8?style=for-the-badge" alt="Online demo"></a>
+</p>
 
-[![Open your Home Assistant instance and open the NextFloor repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=therealMRBK&repository=NextFloor&category=integration)
+<p align="center">
+<a href="https://github.com/therealMRBK/NextFloor/releases"><img src="https://img.shields.io/github/v/release/therealMRBK/NextFloor?style=flat-square" alt="Release"></a>
+<a href="https://github.com/therealMRBK/NextFloor/actions"><img src="https://img.shields.io/github/actions/workflow/status/therealMRBK/NextFloor/ci.yml?branch=main&style=flat-square&label=CI" alt="CI"></a>
+<a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange?style=flat-square" alt="HACS"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue?style=flat-square" alt="MIT"></a>
+<a href="#made-with-ai"><img src="https://img.shields.io/badge/built%20with-AI%20assistance-8a63d2?style=flat-square" alt="Built with AI"></a>
+</p>
 
-[![Release](https://img.shields.io/github/v/release/therealMRBK/NextFloor?style=flat-square)](https://github.com/therealMRBK/NextFloor/releases) [![CI](https://img.shields.io/github/actions/workflow/status/therealMRBK/NextFloor/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/therealMRBK/NextFloor/actions) [![HACS](https://img.shields.io/badge/HACS-custom-orange?style=flat-square)](https://hacs.xyz) [![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue?style=flat-square)](LICENSE) [![Built with AI](https://img.shields.io/badge/built%20with-AI%20assistance-8a63d2?style=flat-square)](#made-with-ai)
+<p align="center"><img src="docs/images/demo-live.gif" alt="NextFloor in a real house: the house turns, the ground floor opens, a room panel with its lights and devices"></p>
 
-![NextFloor in a real house: the house turns, the ground floor opens, a room panel with its lights and devices](docs/images/demo-live.gif)
+<p align="center">📖 <a href="docs/manual.md">Manual</a> · <a href="docs/anleitung.md">Anleitung (Deutsch)</a> · 🗺️ <a href="ROADMAP.md">Roadmap</a> · 📝 <a href="CHANGELOG.md">Changelog</a></p>
 
-NextFloor sits in Home Assistant like one of its own pages: it takes the colours, the font and the corner radius from your theme and follows light and dark mode.
+---
 
-| Dark theme | Light theme |
-|---|---|
-| ![Dark theme](docs/images/view-room.jpg) | ![Light theme](docs/images/view-room-light.jpg) |
-
-▶️ **[Try the online demo](https://therealmrbk.github.io/NextFloor/)** in your browser, with invented demo data. Nothing to install.
-
-📖 **Manual:** [English](docs/manual.md) · [Deutsch](docs/anleitung.md) · 🗺️ [Roadmap](ROADMAP.md) · 📝 [Changelog](CHANGELOG.md)
-
-## What it does
-
-| | |
-|---|---|
-| ![Editor](docs/images/editor.jpg) | **Plan editor in Home Assistant**: floors, rooms as rectangles or free shapes, automatic walls and free-standing partitions, doors, windows, garage doors, stairs, floor openings, outdoor areas and a roof. The 3D view runs next to the plan while you draw. |
-| ![Room](docs/images/view-room.jpg) | **Live 3D view**: tap a lamp to switch it, swipe to dim, long press for colours. Blinds follow their position, windows tilt and open, doors swing. A room panel lists everything in the room's area. |
-| ![Furniture](docs/images/editor-furniture.jpg) | **Furniture and lamps**: 40 basic models plus 11 built-in packs with over 130 more (living, kitchen, bath, bedroom, home cinema, office and homelab, fitness, garden, energy, vehicles with the Tesla models, and a pack of popular furniture sizes). Lamps light their room in their own colour; TVs, washing machines and radiators glow while they run. |
-| ![IKEA sizes](docs/images/furniture-ikea.jpg) | **Furniture in familiar sizes**: bookcases, cube shelves, beds, chests of drawers, wardrobes, sofas and desks in the published outer dimensions of popular IKEA pieces (Billy, Kallax, Malm, Pax, Ektorp …). They are simple models of those sizes, not IKEA's designs. |
-| ![Tesla models](docs/images/vehicles-tesla.jpg) | **Vehicles**: Tesla Model S, 3, X, Y, Cybertruck, Roadster and Semi with their real outer dimensions and their paint colours, plus an electric SUV, a small car, a van, bikes and a trailer. Put one on a parking spot and its car card follows it. |
-| ![Floors](docs/images/view-stacked.jpg) | **Floors and looks**: open a single floor, stack them or cut the walls. Three looks (*Neon*, *Blueprint*, *Day*), a heatmap for temperature, humidity and CO₂, and sunlight through the windows from `sun.sun`. |
-| ![Tablet](docs/images/tablet.jpg) | **Wall tablet ready**: warnings for smoke, gas, water, alarm and windows open in the rain, a kiosk mode with idle return and night dimming, scene buttons, and a *Tablet* quality level for Fire tablets. |
-| ![Card](docs/images/card.jpg) | **Dashboard card**: `custom:nextfloor-card` with a visual editor, loaded automatically. |
-
-## Live features
+## ✨ Highlights
 
 | | |
 |---|---|
-| ![Weather](docs/images/view-weather-rain.jpg) | **Weather outside**: rain, snow, fog, clouds, lightning, sun and moon around the house, taken from a `weather` entity. ![Snow](docs/images/view-weather-snow.jpg) |
-| ![Energy](docs/images/view-energy.jpg) | **Energy flow**: solar fields on the roof light up with their output, glowing lines run from the panels, battery and grid to the house and the wallbox, and a live card shows the balance. Set up the sources in the editor's energy tab. ![Energy editor](docs/images/editor-energy.jpg) |
-| ![Media](docs/images/view-media.jpg) | **TV screens**: TVs show the cover, title, artist and app on a gradient in the app's colour, with a breathing ambilight on the wall. A player placed next to a TV counts as that TV's player. |
-| ![Cameras](docs/images/view-cameras.jpg) | **Cameras**: a camera wall with every live picture, and a flight into a camera that fades into its live stream. Pins show what it detects (person, vehicle, animal). ![Through a camera](docs/images/view-camera-through.jpg) |
-| ![Trail](docs/images/view-trail.jpg) | **Motion trail**: where motion was reported in the last 30 minutes, in time order, as a glowing path through the house with times. |
-| ![Phone](docs/images/phone.jpg) | **Car and sound**: a car on its parking spot shows its charge level and charging state on a live card. Speakers pulse while they play. |
+| ✏️ **Plan editor** | Floors, rooms, walls, doors, windows, stairs, outdoor areas and a roof, drawn in Home Assistant with the 3D view beside the plan. |
+| 💡 **Live 3D** | Tap to switch, swipe to dim, long press for colours. Blinds, windows and doors follow their entities; a room panel lists everything in the room. |
+| 🛋️ **Furniture & vehicles** | 40 basic models and 11 packs with over 130 more, popular IKEA sizes, Tesla models in their paint colours. |
+| ⚡ **Energy & weather** | Solar fields and power flow, rain, snow, fog, sun and moon, sunlight through the windows. |
+| 📺 **Media & cameras** | TV screens with cover and ambilight, a camera wall, flights into live streams, a motion trail. |
+| 🖥️ **Wall tablet ready** | Alerts for smoke, gas, water and open windows, kiosk mode with night dimming, a light quality level for Fire tablets. |
+| 🎨 **Fits your theme** | Takes colours, font and corner radius from Home Assistant; three looks (*Neon*, *Blueprint*, *Day*) and a heatmap. |
+| 🧩 **Dashboard card** | `custom:nextfloor-card` with a visual editor. |
+| 📦 **Own 3D models** | Upload a `.glb` of your own on the Extensions page; NextFloor prepares it for you. |
 
-## Installation
+## 🖼️ Gallery
 
-### HACS
+<table>
+<tr><td align="center" width="33%"><a href="docs/images/view-room.jpg"><img src="docs/images/view-room.jpg" alt="Live room view with its panel"></a><br><sub>Live room view with its panel</sub></td><td align="center" width="33%"><a href="docs/images/editor.jpg"><img src="docs/images/editor.jpg" alt="Plan editor with 3D beside it"></a><br><sub>Plan editor with 3D beside it</sub></td><td align="center" width="33%"><a href="docs/images/view-stacked.jpg"><img src="docs/images/view-stacked.jpg" alt="Floors stacked"></a><br><sub>Floors stacked</sub></td></tr>
+<tr><td align="center" width="33%"><a href="docs/images/view-energy.jpg"><img src="docs/images/view-energy.jpg" alt="Energy flow"></a><br><sub>Energy flow</sub></td><td align="center" width="33%"><a href="docs/images/view-weather-rain.jpg"><img src="docs/images/view-weather-rain.jpg" alt="Weather outside"></a><br><sub>Weather outside</sub></td><td align="center" width="33%"><a href="docs/images/view-media.jpg"><img src="docs/images/view-media.jpg" alt="TV screens"></a><br><sub>TV screens</sub></td></tr>
+<tr><td align="center" width="33%"><a href="docs/images/view-cameras.jpg"><img src="docs/images/view-cameras.jpg" alt="Camera wall"></a><br><sub>Camera wall</sub></td><td align="center" width="33%"><a href="docs/images/view-trail.jpg"><img src="docs/images/view-trail.jpg" alt="Motion trail"></a><br><sub>Motion trail</sub></td><td align="center" width="33%"><a href="docs/images/tablet.jpg"><img src="docs/images/tablet.jpg" alt="Wall tablet"></a><br><sub>Wall tablet</sub></td></tr>
+<tr><td align="center" width="33%"><a href="docs/images/editor-furniture.jpg"><img src="docs/images/editor-furniture.jpg" alt="Furniture library"></a><br><sub>Furniture library</sub></td><td align="center" width="33%"><a href="docs/images/furniture-ikea.jpg"><img src="docs/images/furniture-ikea.jpg" alt="IKEA sizes"></a><br><sub>IKEA sizes</sub></td><td align="center" width="33%"><a href="docs/images/vehicles-tesla.jpg"><img src="docs/images/vehicles-tesla.jpg" alt="Tesla models"></a><br><sub>Tesla models</sub></td></tr>
+</table>
 
-1. Click the button above, or in HACS go to ⋮ → *Custom repositories* and add `https://github.com/therealMRBK/NextFloor` as **Integration**.
+<table>
+<tr><td align="center" width="33%"><a href="docs/images/view-room.jpg"><img src="docs/images/view-room.jpg" alt="Neon"></a><br><sub>Neon</sub></td><td align="center" width="33%"><a href="docs/images/view-blueprint.jpg"><img src="docs/images/view-blueprint.jpg" alt="Blueprint"></a><br><sub>Blueprint</sub></td><td align="center" width="33%"><a href="docs/images/view-day.jpg"><img src="docs/images/view-day.jpg" alt="Day"></a><br><sub>Day</sub></td></tr>
+</table>
+
+## 🚀 Installation
+
+**HACS** (recommended)
+
+1. Click the HACS button above, or in HACS go to ⋮ → *Custom repositories* and add `https://github.com/therealMRBK/NextFloor` as **Integration**.
 2. Install **NextFloor** and restart Home Assistant.
-3. Add the integration:
-
-   [![Open your Home Assistant instance and start setting up NextFloor.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=nextfloor)
-
-   or go to *Settings → Devices & services → Add integration → NextFloor*.
+3. Add the integration: [![Start setting up NextFloor.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=nextfloor) or *Settings → Devices & services → Add integration → NextFloor*.
 4. Open **NextFloor** in the sidebar, switch to **Editor** and draw your first floor.
 
-### Manual
+**Manual:** copy `custom_components/nextfloor` into `config/custom_components/` and restart. Requires Home Assistant 2025.1 or newer.
 
-Copy `custom_components/nextfloor` into `config/custom_components/` and restart Home Assistant.
+## 🧩 Dashboard card
 
-Requires Home Assistant 2025.1 or newer.
+Every option is in the card's visual editor. The same in YAML:
 
-## Dashboard card
-
-All options can be set in the card's visual editor. In YAML:
+<details>
+<summary>All options</summary>
 
 ```yaml
 type: custom:nextfloor-card
@@ -104,15 +105,17 @@ night: "off"            # optional: kiosk, dim at night: off | sun | "22:00-06:0
 idle_orbit: false       # optional: kiosk, slow camera turn after the idle return
 ```
 
-## Your own 3D models
+</details>
 
-If you own a 3D model of a vehicle (a `.glb` file), you can put it on your own Home Assistant and NextFloor shows it instead of the simple shape, in the paint colour you pick. NextFloor ships no models. See [docs/models.md](docs/models.md).
+## 📦 Your own 3D models
 
-## Privacy
+Own a model of a vehicle (`.glb`)? Open **Extensions** in the NextFloor panel, choose the file, turn the front towards you, pick the level of detail and store it on your Home Assistant. NextFloor does the preparation in the browser and ships no models. See [docs/models.md](docs/models.md).
 
-NextFloor stores the plan, its pictures and the packs in Home Assistant's `.storage`. It does not talk to the internet. Camera pictures and history come from your own Home Assistant.
+## 🔒 Privacy
 
-## Made with AI
+The plan, its pictures and the packs live in Home Assistant's `.storage`. NextFloor does not talk to the internet; camera pictures and history come from your own Home Assistant.
+
+## 🤖 Made with AI
 
 NextFloor was built entirely with AI assistance. The idea, the decisions and the testing in a real house come from a person; the design, the code, the tests and the documentation were written together with [Claude](https://www.anthropic.com/claude) (Anthropic) in [Claude Code](https://www.anthropic.com/claude-code). I would rather say so openly than let you guess.
 
@@ -122,7 +125,10 @@ What that means for you:
 - **Back up before you trust it.** The plan lives in Home Assistant's `.storage`; the editor has a backup and restore of the whole plan.
 - **Read the code if it matters to you.** It is MIT licensed and small enough to read. Pull requests are welcome, also ones written with AI, as long as you say so and have run the checks (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
-## Development
+## 🛠️ Development
+
+<details>
+<summary>Build, test, preview</summary>
 
 ```bash
 cd frontend
@@ -133,15 +139,17 @@ npm run build       # writes the bundles to custom_components/nextfloor/frontend
 npm run screenshot  # renders preview/index.html (invented demo data) with a local Chrome or Chromium
 ```
 
+
 - **Preview without Home Assistant**: open `preview/index.html` through any local web server.
 - **Deploy to a test instance**: create `deploy.local.json` with `{"target": "<config>/custom_components/nextfloor"}` and run `npm run deploy` in `frontend/`.
 - **Python tests** run in CI with `pytest-homeassistant-custom-component`.
 - **Furniture packs**: the built-in packs are generated by `tools/build_packs.py`. The format of your own packs is described in [docs/packs.md](docs/packs.md) (German).
 
-## Ideas, questions and bugs
+</details>
 
-- **Ideas and questions:** [Discussions](https://github.com/therealMRBK/NextFloor/discussions).
-- **Bugs:** [open an issue](https://github.com/therealMRBK/NextFloor/issues/new/choose).
+## 💬 Ideas, questions and bugs
+
+[Discussions](https://github.com/therealMRBK/NextFloor/discussions) for ideas and questions, [Issues](https://github.com/therealMRBK/NextFloor/issues/new/choose) for bugs.
 
 ## Licence
 

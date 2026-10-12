@@ -1,0 +1,116 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { newFloor, type Opening } from "../../model.ts";
+import { buildFloorGeometry } from "../build.ts";
+import { buildOpeningParts, CLOSED, type OpeningState } from "../openings.ts";
+
+const room = { id: "a", name: "a", area_id: null, points: [[0, 0], [6, 0], [6, 5], [0, 5]] as [number, number][], floor_material: "wood" as const };
+
+function infosFor(opening: Partial<Opening>) {
+  const full = { id: "o", room_id: "a", edge: 0, offset: 1.5, width: 1.2, type: "window", sill: 0.9, height: 1.3, hinge: "left", leaves: 1, swing: "in", cover: null, contact: null, contact2: null, tilt: null, ...opening } as Opening;
+  return buildFloorGeometry({ ...newFloor("f", "F", 0), rooms: [room], openings: [full] }, 0.3, 0.1).openings;
+}
+
+const triangles = (g: { getAttribute(n: string): { count: number } | undefined }) => (g.getAttribute("position")?.count ?? 0) / 3;
+const build = (opening: Partial<Opening>, state: Partial<OpeningState> = {}, cut = 1.2) => buildOpeningParts(infosFor(opening), new Map([["o", { ...CLOSED, ...state }]]), cut);
+const positions = (g: { getAttribute(n: string): { array: ArrayLike<number> } | undefined }) => Array.from(g.getAttribute("position")?.array ?? []);
+
+test("a window has frame parts and glass, and no blind without a cover", () => {
+  const parts = build({});
+  assert.ok(triangles(parts.frames) > 20);
+  assert.ok(triangles(parts.glass) >= 2);
+  assert.equal(triangles(parts.blinds), 0);
+});
+
+test("a blind adds a box above the window and slats down to the closed fraction", () => {
+  const without = build({});
+  const up = build({}, { cover: 0 });
+  const half = build({}, { cover: 0.5 });
+  assert.ok(triangles(up.frames) > triangles(without.frames), "the blind box");
+  assert.equal(triangles(up.blinds), 0, "raised: no slats");
+  assert.ok(triangles(half.blinds) > 0);
+  const lowest = (parts: ReturnType<typeof build>) => Math.min(...positions(parts.blinds).filter((_, i) => i % 3 === 1));
+  assert.ok(lowest(build({}, { cover: 1 })) < lowest(half), "further down when more closed");
+});
+
+test("an open window swings its sash into the room, and a tilted one leans", () => {
+  const closed = positions(build({}).frames);
+  const open = positions(build({}, { open: 1 }).frames);
+  const tilted = positions(build({}, { tilt: 1 }).frames);
+  assert.equal(closed.length, open.length);
+  assert.notDeepEqual(closed, open);
+  assert.notDeepEqual(closed, tilted);
+  // the swung-open sash reaches into the room: further from the wall than any part of the closed window
+  const depth = (p: number[]) => Math.max(...p.filter((_, i) => i % 3 === 2));
+  assert.ok(depth(open) > depth(closed));
+});
+
+test("a double window has two sashes that move on their own", () => {
+  const single = triangles(build({ leaves: 1 }).frames);
+  const double = triangles(build({ leaves: 2 }).frames);
+  assert.ok(double > single);
+  assert.notDeepEqual(positions(build({ leaves: 2 }, { open: 1, open2: 0 }).frames), positions(build({ leaves: 2 }, { open: 0, open2: 1 }).frames));
+});
+
+test("glazing bars add to the sash, a glass wall has mullions instead of sashes", () => {
+  assert.ok(triangles(build({ style: "bars" }).frames) > triangles(build({}).frames));
+  const wall = build({ style: "glass_wall", width: 2.7, sill: 0, height: 2.4 });
+  assert.ok(triangles(wall.glass) >= 3 * 2, "three panes");
+});
+
+test("a door has a frame, a leaf and handles; a passage only a gap", () => {
+  const door = build({ type: "door", width: 0.9, sill: 0, height: 2.05 });
+  assert.ok(triangles(door.frames) > 50);
+  const passage = build({ type: "door", style: "passage", width: 0.9, sill: 0, height: 2.05 });
+  assert.equal(triangles(passage.frames), 0);
+  assert.equal(triangles(passage.glass), 0);
+});
+
+test("a door leaf swings around its hinge, a sliding one slides along the wall", () => {
+  const door = (state: Partial<OpeningState>, extra: Partial<Opening> = {}) => positions(build({ type: "door", width: 0.9, sill: 0, height: 2.05, ...extra }, state).frames);
+  assert.notDeepEqual(door({ open: 0 }), door({ open: 1 }));
+  const closed = door({ open: 0 }, { style: "sliding" });
+  const slid = door({ open: 1 }, { style: "sliding" });
+  const depth = (p: number[]) => Math.max(...p.filter((_, i) => i % 3 === 2)) - Math.min(...p.filter((_, i) => i % 3 === 2));
+  assert.ok(Math.abs(depth(closed) - depth(slid)) < 0.1, "a sliding leaf stays in the wall's depth");
+});
+
+test("front doors and glass doors have glass; room doors have none", () => {
+  const glassOf = (style: string) => triangles(build({ type: "door", style: style as never, width: 0.9, sill: 0, height: 2.05 }).glass);
+  assert.equal(glassOf("interior"), 0);
+  assert.ok(glassOf("front") > 0);
+  assert.ok(glassOf("front_glass") >= glassOf("front"));
+  assert.ok(glassOf("glass") > 0);
+  assert.ok(glassOf("sidelight") > 0, "a fixed pane beside the leaf");
+});
+
+test("a garage door shows panels while closed and lifts them under the ceiling when open", () => {
+  const garage = (cover: number) => build({ type: "garage", width: 2.5, sill: 0, height: 2.1 }, { cover });
+  assert.ok(triangles(garage(1).blinds) > 0);
+  assert.ok(triangles(garage(0).blinds) > 0, "the lifted part lies flat under the ceiling");
+  assert.ok(triangles(garage(1).frames) > 0);
+});
+
+test("the triangle ranges say which opening each part belongs to", () => {
+  const infos = infosFor({});
+  const parts = buildOpeningParts(infos, new Map(), 1.2);
+  assert.deepEqual(parts.frameTris.map((r) => r.id), ["o"]);
+  assert.equal(parts.frameTris[0].start, 0);
+  assert.equal(parts.frameTris[0].end, triangles(parts.frames));
+  assert.equal(parts.glassTris[0].end, triangles(parts.glass));
+});
+
+test("parts above the cut height carry the wall's fold bucket, the rest are always shown", () => {
+  const folds = (cut: number) => Array.from(build({}, {}, cut).frames.getAttribute("fold")!.array);
+  assert.ok(new Set(folds(10)).size === 1, "everything below the cut: always shown");
+  assert.ok(new Set(folds(0.1)).size >= 1);
+  assert.ok(folds(1.2).includes(-1));
+  assert.ok(folds(1.2).some((f) => f !== -1), "the part above the cut folds with the wall");
+});
+
+test("an open window glows warm; with 'mark closed' the closed one does", () => {
+  const colorSum = (parts: ReturnType<typeof build>) => Array.from(parts.frames.getAttribute("color")!.array).reduce((a, b) => a + b, 0);
+  assert.ok(colorSum(build({}, { open: 1 })) > colorSum(build({})));
+  const marked = (open: number) => colorSum(build({ mark: "closed" } as never, { open, sensed: true }));
+  assert.ok(marked(0) > marked(1));
+});

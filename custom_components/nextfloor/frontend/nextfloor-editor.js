@@ -263,7 +263,7 @@ var Vt=globalThis,Bt=Vt.ShadowRoot&&(Vt.ShadyCSS===void 0||Vt.ShadyCSS.nativeSha
         color: var(--nf-muted);
         cursor: default;
       }
-    `]};customElements.get("nf-entity-picker")||customElements.define("nf-entity-picker",Vi);var Ka=new URL(import.meta.url),Ga=new URL("./nextfloor-3d.js?v=3c3495590a72",Ka).href,to;function no(){return to??=import(Ga),to}function Lt(s,e){if(!Qe(e))return be(s,`furn_${e}`);let t=U(e);return t?Re(t,s?.language??navigator.language):be(s,"pack_missing_item")}var io=["weather","energy","car","sound","screens","cameras"],kn="https://github.com/therealMRBK/NextFloor";var Bi=class extends Y{static properties={hass:{attribute:!1},packs:{attribute:!1},_packMsg:{state:!0}};constructor(){super(),this._packMsg=null}get isAdmin(){return this.hass?.user?.is_admin??!1}t(e,t){return be(this.hass,e,t)}render(){return m`<div class="nf-ext">
+    `]};customElements.get("nf-entity-picker")||customElements.define("nf-entity-picker",Vi);var Ka=new URL(import.meta.url),Ga=new URL("./nextfloor-3d.js?v=af383c85b58d",Ka).href,to;function no(){return to??=import(Ga),to}function Lt(s,e){if(!Qe(e))return be(s,`furn_${e}`);let t=U(e);return t?Re(t,s?.language??navigator.language):be(s,"pack_missing_item")}var io=["weather","energy","car","sound","screens","cameras"],kn="https://github.com/therealMRBK/NextFloor";var Bi=class extends Y{static properties={hass:{attribute:!1},packs:{attribute:!1},_packMsg:{state:!0}};constructor(){super(),this._packMsg=null}get isAdmin(){return this.hass?.user?.is_admin??!1}t(e,t){return be(this.hass,e,t)}render(){return m`<div class="nf-ext">
       <header class="nf-ext-head">
         <h2>${this.t("ext_title")}</h2>
         <p class="nf-sub">${this.t("ext_intro")}</p>

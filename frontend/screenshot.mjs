@@ -98,6 +98,7 @@ window.__smoke = out;` },
   { name: "editor-room", query: "", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; e.selectItem('room', e._doc.floors[0].rooms[0].id); e.side.packages = true;" },
   { name: "editor-opening", query: "", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; const o = e._doc.floors[0].openings.find((x) => x.type === 'window'); e.selectItem('opening', o.id);" },
   { name: "editor-furn-form", query: "?pv=5400&flows", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; const f = e._doc.floors[0].furniture.find((x) => x.type === 'inverter') || e._doc.floors[0].furniture[0]; e.selectItem('furniture', f.id);" },
+  { name: "editor-drag", query: "", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; window.__x0 = e._doc.floors[0].rooms[0].points[0][0]; window.__f0 = e._doc.floors[0].furniture.length;", mouseDrag: [[330, 480], [430, 480]] },
   { name: "editor-roof", query: "", width: 1500, height: 950, editor: true, click: "Dach" },
   { name: "extensions", query: "", width: 1280, height: 950, click: "✦ Erweiterungen", wait: 800 },
   // other devices
@@ -206,6 +207,21 @@ for (const shot of shots.filter((s) => (only ? only.includes(s.name) : !s.dev)))
         }
       }, process.env.DEBUG_EVAL);
       console.log("DEBUG", out);
+    }
+    if (shot.mouseDrag) {
+      const [[x0, y0], [x1, y1]] = shot.mouseDrag;
+      await page.mouse.move(x0, y0);
+      await page.mouse.down();
+      await page.mouse.move((x0 + x1) / 2, (y0 + y1) / 2, { steps: 4 });
+      await page.mouse.move(x1, y1, { steps: 4 });
+      await page.mouse.up();
+      await new Promise((r) => setTimeout(r, 400));
+      if (process.env.DEBUG_EVAL2) {
+        console.log("DEBUG2", await page.evaluate((code) => {
+          const e = document.querySelector("nextfloor-panel").shadowRoot.querySelector("nf-editor");
+          return String(new Function("e", "return " + code)(e));
+        }, process.env.DEBUG_EVAL2));
+      }
     }
     if (shot.then3d) {
       await clickText("3D");

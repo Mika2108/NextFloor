@@ -22,7 +22,6 @@ import {
   type StartView,
   canLift,
   isFixed,
-  isAxisRect,
   step,
   type Direction,
   OPENING_PRESETS,
@@ -60,6 +59,7 @@ import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWall
 import { outdoorRectangleAfter } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
 import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
+import { aimReach, dragStep, facingAngle, gridPositionAfter, hasLeftStart, headingAngle, outlineWithCornerAt, shifted, steppedDelta, straightEnd } from "./editor/ops/drags.ts";
 import { snapToPlan } from "./editor/ops/snapping.ts";
 import { draftLayer, guidesLayer } from "./editor/canvas/draft.ts";
 import { devicesLayer, furnitureLayer } from "./editor/canvas/items.ts";
@@ -1227,23 +1227,17 @@ export class NfEditor extends LitElement {
   }
 
   private onPointerMove(e: PointerEvent): void {
+    const local = this.localPoint(e);
     if (this.pressStart) {
-      const p = this.localPoint(e);
-      if (Math.hypot(p[0] - this.pressStart[0], p[1] - this.pressStart[1]) > 8) {
+      if (hasLeftStart(local, this.pressStart, 8)) {
         clearTimeout(this.pressTimer);
         this.pressStart = null;
         if (this.fixedPan) this._fixedHint = true;
       }
     } else if (this.fixedPan && !this._fixedHint && this.drag?.kind === "pan") this._fixedHint = true;
-    const local = this.localPoint(e);
     if (this.pointers.has(e.pointerId)) this.pointers.set(e.pointerId, local);
     if (this.pinch) {
-      const now = this.pinchState();
-      if (now) {
-        this.zoomAt(now.dist / Math.max(1, this.pinch.dist), ...now.mid);
-        this._view = { ...this._view, ox: this._view.ox + now.mid[0] - this.pinch.mid[0], oy: this._view.oy + now.mid[1] - this.pinch.mid[1] };
-        this.pinch = now;
-      }
+      this.pinchMove();
       return;
     }
     const world = this.toWorld(...local);
@@ -1252,364 +1246,312 @@ export class NfEditor extends LitElement {
       if (this._tool !== "select" && this._tool !== "furniture" && this.floor) this._cursor = this.snap(world, undefined, e.altKey);
       return;
     }
+    this.moveDrag(drag, { local, world, fine: e.altKey, straight: e.shiftKey });
+  }
+
+  /** Two fingers: the distance between them zooms, and their middle pans. */
+  private pinchMove(): void {
+    const now = this.pinchState();
+    if (!now || !this.pinch) return;
+    this.zoomAt(now.dist / Math.max(1, this.pinch.dist), ...now.mid);
+    this._view = { ...this._view, ox: this._view.ox + now.mid[0] - this.pinch.mid[0], oy: this._view.oy + now.mid[1] - this.pinch.mid[1] };
+    this.pinch = now;
+  }
+
+  private panBy(from: [number, number], to: [number, number]): void {
+    this._view = { ...this._view, ox: this._view.ox + to[0] - from[0], oy: this._view.oy + to[1] - from[1] };
+  }
+
+  /** Writes a change made while dragging: not recorded in the history until the pointer is released. */
+  private live(drag: { base: Building }, mutate: (doc: Building, floor: Floor) => void): void {
+    this.change(mutate, drag.base, false);
+  }
+
+  /** The floor as it was when the drag started. */
+  private floorOf(drag: { base: Building }): Floor | undefined {
+    return drag.base.floors.find((f) => f.id === this._floorId);
+  }
+
+  /** What the pointer has done in this move, with the modifier keys. */
+  private moveDrag(drag: Drag, at: { local: [number, number]; world: Vec2; fine: boolean; straight: boolean }): void {
+    const { local, world, fine } = at;
+    const grid = this._doc.settings.grid;
+    // a press only becomes a drag after the pointer has left the spot
+    const started = (d: { moved: boolean; startScreen: [number, number] }) => d.moved || hasLeftStart(local, d.startScreen);
     switch (drag.kind) {
       case "pan":
-        this._view = { ...this._view, ox: this._view.ox + local[0] - drag.last[0], oy: this._view.oy + local[1] - drag.last[1] };
+        this.panBy(drag.last, local);
         drag.last = local;
-        break;
+        return;
       case "tap":
-        if (drag.panning || Math.hypot(local[0] - drag.startScreen[0], local[1] - drag.startScreen[1]) > 6) {
+        if (drag.panning || hasLeftStart(local, drag.startScreen, 6)) {
           drag.panning = true;
-          this._view = { ...this._view, ox: this._view.ox + local[0] - drag.last[0], oy: this._view.oy + local[1] - drag.last[1] };
+          this.panBy(drag.last, local);
         }
         drag.last = local;
-        break;
+        return;
       case "rect":
-        drag.end = this.snap(world, undefined, e.altKey);
+        drag.end = this.snap(world, undefined, fine);
         this.requestUpdate();
-        break;
-      case "freewall": {
-        // Shift keeps the wall straight (horizontal or vertical)
-        let end = this.snap(world, undefined, e.altKey);
-        if (e.shiftKey) end = Math.abs(end[0] - drag.start[0]) > Math.abs(end[1] - drag.start[1]) ? [end[0], drag.start[1]] : [drag.start[0], end[1]];
-        drag.end = end;
+        return;
+      case "freewall":
+        drag.end = straightEnd(drag.start, this.snap(world, undefined, fine), at.straight);
         this.requestUpdate();
-        break;
-      }
+        return;
       case "wallmove": {
-        if (!drag.moved && Math.hypot(local[0] - drag.startScreen[0], local[1] - drag.startScreen[1]) < 5) return;
+        if (!started(drag)) return;
         drag.moved = true;
-        const w = (drag.base.floors.find((f) => f.id === this._floorId)?.walls ?? []).find((q) => q.id === drag.id);
-        if (!w) return;
+        const wall = (this.floorOf(drag)?.walls ?? []).find((w) => w.id === drag.id);
+        if (!wall) return;
         let next: Pick<FreeWall, "a" | "b">;
         if (drag.end) {
-          const p = this.snap(world, undefined, e.altKey);
-          next = drag.end === "a" ? { a: p, b: w.b } : { a: w.a, b: p };
+          const to = this.snap(world, undefined, fine);
+          next = drag.end === "a" ? { a: to, b: wall.b } : { a: wall.a, b: to };
         } else {
-          const g = e.altKey ? 0.01 : this._doc.settings.grid;
-          const dx = Math.round((world[0] - drag.start[0]) / g) * g;
-          const dz = Math.round((world[1] - drag.start[1]) / g) * g;
-          next = { a: [round(w.a[0] + dx), round(w.a[1] + dz)], b: [round(w.b[0] + dx), round(w.b[1] + dz)] };
+          const by = steppedDelta(drag.start, world, dragStep(grid, fine));
+          next = { a: shifted(wall.a, by), b: shifted(wall.b, by) };
         }
-        this.change((_, floor) => Object.assign((floor.walls ?? []).find((q) => q.id === drag.id)!, next), drag.base, false);
-        break;
+        this.live(drag, (_, floor) => Object.assign((floor.walls ?? []).find((w) => w.id === drag.id)!, next));
+        return;
       }
       case "vertex": {
-        const p = this.snap(world, { roomId: drag.roomId, index: drag.index }, e.altKey);
+        const to = this.snap(world, { roomId: drag.roomId, index: drag.index }, fine);
         drag.moved = true;
-        this.change(
-          (_, floor) => {
-            floor.rooms.find((r) => r.id === drag.roomId)!.points[drag.index] = p;
-          },
-          drag.base,
-          false,
-        );
-        break;
+        this.live(drag, (_, floor) => void (floor.rooms.find((r) => r.id === drag.roomId)!.points[drag.index] = to));
+        return;
       }
       case "room": {
-        if (!drag.moved && Math.hypot(local[0] - drag.startScreen[0], local[1] - drag.startScreen[1]) < 5) return;
+        if (!started(drag)) return;
         drag.moved = true;
-        const room = drag.base.floors.find((f) => f.id === this._floorId)?.rooms.find((r) => r.id === drag.roomId);
-        if (!room) return;
-        const delta = this.roomDelta(room, [world[0] - drag.start[0], world[1] - drag.start[1]], e.altKey);
-        const baseFloor = drag.base.floors.find((f) => f.id === this._floorId)!;
+        const before = this.floorOf(drag);
+        const room = before?.rooms.find((r) => r.id === drag.roomId);
+        if (!before || !room) return;
+        const delta = this.roomDelta(room, [world[0] - drag.start[0], world[1] - drag.start[1]], fine);
         // devices inside the room move with it
-        const inside = new Set(baseFloor.placements.filter((pl) => pointInPolygon([pl.x, pl.z], room.points)).map((pl) => pl.entity_id));
-        this.change(
-          (_, floor) => {
-            const r = floor.rooms.find((x) => x.id === drag.roomId)!;
-            r.points = room.points.map(([x, z]) => [round(x + delta[0]), round(z + delta[1])]);
-            floor.placements = baseFloor.placements.map((pl) =>
-              inside.has(pl.entity_id) ? { ...pl, x: round(pl.x + delta[0]), z: round(pl.z + delta[1]) } : pl,
-            );
-          },
-          drag.base,
-          false,
-        );
-        break;
-      }
-      case "roofmove": {
-        if (!drag.moved && Math.hypot(local[0] - drag.startScreen[0], local[1] - drag.startScreen[1]) < 5) return;
-        drag.moved = true;
-        const g = e.altKey ? 0.01 : this._doc.settings.grid;
-        const dx = round(Math.round((world[0] - drag.start[0]) / g) * g);
-        const dz = round(Math.round((world[1] - drag.start[1]) / g) * g);
-        const src = drag.base.settings.roof.sections?.find((x) => x.id === drag.id);
-        if (!src) return;
-        this.change(
-          (doc) => {
-            const sec = doc.settings.roof.sections?.find((x) => x.id === drag.id);
-            if (!sec) return;
-            Object.assign(sec, { x0: round(src.x0 + dx), x1: round(src.x1 + dx), z0: round(src.z0 + dz), z1: round(src.z1 + dz) });
-            if (src.points) sec.points = src.points.map(([x, z]) => [round(x + dx), round(z + dz)] as Vec2);
-          },
-          drag.base,
-          false,
-        );
-        break;
-      }
-      case "solarturn": {
-        drag.moved = true;
-        const src = drag.base.settings.roof.solar?.find((x) => x.id === drag.id);
-        const face = src ? fieldFace(drag.base, src) : null;
-        if (!src || !face) return;
-        // the handle sits in front of the field: turn its front towards the pointer
-        const [cx, cz] = fieldCenter(face, src);
-        let a = (Math.atan2(world[0] - cx, -(world[1] - cz)) * 180) / Math.PI;
-        const step = e.altKey ? 1 : 15;
-        a = Math.round(a / step) * step;
-        const turned = turnGroundField(drag.base, src, a);
-        this.change(
-          (doc) => {
-            const f = doc.settings.roof.solar?.find((x) => x.id === drag.id);
-            if (f) Object.assign(f, turned);
-          },
-          drag.base,
-          false,
-        );
-        break;
-      }
-      case "solarmove": {
-        if (!drag.moved && Math.hypot(local[0] - drag.startScreen[0], local[1] - drag.startScreen[1]) < 5) return;
-        drag.moved = true;
-        const winSrc = drag.win ? drag.base.settings.roof.windows?.find((x) => x.id === drag.id) : undefined;
-        const src = drag.win ? (winSrc ? windowAsField(winSrc) : undefined) : drag.base.settings.roof.solar?.find((x) => x.id === drag.id);
-        // roof faces, and the walls of the floor the plan shows
-        const faces = drag.win ? roofFaces(drag.base) : [...roofFaces(drag.base), ...(this._floorId ? wallFaces(drag.base, this._floorId) : [])];
-        const own = src ? fieldFace(drag.base, src, faces) : null;
-        if (!src || !own) return;
-        const step = e.altKey ? 0.01 : 0.05;
-        const snapTo = (v: number) => round(Math.round(v / step) * step);
-        // over a roof face the field follows the cursor there (it may change to that face) …
-        const hit = own.unbounded ? null : faceAt(faces, world);
-        let face = own;
-        let u: number;
-        let v: number;
-        if (hit && drag.grab) {
-          face = hit.face;
-          u = snapTo(hit.u - drag.grab.du);
-          // on a wall the height stays (or starts at head height when the field comes from elsewhere)
-          v = Number.isNaN(hit.s) ? (hit.face.key === src.face ? src.v : Math.max(0, hit.face.ls - 1.5)) : snapTo(hit.s - drag.grab.ds);
-        } else {
-          // … elsewhere it moves along its own face (a slope looks shorter in the plan)
-          const dx = world[0] - drag.start[0];
-          const dz = world[1] - drag.start[1];
-          const es = [own.es[0], own.es[2]];
-          const esLen2 = es[0] * es[0] + es[1] * es[1] || 1;
-          u = snapTo(src.u + dx * own.eu[0] + dz * own.eu[2]);
-          v = snapTo(src.v + (dx * es[0] + dz * es[1]) / esLen2);
-        }
-        // it never slides off its face
-        const kept = clampField(face, { ...src, face: face.key, u, v, tilt: face.flat ? (src.tilt ?? 15) : src.tilt });
-        this.change(
-          (doc) => {
-            if (drag.win) {
-              const w = doc.settings.roof.windows?.find((x) => x.id === drag.id);
-              if (w) Object.assign(w, { face: face.key, ...kept });
-              return;
-            }
-            const f = doc.settings.roof.solar?.find((x) => x.id === drag.id);
-            if (f) Object.assign(f, { face: face.key, ...kept }, face.flat && f.tilt == null ? { tilt: 15 } : {});
-          },
-          drag.base,
-          false,
-        );
-        break;
-      }
-      case "outvertex": {
-        drag.moved = true;
-        const p = this.snap(world, undefined, e.altKey);
-        const src = drag.base.floors.find((f) => f.id === this._floorId)?.outdoor.find((a) => a.id === drag.id);
-        if (!src) return;
-        const rect = isAxisRect(src.points);
-        this.change(
-          (_, floor) => {
-            const a = floor.outdoor.find((x) => x.id === drag.id);
-            if (!a) return;
-            const pts = src.points.map((q) => [...q] as Vec2);
-            const i = drag.index;
-            const old = src.points[i];
-            pts[i] = [round(p[0]), round(p[1])];
-            // a rectangle stays a rectangle: the corners sharing an x or a z with the dragged one follow
-            if (rect)
-              src.points.forEach((q, j) => {
-                if (j === i) return;
-                if (Math.abs(q[0] - old[0]) < 1e-6) pts[j][0] = round(p[0]);
-                if (Math.abs(q[1] - old[1]) < 1e-6) pts[j][1] = round(p[1]);
-              });
-            a.points = pts;
-          },
-          drag.base,
-          false,
-        );
-        break;
-      }
-      case "bgmove": {
-        drag.moved = true;
-        const dx = world[0] - drag.start[0];
-        const dz = world[1] - drag.start[1];
-        this.change(
-          (_, floor) => {
-            if (floor.background) {
-              floor.background.x = round(drag.bx + dx);
-              floor.background.z = round(drag.bz + dz);
-            }
-          },
-          drag.base,
-          false,
-        );
-        break;
-      }
-      case "bgrotate": {
-        drag.moved = true;
-        const bg = this.floor?.background;
-        const img = bg ? this.bg.picture(bg.image_id) : undefined;
-        if (!bg || !img) break;
-        const c = pictureCentre(bg, img.aspect);
-        // turn about the middle; Shift snaps to whole 15° steps, otherwise tenths of a degree
-        const rot = dragRotation(drag.rot, drag.start, Math.atan2(world[1] - c[1], world[0] - c[0]), e.shiftKey);
-        this.change(
-          (_, floor) => {
-            if (floor.background) floor.background.rotation = rot;
-          },
-          drag.base,
-          false,
-        );
-        break;
-      }
-      case "bgscale": {
-        drag.moved = true;
-        const bg = this.floor?.background;
-        const img = bg ? this.bg.picture(bg.image_id) : undefined;
-        if (!bg || !img) break;
-        // the corner follows the pointer along the picture's own width, whatever its turn
-        const [lx] = pictureLocal(bg, img.aspect, world);
-        const width = Math.max(0.5, round(lx));
-        this.change(
-          (_, floor) => {
-            if (floor.background) floor.background.width = width;
-          },
-          drag.base,
-          false,
-        );
-        break;
-      }
-      case "roofvertex": {
-        drag.moved = true;
-        const p = this.snap(world, undefined, e.altKey);
-        this.change(
-          (doc) => {
-            const sec = doc.settings.roof.sections?.find((x) => x.id === drag.id);
-            if (!sec?.points || drag.index >= sec.points.length) return;
-            sec.points[drag.index] = [round(p[0]), round(p[1])];
-            Object.assign(sec, polygonBox(sec.points));
-          },
-          drag.base,
-          false,
-        );
-        break;
-      }
-      case "roofcorner": {
-        drag.moved = true;
-        const p = this.snap(world, undefined, e.altKey);
-        this.change(
-          (doc) => {
-            const sec = doc.settings.roof.sections?.find((x) => x.id === drag.id);
-            if (!sec) return;
-            if (drag.corner[0]) sec.x1 = round(p[0]);
-            else sec.x0 = round(p[0]);
-            if (drag.corner[1]) sec.z1 = round(p[1]);
-            else sec.z0 = round(p[1]);
-          },
-          drag.base,
-          false,
-        );
-        break;
+        const inside = new Set(before.placements.filter((p) => pointInPolygon([p.x, p.z], room.points)).map((p) => p.entity_id));
+        this.live(drag, (_, floor) => {
+          floor.rooms.find((r) => r.id === drag.roomId)!.points = room.points.map((p) => shifted(p, delta));
+          floor.placements = before.placements.map((p) => {
+            if (!inside.has(p.entity_id)) return p;
+            const [x, z] = shifted([p.x, p.z], delta);
+            return { ...p, x, z };
+          });
+        });
+        return;
       }
       case "opening": {
-        if (!drag.moved && Math.hypot(local[0] - drag.startScreen[0], local[1] - drag.startScreen[1]) < 5) return;
+        if (!started(drag)) return;
         drag.moved = true;
-        const baseFloor = drag.base.floors.find((f) => f.id === this._floorId);
-        const o = baseFloor?.openings.find((x) => x.id === drag.id);
-        const host = o && baseFloor ? openingHost(o, baseFloor.rooms, baseFloor.walls ?? []) : null;
-        if (!o || !host) return;
-        const offset = this.dropOffset(host.room, host.edge, world, o.width, e.altKey);
-        this.change((_, floor) => Object.assign(floor.openings.find((x) => x.id === drag.id)!, { offset }), drag.base, false);
-        break;
+        const before = this.floorOf(drag);
+        const opening = before?.openings.find((o) => o.id === drag.id);
+        const host = opening && before ? openingHost(opening, before.rooms, before.walls ?? []) : null;
+        if (!opening || !host) return;
+        const offset = this.dropOffset(host.room, host.edge, world, opening.width, fine);
+        this.live(drag, (_, floor) => void (floor.openings.find((o) => o.id === drag.id)!.offset = offset));
+        return;
       }
       case "furniture": {
-        if (!drag.moved && Math.hypot(local[0] - drag.startScreen[0], local[1] - drag.startScreen[1]) < 5) return;
+        if (!started(drag)) return;
         drag.moved = true;
-        const f = drag.base.floors.find((x) => x.id === this._floorId)?.furniture.find((x) => x.id === drag.id);
-        if (!f) return;
-        const g = e.altKey ? 0.01 : this._doc.settings.grid;
-        let x = round(Math.round((f.x + world[0] - drag.start[0]) / g) * g);
-        let z = round(Math.round((f.z + world[1] - drag.start[1]) / g) * g);
-        let rotation = f.rotation;
-        // near a wall: turn the back (or a side) to it and sit flush; Alt moves freely
-        const snap = e.altKey ? null : this.snapToWall({ ...f, x, z });
-        if (snap) ({ x, z, rotation } = snap);
-        this.change((_, floor) => Object.assign(floor.furniture.find((q) => q.id === drag.id)!, { x, z, rotation }), drag.base, false);
-        break;
-      }
-      case "outdoor": {
-        if (!drag.moved && Math.hypot(local[0] - drag.startScreen[0], local[1] - drag.startScreen[1]) < 5) return;
-        drag.moved = true;
-        const area = drag.base.floors.find((f) => f.id === this._floorId)?.outdoor.find((o) => o.id === drag.id);
-        if (!area) return;
-        const g = e.altKey ? 0.01 : this._doc.settings.grid;
-        const dx = Math.round((world[0] - drag.start[0]) / g) * g;
-        const dz = Math.round((world[1] - drag.start[1]) / g) * g;
-        this.change(
-          (_, floor) => (floor.outdoor.find((o) => o.id === drag.id)!.points = area.points.map(([x, z]) => [round(x + dx), round(z + dz)])),
-          drag.base,
-          false,
-        );
-        break;
+        const item = this.floorOf(drag)?.furniture.find((f) => f.id === drag.id);
+        if (!item) return;
+        const [x, z] = gridPositionAfter([item.x, item.z], drag.start, world, dragStep(grid, fine));
+        // near a wall the piece turns its back (or a side) to it and sits flush; Alt moves freely
+        const flush = fine ? null : this.snapToWall({ ...item, x, z });
+        const place = flush ?? { x, z, rotation: item.rotation };
+        this.live(drag, (_, floor) => void Object.assign(floor.furniture.find((f) => f.id === drag.id)!, place));
+        return;
       }
       case "resize": {
         drag.moved = true;
-        const f = drag.base.floors.find((x) => x.id === this._floorId)?.furniture.find((x) => x.id === drag.id);
-        if (!f) return;
-        const size = resizeFurniture(f, drag.corner, world, e.altKey ? 0.01 : this._doc.settings.grid);
-        this.change((_, floor) => Object.assign(floor.furniture.find((q) => q.id === drag.id)!, size), drag.base, false);
-        break;
+        const item = this.floorOf(drag)?.furniture.find((f) => f.id === drag.id);
+        if (!item) return;
+        const size = resizeFurniture(item, drag.corner, world, dragStep(grid, fine));
+        this.live(drag, (_, floor) => void Object.assign(floor.furniture.find((f) => f.id === drag.id)!, size));
+        return;
       }
       case "rotate": {
         drag.moved = true;
-        const f = drag.base.floors.find((x) => x.id === this._floorId)?.furniture.find((x) => x.id === drag.id);
-        if (!f) return;
-        // the handle sits in front of the item: turn the front towards the pointer
-        let a = (Math.atan2(-(world[0] - f.x), world[1] - f.z) * 180) / Math.PI;
-        const step = e.altKey ? 1 : 15;
-        a = ((Math.round(a / step) * step) % 360 + 360) % 360;
-        this.change((_, floor) => Object.assign(floor.furniture.find((q) => q.id === drag.id)!, { rotation: a }), drag.base, false);
-        break;
+        const item = this.floorOf(drag)?.furniture.find((f) => f.id === drag.id);
+        if (!item) return;
+        const rotation = facingAngle([item.x, item.z], world, fine ? 1 : 15);
+        this.live(drag, (_, floor) => void (floor.furniture.find((f) => f.id === drag.id)!.rotation = rotation));
+        return;
       }
       case "aim": {
         drag.moved = true;
-        const pl = drag.base.floors.find((x) => x.id === this._floorId)?.placements.find((x) => x.entity_id === drag.entityId);
-        if (!pl) return;
-        // the handle sits at the far edge of the wedge: it turns the camera and sets how far it reaches
-        let a = (Math.atan2(-(world[0] - pl.x), world[1] - pl.z) * 180) / Math.PI;
-        const step = e.altKey ? 1 : 5;
-        a = ((Math.round(a / step) * step) % 360 + 360) % 360;
-        const reach = Math.min(50, Math.max(0.5, Math.round(Math.hypot(world[0] - pl.x, world[1] - pl.z) * 10) / 10));
-        this.change((_, floor) => Object.assign(floor.placements.find((q) => q.entity_id === drag.entityId)!, { rotation: a, reach }), drag.base, false);
-        break;
+        const placed = this.floorOf(drag)?.placements.find((p) => p.entity_id === drag.entityId);
+        if (!placed) return;
+        // the handle is at the far edge of the wedge: it turns the camera and sets how far it reaches
+        const turn = { rotation: facingAngle([placed.x, placed.z], world, fine ? 1 : 5), reach: aimReach([placed.x, placed.z], world) };
+        this.live(drag, (_, floor) => void Object.assign(floor.placements.find((p) => p.entity_id === drag.entityId)!, turn));
+        return;
       }
       case "device": {
-        if (!drag.moved && Math.hypot(local[0] - drag.startScreen[0], local[1] - drag.startScreen[1]) < 5) return;
+        if (!started(drag)) return;
         drag.moved = true;
-        const pl = drag.base.floors.find((f) => f.id === this._floorId)?.placements.find((x) => x.entity_id === drag.entityId);
-        if (!pl) return;
-        const g = e.altKey ? 0.01 : this._doc.settings.grid;
-        const x = round(Math.round((pl.x + world[0] - drag.start[0]) / g) * g);
-        const z = round(Math.round((pl.z + world[1] - drag.start[1]) / g) * g);
-        this.change((_, floor) => Object.assign(floor.placements.find((q) => q.entity_id === drag.entityId)!, { x, z }), drag.base, false);
-        break;
+        const placed = this.floorOf(drag)?.placements.find((p) => p.entity_id === drag.entityId);
+        if (!placed) return;
+        const [x, z] = gridPositionAfter([placed.x, placed.z], drag.start, world, dragStep(grid, fine));
+        this.live(drag, (_, floor) => void Object.assign(floor.placements.find((p) => p.entity_id === drag.entityId)!, { x, z }));
+        return;
       }
+      case "outdoor": {
+        if (!started(drag)) return;
+        drag.moved = true;
+        const area = this.floorOf(drag)?.outdoor.find((o) => o.id === drag.id);
+        if (!area) return;
+        const by = steppedDelta(drag.start, world, dragStep(grid, fine));
+        this.live(drag, (_, floor) => void (floor.outdoor.find((o) => o.id === drag.id)!.points = area.points.map((p) => shifted(p, by))));
+        return;
+      }
+      case "outvertex": {
+        drag.moved = true;
+        const to = this.snap(world, undefined, fine);
+        const area = this.floorOf(drag)?.outdoor.find((o) => o.id === drag.id);
+        if (!area) return;
+        this.live(drag, (_, floor) => {
+          const target = floor.outdoor.find((o) => o.id === drag.id);
+          if (target) target.points = outlineWithCornerAt(area.points, drag.index, to);
+        });
+        return;
+      }
+      case "bgmove":
+        drag.moved = true;
+        this.live(drag, (_, floor) => {
+          if (floor.background) [floor.background.x, floor.background.z] = shifted([drag.bx, drag.bz], [world[0] - drag.start[0], world[1] - drag.start[1]]);
+        });
+        return;
+      case "bgrotate": {
+        drag.moved = true;
+        const background = this.floor?.background;
+        const picture = background ? this.bg.picture(background.image_id) : undefined;
+        if (!background || !picture) return;
+        const c = pictureCentre(background, picture.aspect);
+        // turned about its middle; Shift snaps to whole 15° steps, otherwise tenths of a degree
+        const rotation = dragRotation(drag.rot, drag.start, Math.atan2(world[1] - c[1], world[0] - c[0]), at.straight);
+        this.live(drag, (_, floor) => void (floor.background && (floor.background.rotation = rotation)));
+        return;
+      }
+      case "bgscale": {
+        drag.moved = true;
+        const background = this.floor?.background;
+        const picture = background ? this.bg.picture(background.image_id) : undefined;
+        if (!background || !picture) return;
+        // the corner follows the pointer along the picture's own width, whatever its turn
+        const width = Math.max(0.5, round(pictureLocal(background, picture.aspect, world)[0]));
+        this.live(drag, (_, floor) => void (floor.background && (floor.background.width = width)));
+        return;
+      }
+      default:
+        this.moveRoofDrag(drag, at);
     }
+  }
+
+  /** The drags of the roof and energy tools: sections, their corners and points, solar fields, and roof windows. */
+  private moveRoofDrag(drag: Drag, at: { local: [number, number]; world: Vec2; fine: boolean }): void {
+    const { local, world, fine } = at;
+    const grid = this._doc.settings.grid;
+    switch (drag.kind) {
+      case "roofmove": {
+        if (!drag.moved && !hasLeftStart(local, drag.startScreen)) return;
+        drag.moved = true;
+        const by = steppedDelta(drag.start, world, dragStep(grid, fine));
+        const before = drag.base.settings.roof.sections?.find((s) => s.id === drag.id);
+        if (!before) return;
+        this.live(drag, (doc) => {
+          const section = doc.settings.roof.sections?.find((s) => s.id === drag.id);
+          if (!section) return;
+          const [x0, z0] = shifted([before.x0, before.z0], by);
+          const [x1, z1] = shifted([before.x1, before.z1], by);
+          Object.assign(section, { x0, x1, z0, z1 });
+          if (before.points) section.points = before.points.map((p) => shifted(p, by));
+        });
+        return;
+      }
+      case "roofvertex": {
+        drag.moved = true;
+        const to = this.snap(world, undefined, fine);
+        this.live(drag, (doc) => {
+          const section = doc.settings.roof.sections?.find((s) => s.id === drag.id);
+          if (!section?.points || drag.index >= section.points.length) return;
+          section.points[drag.index] = shifted(to, [0, 0]);
+          Object.assign(section, polygonBox(section.points));
+        });
+        return;
+      }
+      case "roofcorner": {
+        drag.moved = true;
+        const to = this.snap(world, undefined, fine);
+        this.live(drag, (doc) => {
+          const section = doc.settings.roof.sections?.find((s) => s.id === drag.id);
+          if (!section) return;
+          section[drag.corner[0] ? "x1" : "x0"] = round(to[0]);
+          section[drag.corner[1] ? "z1" : "z0"] = round(to[1]);
+        });
+        return;
+      }
+      case "solarturn": {
+        drag.moved = true;
+        const before = drag.base.settings.roof.solar?.find((f) => f.id === drag.id);
+        const face = before ? fieldFace(drag.base, before) : null;
+        if (!before || !face) return;
+        // the handle sits in front of the field: turn its front towards the pointer
+        const turned = turnGroundField(drag.base, before, headingAngle(fieldCenter(face, before), world, fine ? 1 : 15));
+        this.live(drag, (doc) => {
+          const field = doc.settings.roof.solar?.find((f) => f.id === drag.id);
+          if (field) Object.assign(field, turned);
+        });
+        return;
+      }
+      case "solarmove":
+        this.moveSolar(drag, at);
+        return;
+      default:
+        return;
+    }
+  }
+
+  /** Dragging a solar field or roof window: it follows the pointer onto another face, or along its own, and never slides off. */
+  private moveSolar(drag: Extract<Drag, { kind: "solarmove" }>, at: { local: [number, number]; world: Vec2; fine: boolean }): void {
+    const { local, world, fine } = at;
+    if (!drag.moved && !hasLeftStart(local, drag.startScreen)) return;
+    drag.moved = true;
+    const windowBefore = drag.win ? drag.base.settings.roof.windows?.find((w) => w.id === drag.id) : undefined;
+    const before = drag.win ? (windowBefore ? windowAsField(windowBefore) : undefined) : drag.base.settings.roof.solar?.find((f) => f.id === drag.id);
+    // roof faces, and for fields also the walls of the floor the plan shows
+    const faces = drag.win ? roofFaces(drag.base) : [...roofFaces(drag.base), ...(this._floorId ? wallFaces(drag.base, this._floorId) : [])];
+    const own = before ? fieldFace(drag.base, before, faces) : null;
+    if (!before || !own) return;
+    const step = fine ? 0.01 : 0.05;
+    const onStep = (v: number) => round(Math.round(v / step) * step);
+    const over = own.unbounded ? null : faceAt(faces, world);
+    let face = own;
+    let u: number;
+    let v: number;
+    if (over && drag.grab) {
+      // over a face the field follows the pointer there, and may change to that face
+      face = over.face;
+      u = onStep(over.u - drag.grab.du);
+      // on a wall the height stays, or starts at head height when the field comes from elsewhere
+      v = Number.isNaN(over.s) ? (over.face.key === before.face ? before.v : Math.max(0, over.face.ls - 1.5)) : onStep(over.s - drag.grab.ds);
+    } else {
+      // elsewhere it moves along its own face; a slope looks shorter in the plan
+      const [dx, dz] = [world[0] - drag.start[0], world[1] - drag.start[1]];
+      const slope = [own.es[0], own.es[2]];
+      u = onStep(before.u + dx * own.eu[0] + dz * own.eu[2]);
+      v = onStep(before.v + (dx * slope[0] + dz * slope[1]) / (slope[0] * slope[0] + slope[1] * slope[1] || 1));
+    }
+    const kept = clampField(face, { ...before, face: face.key, u, v, tilt: face.flat ? (before.tilt ?? 15) : before.tilt });
+    this.live(drag, (doc) => {
+      if (drag.win) {
+        const w = doc.settings.roof.windows?.find((x) => x.id === drag.id);
+        if (w) Object.assign(w, { face: face.key, ...kept });
+        return;
+      }
+      const f = doc.settings.roof.solar?.find((x) => x.id === drag.id);
+      if (f) Object.assign(f, { face: face.key, ...kept }, face.flat && f.tilt == null ? { tilt: 15 } : {});
+    });
   }
 
   private onPointerUp(e: PointerEvent): void {

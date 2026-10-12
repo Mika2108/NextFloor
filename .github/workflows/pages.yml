@@ -1,11 +1,12 @@
 name: Online demo
 
-# Publishes the preview (invented demo data, mock Home Assistant) as the online demo on GitHub Pages.
+# Publishes the preview (invented demo data, mock Home Assistant) as the online demo on GitHub Pages:
+# the released version (branch main) at the root and the version under development (branch dev) under /dev/.
 # Only the preview page, its demo data and the built bundles go online, nothing from private/.
+# Every run builds both branches from their latest state, so a push to either one refreshes the whole site.
 on:
-  # not on releases: the github-pages environment only accepts the main branch, and every push to main that changes the demo deploys it
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "site/**"
       - "preview/**"
@@ -32,13 +33,29 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: src-main
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: src-dev
       - name: Assemble the site
         run: |
-          mkdir -p _site/preview _site/custom_components/nextfloor
-          cp site/index.html _site/
-          cp preview/index.html preview/demo-data.js preview/basic-types.js preview/pack-ids.js _site/preview/
-          cp -r custom_components/nextfloor/frontend _site/custom_components/nextfloor/
-          cp -r custom_components/nextfloor/packs _site/custom_components/nextfloor/
+          assemble() {
+            src="$1"; out="$2"
+            mkdir -p "$out/preview" "$out/custom_components/nextfloor"
+            cp "$src/site/index.html" "$out/"
+            cp "$src"/preview/*.html "$src"/preview/*.js "$out/preview/"
+            cp -r "$src/custom_components/nextfloor/frontend" "$out/custom_components/nextfloor/"
+            cp -r "$src/custom_components/nextfloor/packs" "$out/custom_components/nextfloor/"
+          }
+          assemble src-main _site
+          assemble src-dev _site/dev
+          # the development demo says so, so nobody takes it for the release
+          for page in _site/dev/index.html _site/dev/preview/index.html; do
+            sed -i 's|<body>|<body><div style="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99;padding:2px 14px;border-radius:0 0 10px 10px;background:#ffb547;color:#1a1200;font:700 12px sans-serif">DEV – work in progress</div>|' "$page"
+          done
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

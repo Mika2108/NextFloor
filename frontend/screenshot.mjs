@@ -53,6 +53,10 @@ const shots = [
   { name: "showcase-build", dev: true, query: "?showcase&lang=en&set=pack%3Aausbau", width: 1400, height: 800 },
   { name: "showcase-shop", dev: true, query: "?showcase&lang=en&set=pack%3Awerkstatt", width: 1400, height: 800 },
   { name: "showcase-cars", dev: true, query: "?showcase&lang=en&set=pack%3Afahrzeuge&page=2", width: 1400, height: 800 },
+  { name: "map-3d", dev: true, query: "?map", width: 1280, height: 800 },
+  { name: "map-3d-south", dev: true, query: "?map&north=180", width: 1280, height: 800 },
+  { name: "map-editor", dev: true, query: "?map", width: 1280, height: 800, editor: true, editorScript: "e.fit();" },
+  { name: "settings-map", dev: true, query: "?map", width: 1400, height: 1100, editor: true, editorScript: "const d = [...e.renderRoot.querySelectorAll('details')].find((x) => x.querySelector('summary')?.textContent.includes('Einstellungen')); if (d) { d.open = true; d.scrollIntoView({ block: 'start' }); }" },
   { name: "view-house", query: "?pv=5400&flows", width: 1280, height: 800 },
   { name: "view-floor-eg", query: "?pv=5400&flows", width: 1280, height: 800, click: "Erdgeschoss" },
   { name: "view-room", query: "", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
@@ -119,6 +123,18 @@ const errors = [];
 const only = process.env.SHOTS?.split(",");
 for (const shot of shots.filter((s) => (only ? only.includes(s.name) : !s.dev))) {
   const page = await browser.newPage();
+  if (process.env.FAKE_TILES) {
+    // no internet needed: OpenStreetMap tiles are answered with a numbered grid tile
+    await page.setRequestInterception(true);
+    page.on("request", (req) => {
+      const m = /tile\.openstreetmap\.org\/(\d+)\/(\d+)\/(\d+)\.png/.exec(req.url());
+      if (!m) return req.continue();
+      const [, z, x, y] = m;
+      const tint = (Number(x) + Number(y)) % 2 ? "#6a8f5a" : "#8aa97a";
+      const body = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="${tint}"/><path d="M0 128H256M128 0V256" stroke="#fff" stroke-width="6"/><rect x="1" y="1" width="254" height="254" fill="none" stroke="#223" stroke-width="2"/><text x="12" y="30" font-size="22" font-family="sans-serif" fill="#112">${z}/${x}/${y}</text><text x="116" y="22" font-size="18" fill="#a00">N</text></svg>`;
+      req.respond({ status: 200, contentType: "image/svg+xml", headers: { "access-control-allow-origin": "*" }, body });
+    });
+  }
   page.on("pageerror", (e) => errors.push(`${shot.name}: ${e.message}`));
   page.on("console", (m) => m.type() === "error" && !m.location()?.url?.endsWith("favicon.ico") && errors.push(`${shot.name}: ${m.text()}`));
   await page.setViewport({ width: shot.width, height: shot.height, deviceScaleFactor: 1 });

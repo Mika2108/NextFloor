@@ -50,7 +50,7 @@ test("button data: empty is none, objects pass, everything else is refused", () 
   for (const bad of ["[1]", "5", "null", "{oops", '"text"']) assert.deepEqual(parseButtonData(bad), { ok: false }, bad);
 });
 
-import { clamp, withEffect, wrapDegrees } from "./settings.ts";
+import { clamp, turnedNorth, withEffect, wrapDegrees } from "./settings.ts";
 
 test("settings are kept within their limits", () => {
   assert.equal(clamp(5, 0, 1), 1);
@@ -58,6 +58,9 @@ test("settings are kept within their limits", () => {
   assert.equal(clamp(0.5, 0, 1), 0.5);
   assert.equal(wrapDegrees(370), 10);
   assert.equal(wrapDegrees(-10), 350);
+  assert.equal(turnedNorth(0, 180), 180, "north and south swapped");
+  assert.equal(turnedNorth(200, 180), 20);
+  assert.equal(turnedNorth(10, -90), 280);
   assert.equal(wrapDegrees(359.6), 0);
 });
 

@@ -417,6 +417,62 @@ export const editorStyles = css`
     margin-bottom: 8px;
   }
   .nf-floor-list,
+  .nf-compass {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--nf-line);
+    border-radius: 12px;
+  }
+  .nf-compass-dial {
+    width: 96px;
+    height: 96px;
+    flex: none;
+  }
+  .nf-compass-ring {
+    fill: none;
+    stroke: var(--nf-line);
+    stroke-width: 1.5;
+  }
+  .nf-compass-up {
+    fill: var(--nf-soft);
+  }
+  .nf-compass-n {
+    fill: var(--nf-accent);
+  }
+  .nf-compass-s {
+    fill: color-mix(in srgb, var(--nf-soft) 55%, transparent);
+  }
+  .nf-compass-label {
+    fill: var(--nf-text);
+    font-size: 12px;
+    font-weight: 700;
+    text-anchor: middle;
+  }
+  .nf-compass-label-s {
+    fill: var(--nf-soft);
+  }
+  .nf-map-settings {
+    display: grid;
+    gap: 8px;
+  }
+  .nf-map-move {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .nf-map-arrows {
+    display: flex;
+    gap: 6px;
+  }
+  .nf-compass-side {
+    display: grid;
+    gap: 6px;
+    flex: 1 1 200px;
+  }
   .nf-actions {
     display: flex;
     flex-wrap: wrap;

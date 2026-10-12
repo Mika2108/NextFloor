@@ -167,7 +167,8 @@ Walls are created automatically: every shared edge of two rooms becomes an inter
 |---|---|
 | **Exterior wall (m)**, **Interior wall (m)** | Wall thicknesses |
 | **Grid (m)** | Drawing step |
-| **North** | Degrees clockwise from up. Needed for sunlight |
+| **Compass** | Where north lies, degrees clockwise from up. A dial and the buttons **Swap north ↔ south** (180°), **↺ 90°** and **↻ 90°** turn it. Only the compass turns: the drawing, roof faces and solar fields stay as they are, while sunlight, wind and the compass directions of the roof faces follow it |
+| **Real map** | Lays a map (OpenStreetMap by default) dimmed under the plan, in the plan and in 3D. Start with Home Assistant's location, set **Visibility** and **Detail level**, then move the map with the arrow buttons (or turn the compass) until the house sits on its plot. Your browser loads the tiles itself, and only while the map is on; **Own tile address** takes any `https://…/{z}/{x}/{y}` source you may use |
 | **Roof** | No roof, flat roof or gable roof, with pitch and overhang. For a gable roof, **Ridge** sets whether the ridge runs along the long or the short side (e.g. terraced house). **Roof sections (custom)** builds the roof from several parts, see [4.19](#419-roof) |
 | **Weather entity** | Which weather entity drives the weather outside, see [6.2](#62-weather-outside) |
 | **Weather effects in 3D** | Which effects are shown |
@@ -721,7 +722,7 @@ Walls catch taps. In the room view only things in the room count. If it still hi
 Set quality to **Tablet** and check with **FPS** what is drawing. At rest it should read 0 fps. If something keeps running, the reason is shown next to it, e.g. a lamp's colour effect.
 
 **Sunlight falls through the wrong windows.**
-Check **North** under Settings: degrees clockwise from "up" in the plan.
+Check the **Compass** under Settings: degrees clockwise from "up" in the plan. If north and south are the wrong way round, press **Swap north ↔ south**.
 
 **The notice "This page still shows NextFloor x.y, Home Assistant already has …" stays.**
 The browser or the companion app still holds an old NextFloor bundle. Tap **Reload**; in the companion app go to Settings → Companion app → **Reset frontend cache**, then close the app completely and open it again. Restarting Home Assistant does not help here.

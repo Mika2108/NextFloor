@@ -10,6 +10,7 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=therealMRBK&repository=NextFloor&category=integration"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open in HACS"></a>
 <a href="https://therealmrbk.github.io/NextFloor/"><img src="https://img.shields.io/badge/%E2%96%B6-Online%20demo-00b4d8?style=for-the-badge" alt="Online demo"></a>
 <a href="https://therealmrbk.github.io/NextFloor/preview/index.html?showcase&lang=en"><img src="https://img.shields.io/badge/%E2%96%A6-All%20models-8a63d2?style=for-the-badge" alt="All models"></a>
+<a href="https://therealmrbk.github.io/NextFloor/dev/"><img src="https://img.shields.io/badge/%E2%9A%99-Dev%20demo-ffb547?style=for-the-badge" alt="Demo of the development version"></a>
 </p>
 
 <p align="center">
@@ -112,7 +113,7 @@ Own a model of a vehicle (`.glb`)? Open **Extensions** in the NextFloor panel, c
 
 ## 🔒 Privacy
 
-The plan, its pictures and the packs live in Home Assistant's `.storage`. NextFloor does not talk to the internet; camera pictures and history come from your own Home Assistant.
+The plan, its pictures and the packs live in Home Assistant's `.storage`. NextFloor does not talk to the internet on its own; only if you switch on the optional real map, your browser loads map tiles from the tile server (OpenStreetMap by default). Pictures and history come from your own Home Assistant.
 
 ## 🤖 Made with AI
 

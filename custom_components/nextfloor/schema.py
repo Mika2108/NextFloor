@@ -484,6 +484,23 @@ FLOOR_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+# a real map under the plan (tiles loaded by the browser): where the plan's anchor point lies on Earth
+MAP_SCHEMA = vol.Schema(
+    {
+        vol.Required("on"): bool,
+        vol.Required("lat"): vol.All(vol.Coerce(float), vol.Range(min=-85, max=85)),
+        vol.Required("lon"): vol.All(vol.Coerce(float), vol.Range(min=-180, max=180)),
+        # the plan point (metres) that lies at lat / lon
+        vol.Optional("x", default=0): vol.All(vol.Coerce(float), vol.Range(min=-100000, max=100000)),
+        vol.Optional("z", default=0): vol.All(vol.Coerce(float), vol.Range(min=-100000, max=100000)),
+        vol.Optional("opacity", default=0.5): vol.All(vol.Coerce(float), vol.Range(min=0.05, max=1)),
+        vol.Optional("zoom", default=18): vol.All(vol.Coerce(int), vol.Range(min=15, max=19)),
+        # None = OpenStreetMap; else a tile address with {z}, {x} and {y}
+        vol.Optional("url", default=None): vol.Any(None, vol.All(str, vol.Length(max=300), vol.Match(r"^https://"))),
+    },
+    extra=vol.ALLOW_EXTRA,
+)
+
 SETTINGS_SCHEMA = vol.Schema(
     {
         vol.Required("wall_exterior"): vol.All(vol.Coerce(float), vol.Range(min=0.02, max=1)),
@@ -491,6 +508,7 @@ SETTINGS_SCHEMA = vol.Schema(
         vol.Required("grid"): vol.All(vol.Coerce(float), vol.Range(min=0.01, max=1)),
         # direction of north in the plan, degrees clockwise from "up"
         vol.Optional("north", default=0): vol.All(vol.Coerce(float), vol.Range(min=-360, max=360)),
+        vol.Optional("map", default=None): vol.Any(None, MAP_SCHEMA),
         # plan lock: rooms, walls, doors, windows and outdoor areas cannot be moved by accident
         vol.Optional("lock_plan", default=False): bool,
         # stations and playlists for the speakers' quick menu (media_player.play_media type + content id)

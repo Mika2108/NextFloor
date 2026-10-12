@@ -53,6 +53,7 @@ import { renderEnergyBalance, renderEnergyChecklist, renderEnergyDevices, render
 import { energyMarkersLayer, headroomLayer, roofSectionsLayer, roofWindowsLayer, solarLayer } from "./editor/canvas/roof-layers.ts";
 import type { CanvasContext } from "./editor/canvas/context.ts";
 import { backgroundLayer } from "./editor/canvas/background.ts";
+import { mapLayer } from "./editor/canvas/map.ts";
 import { BackgroundTool, readPictureInBrowser } from "./editor/background-tool.ts";
 import { renderBackgroundForm } from "./editor/forms/background.ts";
 import { dragRotation, pictureCentre, pictureLocal } from "./editor/ops/background.ts";
@@ -1829,7 +1830,7 @@ export class NfEditor extends LitElement {
     const room = this.room;
     const showRoomHandles = !!room && this.isAdmin && this._tool === "select" && !this.sel.opening && !this.sel.furniture && !this.isFixedItem("room", room.id);
     const sketch = this.drag?.kind === "freewall" || this.drag?.kind === "rect" ? this.drag : null;
-    return svg`${backgroundLayer(ctx, this.bg, floor)} ${gridLayer(ctx, this._size)} ${floorBelowLayer(ctx)} ${walls ? wallsLayer(ctx, walls) : nothing}
+    return svg`${mapLayer(ctx, this._doc.settings)} ${backgroundLayer(ctx, this.bg, floor)} ${gridLayer(ctx, this._size)} ${floorBelowLayer(ctx)} ${walls ? wallsLayer(ctx, walls) : nothing}
       ${floor ? svg`${outdoorLayer(ctx, floor, this.sel.outdoor)} ${roomsLayer(ctx, floor, this.sel.room, this.sel.edge)} ${furnitureLayer(ctx, floor, this.sel.furniture)}
         ${freeWallsLayer(ctx, floor, this.sel.wall)} ${walls ? openingsLayer(ctx, floor, walls, this.sel.opening) : nothing} ${meterLayer(ctx, floor)}
         ${this._tool === "select" ? devicesLayer(ctx, floor, this.sel.device) : nothing}

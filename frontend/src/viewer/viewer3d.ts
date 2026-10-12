@@ -58,6 +58,8 @@ import { hasMesh, mountBase, packItem, setMeshSource, setPacks, type FurniturePa
 import { withVehicles } from "../parking.ts";
 import { buildRoof, type RoofWindowState } from "./roof.ts";
 import { GROUND, groundFace, groundFloor, wallFaces } from "../solar.ts";
+import { MapLayer } from "./live-map.ts";
+import type { MapSettings } from "../model.ts";
 import { accentOnUniform, accentUniform, parseAccent, lineBlending, themed, themeIndex, type Theme, type ThemeUniform } from "./theme.ts";
 
 export type { Theme } from "./theme.ts";
@@ -464,6 +466,11 @@ export class NextFloorViewer {
   private sun: SunState | null = null;
   /** The sky over the plot: rain, snow, clouds, fog, lightning, sun and moon (live-weather.ts). */
   private readonly weatherLayer: WeatherLayer;
+  /** The real map under the plan (live-map.ts). */
+  private readonly mapLayer: MapLayer;
+  private mapSettings: MapSettings | null = null;
+  private mapNorth = 0;
+  private groundY = 0;
   private skyView: SkyView | null = null;
   private weatherTimer: ReturnType<typeof setTimeout> | undefined;
   /** Power flowing between the devices, sparkling solar modules (live-energy.ts). */
@@ -497,6 +504,8 @@ export class NextFloorViewer {
     this.ground.renderOrder = -1;
     this.scene.add(this.ground, this.root);
     this.weatherLayer = new WeatherLayer(this.scene);
+    this.mapLayer = new MapLayer(this.scene);
+    this.mapLayer.onChange = () => this.invalidate();
     this.energyLayer = new EnergyLayer(this.scene, this.liftOf);
     this.soundLayer = new SoundLayer(this.scene, this.liftOf);
     this.screenLayer = new ScreenLayer(this.scene, this.liftOf);
@@ -798,6 +807,7 @@ export class NextFloorViewer {
   setTheme(theme: Theme): void {
     if (theme === this.theme) return;
     this.theme = theme;
+    this.placeMap();
     this.themeUniform.value = themeIndex(theme);
     const blending = lineBlending(theme);
     const lineMats = [...this.floors.map((f) => f.materials.lines), ...(this.roof ? [this.roof.lines] : [])];
@@ -1033,6 +1043,7 @@ export class NextFloorViewer {
     clearTimeout(this.orbitTimer);
     clearTimeout(this.weatherTimer);
     this.weatherLayer.dispose();
+    this.mapLayer.dispose();
     this.energyLayer.dispose();
     this.soundLayer.dispose();
     this.screenLayer.dispose();
@@ -1896,6 +1907,20 @@ export class NextFloorViewer {
     const span = GROUND_CELLS * Math.ceil((Math.max(s.x, s.z) + 16) / GROUND_CELLS);
     this.ground.scale.set(span, span, 1);
     this.ground.position.set(c.x, y - SLAB - 0.02, c.z);
+    this.groundY = y - SLAB - 0.04;
+    this.placeMap();
+  }
+
+  /** The real map under the plan: shown while the settings switch it on, turned by the plan's north. */
+  setMap(map: MapSettings | null | undefined, north: number): void {
+    this.mapSettings = map ?? null;
+    this.mapNorth = north;
+    this.placeMap();
+    this.invalidate();
+  }
+
+  private placeMap(): void {
+    this.mapLayer.set(this.mapSettings, this.mapNorth, this.groundY, this.theme === "day" ? 1 : 0.55);
   }
 
   /** Camera distance at which a box of this size fits the view (bounding sphere against the narrower field of view). */

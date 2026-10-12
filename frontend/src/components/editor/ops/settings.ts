@@ -5,6 +5,9 @@ export const clamp = (value: number, low: number, high: number): number => Math.
 /** Compass degrees as a whole number in 0 to 359. */
 export const wrapDegrees = (value: number): number => ((Math.round(value) % 360) + 360) % 360;
 
+/** North turned by `by` degrees (180 swaps north and south), kept within 0 to 359. */
+export const turnedNorth = (north: number, by: number): number => wrapDegrees(north + by);
+
 /** The weather effects with one switched on or off; no effect appears twice. */
 export function withEffect<T>(effects: readonly T[], effect: T, on: boolean): T[] {
   return on ? [...new Set([...effects, effect])] : effects.filter((e) => e !== effect);

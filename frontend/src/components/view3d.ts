@@ -33,6 +33,7 @@ import { watchedEntities } from "./view3d/watch-list.ts";
 import { alertColor, alertSources, alertText, findAlerts, type Alert, type AlertSources } from "../alerts.ts";
 import { iconPath, iconSvg, mdiIcon } from "../icons.ts";
 import { deviceSensors, energySummary, findConsumers, readPower, type Consumer, type EnergySummary } from "../energy.ts";
+import { mapCredit, mapShown } from "../map-geo.ts";
 import { type CustomButton, type EntityRef } from "../model.ts";
 
 import { STAGE, type Theme } from "../themes.ts";
@@ -433,6 +434,7 @@ export class NfView3d extends LitElement {
         this.shownStartView = JSON.stringify(this.startViewOf());
         this.viewer.setStartView(this.startViewOf());
         this.viewer.setBuilding(this.building);
+        this.viewer.setMap(this.building.settings.map, this.building.settings.north ?? 0);
       }
       this.scheduleThumbs();
       this.syncDevices(true);
@@ -467,6 +469,7 @@ export class NfView3d extends LitElement {
       this.shownStartView = start;
       v.setStartView(this.startViewOf());
       v.setBuilding(this.building);
+      v.setMap(this.building?.settings.map, this.building?.settings.north ?? 0);
       if (startChanged && this.floorId === null) v.resetView();
     }
     if (changed.has("startView") && changed.get("startView") !== undefined) {
@@ -1532,6 +1535,13 @@ export class NfView3d extends LitElement {
     </div>`;
   }
 
+  /** The map's credit while a real map lies under the plan (OpenStreetMap asks for it). */
+  private renderMapCredit() {
+    const map = this.building?.settings.map;
+    if (!mapShown(map)) return nothing;
+    return html`<a class="nf-map-credit" href=${mapCredit(map).href} target="_blank" rel="noopener">${mapCredit(map).text}</a>`;
+  }
+
   private renderLegend() {
     if (this.heatMode === "none" || this.heatMode === "values") return nothing;
     const scale = HEAT_SCALES[this.heatMode];
@@ -1565,7 +1575,7 @@ export class NfView3d extends LitElement {
       class="nf-stage ${this.roomLabels ? "" : "nf-no-room-names"} ${this._low ? "nf-low" : ""} ${this.panelOpen ? "nf-panel-open" : ""} ${this._alerts.length ? "nf-has-alerts" : ""} ${this._narrowStage ? "nf-narrow" : ""}"
       style=${style}
     >
-      ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()}
+      ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()} ${this.renderMapCredit()}
       ${this.renderAlerts()} ${this.clean ? nothing : html`${this.renderThumbs()} ${this.renderScenes()} ${this.renderFind()} ${this.renderCentral()}`} ${this.renderSwipe()}
       ${this.renderMenu()} ${this.renderEye()}
       ${this.showStats && this._stats
@@ -2354,6 +2364,18 @@ export class NfView3d extends LitElement {
           scale: 1.35;
           filter: drop-shadow(0 0 12px var(--nf-accent));
         }
+      }
+      .nf-map-credit {
+        position: absolute;
+        right: 8px;
+        bottom: 4px;
+        z-index: 2;
+        padding: 1px 6px;
+        border-radius: 6px;
+        background: color-mix(in srgb, var(--nf-chrome) 80%, transparent);
+        color: var(--nf-soft);
+        font-size: 10px;
+        text-decoration: none;
       }
       .nf-legend {
         position: absolute;

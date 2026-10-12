@@ -469,6 +469,23 @@ export interface BuildingSettings {
   lock_plan?: boolean;
   /** The camera the house view opens with (3D view, card, kiosk); null = fitted from the front left. */
   start_view?: StartView | null;
+  /** A real map under the plan (null = none). */
+  map?: MapSettings | null;
+}
+
+/** A real map as the base of the plan: the plan point (x, z in metres) that lies at lat / lon, turned by the plan's north. */
+export interface MapSettings {
+  on: boolean;
+  lat: number;
+  lon: number;
+  x?: number;
+  z?: number;
+  /** How strongly the map shows, 0.05 to 1 (default 0.5). */
+  opacity?: number;
+  /** Tile zoom, 15 (coarse) to 19 (fine; default 18). */
+  zoom?: number;
+  /** Tile address with {z}, {x} and {y}; null = OpenStreetMap. */
+  url?: string | null;
 }
 
 /** A camera position around the house: azimuth and polar angle (radians) and the distance (m). */

@@ -35,6 +35,12 @@ const params = new URLSearchParams(location.search);
         localStorage.setItem("nextfloor.flows", params.has("flows") ? "1" : "0");
       } catch {}
       let building = params.has("empty") ? { version: 1, floors: [], settings: { wall_exterior: 0.24, wall_interior: 0.12, grid: 0.05 } } : DEMO_BUILDING;
+      // ?map and ?north=180 switch the real map and the compass on for a look (the demo ships with both off)
+      if (params.has("map") || params.has("north")) {
+        building = structuredClone(building);
+        if (params.has("north")) building.settings.north = Number(params.get("north")) || 0;
+        if (params.has("map")) building.settings.map = { on: true, lat: 50.1109, lon: 8.6821, x: 5, z: 4, opacity: 0.6, zoom: 19, url: null };
+      }
       // development view: a whole pack laid out in rows on a plain floor (?pack=nextfloor.ikea, or ?cars for the Teslas)
       const showPack = params.get("pack") || (params.has("cars") ? "nextfloor.fahrzeuge" : null);
       if (showPack) {
@@ -160,6 +166,7 @@ const params = new URLSearchParams(location.search);
 
       const hass = {
         language: params.get("lang") || "de",
+        config: { latitude: 50.1109, longitude: 8.6821 },
         themes: { darkMode: !light },
         user: { is_admin: !params.has("user"), name: "Demo" },
         areas: DEMO_AREAS,

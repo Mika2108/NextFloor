@@ -3,9 +3,11 @@ import { weatherEntity } from "../../../weather.ts";
 import type { I18nKey } from "../../../i18n.ts";
 import { DEFAULT_WEATHER_EFFECTS, WEATHER_EFFECTS, type Building, type RoofType } from "../../../model.ts";
 import { entityOptions } from "../entities.ts";
+import { renderCompass } from "./compass.ts";
+import { renderMapSettings } from "./map.ts";
 import { checkField, entityField, hint, numberField, selectField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
-import { clamp, withEffect, wrapDegrees } from "../ops/settings.ts";
+import { clamp, withEffect } from "../ops/settings.ts";
 
 /** What choosing the "own sections" roof needs from the editor: it proposes sections from the rooms and opens the roof tool. */
 export interface SettingsActions {
@@ -29,7 +31,8 @@ export function renderSettings(host: EditorHost, actions: SettingsActions): Temp
       ${numberField(host, t("wall_exterior"), s.wall_exterior, (v) => set({ wall_exterior: clamp(v, 0.02, 1) }), 0.01, 0.02)}
       ${numberField(host, t("wall_interior"), s.wall_interior, (v) => set({ wall_interior: clamp(v, 0.02, 1) }), 0.01, 0.02)}
       ${numberField(host, t("grid"), s.grid, (v) => set({ grid: clamp(v, 0.01, 1) }), 0.01, 0.01)}
-      ${numberField(host, t("north"), s.north, (v) => set({ north: wrapDegrees(v) }), 1)}
+      ${renderCompass(host, s.north, (north) => set({ north }))}
+      ${renderMapSettings(host, host.doc, (map) => set({ map }))}
       ${selectField(host, t("roof"), s.roof.type, roofChoices, (type) => (type === "custom" ? actions.useRoofSections() : setRoof({ type })), { wide: true })}
       ${gable
         ? selectField(host, t("roof_ridge"), s.roof.ridge === "short" ? "short" : "long", [["long", t("roof_ridge_long")], ["short", t("roof_ridge_short")]], (ridge) => setRoof({ ridge: ridge === "short" ? "short" : null }), { wide: true })

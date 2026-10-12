@@ -169,7 +169,8 @@ Unten in der Seitenleiste klappt **Einstellungen** auf:
 |---|---|
 | **Außenwand (m)**, **Innenwand (m)** | Wandstärken |
 | **Raster (m)** | Schrittweite beim Zeichnen |
-| **Nordrichtung** | Grad im Uhrzeigersinn von oben. Wird für das Sonnenlicht gebraucht |
+| **Kompass** | Wohin Norden zeigt, Grad im Uhrzeigersinn von oben. Eine Scheibe und die Knöpfe **Nord ↔ Süd tauschen** (180°), **↺ 90°** und **↻ 90°** drehen ihn. Es dreht sich nur der Kompass: Zeichnung, Dachflächen und Solarfelder bleiben, Sonnenlicht, Wind und die Himmelsrichtungen der Dachflächen richten sich danach |
+| **Echte Karte** | Legt eine Karte (standardmäßig OpenStreetMap) gedimmt unter den Plan, im Plan und in 3D. Mit dem Standort von Home Assistant starten, **Sichtbarkeit** und **Detailstufe** einstellen, dann die Karte mit den Pfeilknöpfen verschieben (oder den Kompass drehen), bis das Haus auf seinem Grundstück sitzt. Dein Browser lädt die Kacheln selbst, und nur solange die Karte an ist; die **eigene Kachel-Adresse** nimmt jede Quelle `https://…/{z}/{x}/{y}`, die du nutzen darfst |
 | **Dach** | Kein Dach, Flachdach oder Satteldach, mit Dachneigung und Dachüberstand. Beim Satteldach legt **First** fest, ob der First entlang der langen oder der kurzen Seite läuft (z. B. Reihenhaus). **Dachflächen (frei)** baut das Dach aus mehreren Teilen, siehe [4.19](#419-dach) |
 | **Wetter-Entität** | Welche Wetter-Entität das Wetter draußen liefert, siehe [6.2](#62-wetter-draußen) |
 | **Wetter-Effekte in 3D** | Welche Effekte gezeigt werden |
@@ -726,7 +727,7 @@ Wände fangen Tipps ab. In der Raumansicht zählen nur Dinge im Raum. Trifft es 
 Qualität auf **Tablet** stellen und mit **FPS** prüfen, was zeichnet. Im Leerlauf sollte dort 0 B/s stehen. Läuft dauerhaft etwas, steht der Grund daneben, etwa ein Farbeffekt einer Lampe.
 
 **Das Sonnenlicht fällt durch die falschen Fenster.**
-Unter Einstellungen die **Nordrichtung** prüfen: Grad im Uhrzeigersinn von „oben“ im Plan.
+Unter Einstellungen den **Kompass** prüfen: Grad im Uhrzeigersinn von „oben“ im Plan. Sind Nord und Süd vertauscht, hilft **Nord ↔ Süd tauschen**.
 
 **Die Meldung „Diese Seite zeigt noch NextFloor x.y, Home Assistant hat schon …“ bleibt.**
 Browser oder Companion-App halten noch ein altes NextFloor-Bundle. Auf **Neu laden** tippen; in der Companion-App unter Einstellungen → Companion-App → **Frontend-Cache zurücksetzen**, dann die App ganz schließen und neu öffnen. Ein Neustart von Home Assistant hilft hier nicht.

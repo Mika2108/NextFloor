@@ -5,6 +5,7 @@ import type { EditorHost } from "../host.ts";
 export interface CanvasContext {
   host: EditorHost;
   toScreen(p: Vec2): [number, number];
+  toWorld(x: number, y: number): Vec2;
   /** Pixels per metre. */
   scale: number;
   floorId: string | null;

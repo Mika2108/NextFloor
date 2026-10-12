@@ -3,7 +3,6 @@
 import { html, LitElement, nothing, svg, type PropertyValues, type TemplateResult } from "lit";
 import { fetchImage, storeImage } from "../api.ts";
 import { areaEntities, defaultHeight, entityName, kindOf } from "../devices.ts";
-import { furnitureSymbol } from "./furniture2d.ts";
 import { closeGaps, suggestedThickness } from "../geometry/gaps.ts";
 import { keepInRoom, snapToWall } from "../geometry/snap.ts";
 import { SHOW_PRESENCE } from "../flags.ts";
@@ -11,13 +10,11 @@ import { polygonBox } from "../roof-sections.ts";
 import { clampField, faceAt, fieldFace, pointOnFace, roofFaces, turnGroundField, fieldCenter, wallFaces, windowAsField, onFace, onField, rayOnFace, type RoofFace } from "../solar.ts";
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
 import {
-  sidelightLayout,
   type FreeWall,
 } from "../model.ts";
 import { furnishRoom, type PackageId } from "../packages.ts";
-import { generateWalls, locateOpening, openingHost, pointOnRoomEdge, type Wall } from "../geometry/walls.ts";
+import { generateWalls, locateOpening, openingHost, type Wall } from "../geometry/walls.ts";
 import { formatNumber, languageReady, loadLanguage, translate, type I18nKey } from "../i18n.ts";
-import { iconPath } from "../icons.ts";
 import {
   bounds,
   centroid,
@@ -25,11 +22,9 @@ import {
   type StartView,
   canLift,
   isFixed,
-  isLamp,
   isAxisRect,
   step,
   type Direction,
-  signedArea,
   OPENING_PRESETS,
   type OpeningPreset,
   resizeFurniture,
@@ -48,8 +43,6 @@ import {
   type OpeningType,
   type Room,
   type Vec2,
-  openingStyle,
-  isFrontDoor,
 } from "../model.ts";
 import { controls, tokens } from "../styles.ts";
 import { renderFavorites, renderPresence, renderStartView } from "./editor/forms/house.ts";
@@ -67,6 +60,10 @@ import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWall
 import { outdoorRectangleAfter } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
 import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
+import { draftLayer, guidesLayer } from "./editor/canvas/draft.ts";
+import { devicesLayer, furnitureLayer } from "./editor/canvas/items.ts";
+import { openingsLayer } from "./editor/canvas/openings.ts";
+import { cutMarksLayer, floorBelowLayer, freeWallsLayer, gridLayer, meterLayer, outdoorHandlesLayer, outdoorLayer, roomHandlesLayer, roomsLayer, wallsLayer } from "./editor/canvas/plan.ts";
 import { renderEdgeHeights, type EdgeActions } from "./editor/forms/edges.ts";
 import { cutEdge, joinAtCut, moveCut, setPartHeight, setWallHeight, setWallThickness } from "./editor/ops/edges.ts";
 import { renderDeviceForm, type DeviceActions } from "./editor/forms/device.ts";
@@ -405,7 +402,7 @@ export class NfEditor extends LitElement {
 
   /** What the layers drawn over the plan need. */
   private canvasContext(): CanvasContext {
-    return { host: this.host, toScreen: (p) => this.toScreen(p), scale: this._view.scale, floorId: this._floorId };
+    return { host: this.host, toScreen: (p) => this.toScreen(p), toWorld: (x, y) => this.toWorld(x, y), scale: this._view.scale, floorId: this._floorId };
   }
 
   /** What the roof and solar forms need. */
@@ -1876,23 +1873,6 @@ export class NfEditor extends LitElement {
     this.sel.wall = null;
   }
 
-  /** The plan symbol of free walls: a wide invisible hit line, and end handles when selected. */
-  private renderFreeWalls(floor: Floor) {
-    return svg`<g>${(floor.walls ?? []).map((w) => {
-      const [x0, y0] = this.toScreen(w.a);
-      const [x1, y1] = this.toScreen(w.b);
-      const sel = w.id === this.sel.wall;
-      return svg`<g data-free-wall=${w.id} class=${`nf-free-wall${sel ? " nf-free-wall-sel" : ""}`}>
-        <line class="nf-hit" x1=${x0} y1=${y0} x2=${x1} y2=${y1} />
-        <line class="nf-free-wall-line" x1=${x0} y1=${y0} x2=${x1} y2=${y1} />
-      </g>
-      ${sel && this.isAdmin && !isFixed(w, true, this._doc.settings)
-        ? svg`<g class="nf-vertex" data-wall-end=${`${w.id}:a`}><circle cx=${x0} cy=${y0} r="16" class="nf-hit" /><circle cx=${x0} cy=${y0} r="6" /></g>
-            <g class="nf-vertex" data-wall-end=${`${w.id}:b`}><circle cx=${x1} cy=${y1} r="16" class="nf-hit" /><circle cx=${x1} cy=${y1} r="6" /></g>`
-        : nothing}`;
-    })}</g>`;
-  }
-
   private get outdoorArea(): OutdoorArea | undefined {
     return this.sel.outdoor ? this.floor?.outdoor.find((o) => o.id === this.sel.outdoor) : undefined;
   }
@@ -1980,6 +1960,25 @@ export class NfEditor extends LitElement {
   private faceHit(face: RoofFace, p: Vec2): { u: number; s: number } | null {
     if (!face.wall) return pointOnFace(face, p);
     return { u: (p[0] - face.o[0]) * face.eu[0] + (p[1] - face.o[2]) * face.eu[2], s: Number.NaN };
+  }
+
+  /** Everything drawn in the plan, bottom to top. */
+  private planLayers(floor: Floor | undefined, walls: Wall[] | null): ReturnType<typeof svg> {
+    const ctx = this.canvasContext();
+    const room = this.room;
+    const showRoomHandles = !!room && this.isAdmin && this._tool === "select" && !this.sel.opening && !this.sel.furniture && !this.isFixedItem("room", room.id);
+    const sketch = this.drag?.kind === "freewall" || this.drag?.kind === "rect" ? this.drag : null;
+    return svg`${backgroundLayer(ctx, this.bg, floor)} ${gridLayer(ctx, this._size)} ${floorBelowLayer(ctx)} ${walls ? wallsLayer(ctx, walls) : nothing}
+      ${floor ? svg`${outdoorLayer(ctx, floor, this.sel.outdoor)} ${roomsLayer(ctx, floor, this.sel.room, this.sel.edge)} ${furnitureLayer(ctx, floor, this.sel.furniture)}
+        ${freeWallsLayer(ctx, floor, this.sel.wall)} ${walls ? openingsLayer(ctx, floor, walls, this.sel.opening) : nothing} ${meterLayer(ctx, floor)}
+        ${this._tool === "select" ? devicesLayer(ctx, floor, this.sel.device) : nothing}
+        ${showRoomHandles ? roomHandlesLayer(ctx, room, this.sel.corner) : nothing}
+        ${outdoorHandlesLayer(ctx, this.outdoorArea, this._tool)}
+        ${room && this._tool === "select" ? cutMarksLayer(ctx, room) : nothing}
+        ${headroomLayer(ctx, floor)}`
+      : nothing}
+      ${this._tool === "roof" ? svg`${roofSectionsLayer(ctx, this.roof)}${roofWindowsLayer(ctx, this.roof)}` : this._tool === "energy" ? svg`${roofSectionsLayer(ctx, this.roof)}${solarLayer(ctx, this.roof)}${energyMarkersLayer(ctx, this.floor, this.sel.furniture)}` : nothing}
+      ${draftLayer(ctx, sketch, this._tool, this._draft, this._cursor)} ${guidesLayer(ctx, this._guides, this._size)}`;
   }
 
   private wallsOfFloor() {
@@ -2787,16 +2786,7 @@ export class NfEditor extends LitElement {
               @wheel=${this.onWheel}
               @contextmenu=${this.onContextMenu}
             >
-              ${backgroundLayer(this.canvasContext(), this.bg, floor)} ${this.renderGrid()} ${this.renderGhost()} ${walls ? this.renderWalls(walls.walls) : nothing}
-              ${floor ? this.renderOutdoor(floor) : nothing} ${floor ? this.renderRooms(floor) : nothing} ${floor ? this.renderFurniture(floor) : nothing}
-              ${floor ? this.renderFreeWalls(floor) : nothing}
-              ${floor && walls ? this.renderOpenings(floor, walls.walls) : nothing} ${floor ? this.renderMeter(floor) : nothing}
-              ${floor && this._tool === "select" ? this.renderDevices(floor) : nothing}
-              ${this.room && this.isAdmin && this._tool === "select" && !this.sel.opening && !this.sel.furniture && !this.isFixedItem("room", this.room.id) ? this.renderHandles(this.room) : nothing}
-              ${floor ? this.renderOutdoorHandles(floor) : nothing}
-              ${this.room && this._tool === "select" ? this.renderSplitMarks(this.room) : nothing}
-              ${floor ? headroomLayer(this.canvasContext(), floor) : nothing}
-              ${this._tool === "roof" ? svg`${roofSectionsLayer(this.canvasContext(), this.roof)}${roofWindowsLayer(this.canvasContext(), this.roof)}` : this._tool === "energy" ? svg`${roofSectionsLayer(this.canvasContext(), this.roof)}${solarLayer(this.canvasContext(), this.roof)}${energyMarkersLayer(this.canvasContext(), this.floor, this.sel.furniture)}` : nothing} ${this.renderDraft()} ${this.renderGuides()}
+              ${this.planLayers(floor, walls?.walls ?? null)}
             </svg>
             ${this.renderContext()}
             <p class="nf-hint ${this._fixedHint ? "nf-hint-fixed" : ""}">${!floor ? this.t("hint_empty") : this._fixedHint ? this.t("fixed_drag_hint") : this.t(`hint_${this._tool}` as I18nKey)}</p>
@@ -2812,400 +2802,6 @@ export class NfEditor extends LitElement {
     `;
   }
 
-  private renderGrid() {
-    const { scale } = this._view;
-    const { w, h } = this._size;
-    const minor = scale >= 90 ? 0.1 : scale >= 30 ? 0.5 : 1;
-    const major = scale >= 20 ? 1 : 5;
-    const [x0, z0] = this.toWorld(0, 0);
-    const [x1, z1] = this.toWorld(w, h);
-    const lines: ReturnType<typeof svg>[] = [];
-    const push = (step: number, cls: string) => {
-      for (let x = Math.ceil(x0 / step) * step; x <= x1; x += step) {
-        const sx = this.toScreen([x, 0])[0];
-        lines.push(svg`<line class=${cls} x1=${sx} y1="0" x2=${sx} y2=${h} />`);
-      }
-      for (let z = Math.ceil(z0 / step) * step; z <= z1; z += step) {
-        const sy = this.toScreen([0, z])[1];
-        lines.push(svg`<line class=${cls} x1="0" y1=${sy} x2=${w} y2=${sy} />`);
-      }
-    };
-    if (minor < major) push(minor, "nf-grid-minor");
-    push(major, "nf-grid-major");
-    const [ox, oy] = this.toScreen([0, 0]);
-    lines.push(svg`<circle class="nf-origin" cx=${ox} cy=${oy} r="3" />`);
-    return svg`<g pointer-events="none">${lines}</g>`;
-  }
-
-  /** Rooms of the floor below, as orientation. */
-  private renderGhost() {
-    const i = this._doc?.floors.findIndex((f) => f.id === this._floorId) ?? -1;
-    const below = i > 0 ? this._doc.floors[i - 1] : undefined;
-    if (!below) return nothing;
-    return svg`<g pointer-events="none">${below.rooms.map(
-      (r) => svg`<polygon class="nf-ghost" points=${r.points.map((p) => this.toScreen(p).join(",")).join(" ")} />`,
-    )}</g>`;
-  }
-
-  private renderWalls(walls: Wall[]) {
-    const H = this.floor?.height ?? 2.5;
-    return svg`<g pointer-events="none">${walls.map((w) => {
-      const low = w.height !== undefined && w.height < H - 0.01;
-      const cls = `nf-wall${w.exterior ? " nf-wall-ext" : ""}${low ? " nf-wall-low" : ""}`;
-      return svg`<polygon class=${cls} points=${w.footprint.map((p) => this.toScreen(p).join(",")).join(" ")} />`;
-    })}</g>`;
-  }
-
-  /** Marks on the selected room's edges where a wall is split by hand. */
-  private renderSplitMarks(room: Room) {
-    const pts = room.points;
-    return svg`${(room.wall_splits ?? []).flatMap((list, i) => {
-      if (!list || i >= pts.length) return [];
-      const a = pts[i];
-      const b = pts[(i + 1) % pts.length];
-      const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-      const ux = (b[0] - a[0]) / l;
-      const uz = (b[1] - a[1]) / l;
-      return list.map((d) => {
-        const [x, y] = this.toScreen([a[0] + ux * d, a[1] + uz * d]);
-        // a short tick across the wall
-        return svg`<line class="nf-split-mark" x1=${x - uz * 7} y1=${y + ux * 7} x2=${x + uz * 7} y2=${y - ux * 7} />`;
-      });
-    })}`;
-  }
-
-
-  /** Corner handles of the selected outdoor area (a rectangle stays a rectangle while dragging). */
-  private renderOutdoorHandles(floor: Floor) {
-    const a = this.sel.outdoor ? floor.outdoor.find((x) => x.id === this.sel.outdoor) : undefined;
-    if (!a || !this.isAdmin || this._tool !== "select" || this._doc.settings.lock_plan) return nothing;
-    return svg`${a.points.map((p, i) => {
-      const [x, y] = this.toScreen(p);
-      return svg`<g class="nf-vertex" data-out-vertex=${`${a.id}:${i}`}><circle cx=${x} cy=${y} r="16" class="nf-hit" /><circle cx=${x} cy=${y} r="6" /></g>`;
-    })}`;
-  }
-
-  private renderOutdoor(floor: Floor) {
-    return svg`<g>${floor.outdoor.map((a) => {
-      const pts = a.points.map((p) => this.toScreen(p).join(",")).join(" ");
-      const [cx, cy] = this.toScreen(centroid(a.points));
-      const b = bounds(a.points);
-      const big = Math.min(b.x1 - b.x0, b.z1 - b.z0) * this._view.scale > 40;
-      return svg`<g data-outdoor=${a.id} class=${`nf-out nf-out-${a.type}${a.id === this.sel.outdoor ? " nf-out-sel" : ""}`}>
-        <polygon points=${pts} />
-        ${big ? svg`<text x=${cx} y=${cy + 4}>${this.t(`out_${a.type}` as I18nKey)}</text>` : nothing}
-      </g>`;
-    })}</g>`;
-  }
-
-  private renderRooms(floor: Floor) {
-    return svg`
-      <g>${floor.rooms.map((r) => {
-        const pts = r.points.map((p) => this.toScreen(p).join(",")).join(" ");
-        return svg`<polygon data-room=${r.id} class=${r.id === this.sel.room ? "nf-room nf-room-sel" : "nf-room"} points=${pts} />`;
-      })}</g>
-      ${this.renderEdgeHighlight()}
-      <g pointer-events="none">${floor.rooms.map((r) => {
-        const [cx, cy] = this.toScreen(centroid(r.points));
-        return svg`<text class="nf-room-name" x=${cx} y=${cy - 2}>${r.name}</text>
-          <text class="nf-room-area" x=${cx} y=${cy + 14}>${this.t("area_m2", { a: formatNumber(this.hass, polygonArea(r.points), 1) })}</text>`;
-      })}</g>
-    `;
-  }
-
-  /** The wall of the selected room whose row in the wall height list is hovered. */
-  private renderEdgeHighlight() {
-    const r = this.room;
-    const i = this.sel.edge;
-    if (!r || i === null || i >= r.points.length) return nothing;
-    const [x1, y1] = this.toScreen(r.points[i]);
-    const [x2, y2] = this.toScreen(r.points[(i + 1) % r.points.length]);
-    return svg`<line class="nf-edge-hi" pointer-events="none" x1=${x1} y1=${y1} x2=${x2} y2=${y2} />`;
-  }
-
-  private renderMeter(floor: Floor) {
-    const m = this._doc.energy?.meter;
-    if (!m || m.floor_id !== floor.id) return nothing;
-    const [x, y] = this.toScreen([m.x, m.z]);
-    return svg`<g class="nf-meter" transform="translate(${x} ${y})" pointer-events="none">
-      <rect x="-11" y="-11" width="22" height="22" rx="5" />
-      <path d="M1.5 -7 L-4 1 H0 L-1.5 7 L4 -1 H0 Z" />
-    </g>`;
-  }
-
-  private renderFurniture(floor: Floor) {
-    const k = this._view.scale;
-    return svg`<g>${floor.furniture.map((f) => {
-      const sel = f.id === this.sel.furniture;
-      const [cx, cy] = this.toScreen([f.x, f.z]);
-      const big = Math.min(f.w, f.d) * k > 44;
-      // the handle sits in front of the item; dragging it turns the item
-      const a = (f.rotation * Math.PI) / 180;
-      const reach = f.d / 2 + Math.max(0.3, 26 / k);
-      const [hx, hy] = this.toScreen([f.x - Math.sin(a) * reach, f.z + Math.cos(a) * reach]);
-      const [fx, fy] = this.toScreen([f.x - Math.sin(a) * (f.d / 2), f.z + Math.cos(a) * (f.d / 2)]);
-      const lit = isLamp(f.type) && !!f.entity && f.entity !== "none" && this.hass?.states[f.entity]?.state === "on";
-      return svg`<g data-furniture=${f.id} class=${`nf-furn${sel ? " nf-furn-sel" : ""}${lit ? " nf-furn-lit" : ""}${(ENERGY_DEVICES as readonly string[]).includes(f.type) ? " nf-energy-item" : ""}`}>
-        <g transform="translate(${cx} ${cy}) rotate(${f.rotation}) scale(${f.mirror ? -k : k} ${k})">
-          <rect class="nf-furn-body" x=${-f.w / 2} y=${-f.d / 2} width=${f.w} height=${f.d} />
-          <g class="nf-furn-sym">${furnitureSymbol(f.type, f.w, f.d)}</g>
-          <line class="nf-furn-front" x1=${-f.w / 2} y1=${f.d / 2} x2=${f.w / 2} y2=${f.d / 2} />
-        </g>
-        ${big ? svg`<text x=${cx} y=${cy + 4}>${furnitureName(this.hass, f.type)}</text>` : nothing}
-      </g>
-      ${sel && this.isAdmin && !f.locked
-        ? ([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([sx, sz]) => {
-            const [x, y] = this.toScreen([f.x + (sx * f.w * Math.cos(a)) / 2 - (sz * f.d * Math.sin(a)) / 2, f.z + (sx * f.w * Math.sin(a)) / 2 + (sz * f.d * Math.cos(a)) / 2]);
-            return svg`<g class="nf-resize" data-resize=${`${f.id}:${sx}:${sz}`}>
-              <circle cx=${x} cy=${y} r="14" class="nf-hit" />
-              <rect x=${x - 5} y=${y - 5} width="10" height="10" rx="2" />
-            </g>`;
-          })
-        : nothing}
-      ${sel
-        ? (() => {
-            // behind the item, away from the turn handle in front
-            const [lx, ly] = this.toScreen([f.x + Math.sin(a) * (f.d / 2 + 18 / k), f.z - Math.cos(a) * (f.d / 2 + 18 / k)]);
-            return svg`<text class="nf-dim" x=${lx} y=${ly + 4}>${formatNumber(this.hass, f.w, 2)} × ${formatNumber(this.hass, f.d, 2)} m</text>`;
-          })()
-        : nothing}
-      ${sel && f.locked ? svg`<text class="nf-lock" x=${hx} y=${hy + 5}>🔒</text>` : nothing}
-      ${sel && this.isAdmin && !f.locked
-        ? svg`<g class="nf-rotate" data-rotate=${f.id}>
-            <line x1=${fx} y1=${fy} x2=${hx} y2=${hy} />
-            <circle cx=${hx} cy=${hy} r="16" class="nf-hit" />
-            <circle cx=${hx} cy=${hy} r="8" />
-            <path d="M${hx - 4} ${hy - 1}a4 4 0 1 1 2 3.5" />
-          </g>`
-        : nothing}`;
-    })}</g>`;
-  }
-
-  private renderOpenings(floor: Floor, walls: Wall[]) {
-    return svg`<g>${floor.openings.map((o) => {
-      const host = openingHost(o, floor.rooms, floor.walls ?? []);
-      if (!host) return nothing;
-      const { room, edge } = host;
-      const hit = locateOpening(walls, o, host);
-      const p0 = pointOnRoomEdge(room, edge, o.offset - o.width / 2);
-      const p1 = pointOnRoomEdge(room, edge, o.offset + o.width / 2);
-      const ux = (p1[0] - p0[0]) / (o.width || 1);
-      const uz = (p1[1] - p0[1]) / (o.width || 1);
-      // normal into the room (room outlines may run either way round)
-      const sgn = signedArea(room.points) >= 0 ? 1 : -1;
-      const n: Vec2 = [-uz * sgn, ux * sgn];
-      // gap across the whole wall thickness
-      let across: [number, number] = [0.06, 0.06];
-      if (hit) across = hit.wall.free || hit.wall.roomLeft === room.id ? [hit.wall.left, hit.wall.right] : [hit.wall.right, hit.wall.left];
-      const q = (p: Vec2, k: number) => this.toScreen([p[0] + n[0] * k, p[1] + n[1] * k]);
-      const gap = [q(p0, across[0] + 0.01), q(p1, across[0] + 0.01), q(p1, -across[1] - 0.01), q(p0, -across[1] - 0.01)];
-      const sel = o.id === this.sel.opening;
-      const style = openingStyle(o, hit?.wall.exterior ?? false);
-      const front = o.type === "door" && isFrontDoor(style);
-      const cls = `nf-open nf-open-${o.type}${front ? " nf-open-front" : ""}${sel ? " nf-open-sel" : ""}`;
-      let symbol;
-      if (o.type === "garage") {
-        // door panel just inside the room, with its track under the ceiling drawn dashed
-        const a0 = q(p0, across[0] - 0.04);
-        const a1 = q(p1, across[0] - 0.04);
-        const b0 = q(p0, across[0] + Math.min(2, o.height));
-        const b1 = q(p1, across[0] + Math.min(2, o.height));
-        symbol = svg`<line x1=${a0[0]} y1=${a0[1]} x2=${a1[0]} y2=${a1[1]} />
-          <path class="nf-open-track" d="M${a0[0]} ${a0[1]}L${b0[0]} ${b0[1]}M${a1[0]} ${a1[1]}L${b1[0]} ${b1[1]}" />`;
-      } else if (o.type === "door") {
-        // leaves swinging into the room (or out of it) from the hinge side; "left" is seen from the
-        // room, so it depends on which way round the outline runs
-        const out = o.swing === "out";
-        const face = out ? -across[1] : across[0];
-        const hingeAtP0 = (o.hinge === "left") === sgn > 0;
-        const two = o.leaves === 2;
-        // sidelights: fixed glass beside the leaf, drawn like window panes
-        let l0 = p0;
-        let l1 = p1;
-        let panes: [Vec2, Vec2][] = [];
-        const lights = sidelightLayout(o.width, style, hingeAtP0, o);
-        if (lights) {
-          const at = (k: number): Vec2 => (k <= 0.02 ? p0 : k >= o.width - 0.02 ? p1 : pointOnRoomEdge(room, edge, o.offset - o.width / 2 + k));
-          l0 = at(lights.x0);
-          l1 = at(lights.x1);
-          panes = lights.panels.map(([a, b]) => [at(a), at(b)]);
-        }
-        const midP: Vec2 = [(l0[0] + l1[0]) / 2, (l0[1] + l1[1]) / 2];
-        const leafW = (two ? 0.5 : 1) * Math.hypot(l1[0] - l0[0], l1[1] - l0[1]);
-        const mid = (across[0] - across[1]) / 2;
-        const paneLines = panes.map(([a, b]) => {
-          const a0 = q(a, mid + 0.035);
-          const b0 = q(b, mid + 0.035);
-          const a1 = q(a, mid - 0.035);
-          const b1 = q(b, mid - 0.035);
-          return svg`<line class="nf-open-pane" x1=${a0[0]} y1=${a0[1]} x2=${b0[0]} y2=${b0[1]} /><line class="nf-open-pane" x1=${a1[0]} y1=${a1[1]} x2=${b1[0]} y2=${b1[1]} />`;
-        });
-        const arc = (hinge: Vec2, free: Vec2) => {
-          const [hx, hy] = q(hinge, face);
-          const [fx, fy] = q(free, face);
-          const leaf = q(hinge, face + (out ? -leafW : leafW));
-          const r = leafW * this._view.scale;
-          const cross = (leaf[0] - hx) * (fy - hy) - (leaf[1] - hy) * (fx - hx);
-          return svg`<path d="M${hx} ${hy}L${leaf[0]} ${leaf[1]}A${r} ${r} 0 0 ${cross > 0 ? 1 : 0} ${fx} ${fy}" />`;
-        };
-        symbol = svg`${paneLines}${
-          style === "passage"
-            ? svg`<line class="nf-open-passage" x1=${q(p0, mid)[0]} y1=${q(p0, mid)[1]} x2=${q(p1, mid)[0]} y2=${q(p1, mid)[1]} />`
-            : style === "sliding"
-            ? svg`<line x1=${q(l0, face)[0]} y1=${q(l0, face)[1]} x2=${q(l1, face)[0]} y2=${q(l1, face)[1]} />`
-            : two
-              ? svg`${arc(l0, midP)}${arc(l1, midP)}`
-              : arc(hingeAtP0 ? l0 : l1, hingeAtP0 ? l1 : l0)
-        }`;
-      } else {
-        // two panes in the middle of the wall; a double window has a post in the middle
-        const mid = (across[0] - across[1]) / 2;
-        const a0 = q(p0, mid + 0.035);
-        const a1 = q(p1, mid + 0.035);
-        const b0 = q(p0, mid - 0.035);
-        const b1 = q(p1, mid - 0.035);
-        const midP: Vec2 = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
-        const m0 = q(midP, across[0]);
-        const m1 = q(midP, -across[1]);
-        symbol = svg`<line x1=${a0[0]} y1=${a0[1]} x2=${a1[0]} y2=${a1[1]} /><line x1=${b0[0]} y1=${b0[1]} x2=${b1[0]} y2=${b1[1]} />${
-          o.leaves === 2 ? svg`<line x1=${m0[0]} y1=${m0[1]} x2=${m1[0]} y2=${m1[1]} />` : nothing
-        }`;
-      }
-      return svg`<g data-opening=${o.id} class=${cls}>
-        <polygon class="nf-open-gap" points=${gap.map((p) => p.join(",")).join(" ")} />
-        ${symbol}
-      </g>`;
-    })}</g>`;
-  }
-
-  private renderDevices(floor: Floor) {
-    return svg`<g>${floor.placements.map((pl) => {
-      const kind = kindOf(pl.entity_id);
-      if (!kind) return nothing;
-      const [x, y] = this.toScreen([pl.x, pl.z]);
-      const on = this.hass?.states[pl.entity_id]?.state === "on";
-      const sel = pl.entity_id === this.sel.device;
-      const cls = `nf-device${on ? " nf-device-on" : ""}${sel ? " nf-device-sel" : ""}`;
-      return svg`${kind === "camera" ? this.renderCameraWedge(pl, sel) : nothing}<g data-device=${pl.entity_id} class=${cls} transform="translate(${x} ${y})">
-        <title>${entityName(this.hass, pl.entity_id)}</title>
-        <circle r="18" class="nf-hit" /><circle r="12" />
-        <path d=${iconPath(kind)} transform="translate(-7.2 -7.2) scale(0.6)" />
-      </g>
-      ${sel && pl.locked ? svg`<text class="nf-lock" x=${x + 16} y=${y - 12}>🔒</text>` : nothing}`;
-    })}</g>`;
-  }
-
-  /** A camera's field of view in the plan; when selected, a handle at its far edge turns it and sets its reach. */
-  private renderCameraWedge(pl: Placement, sel: boolean) {
-    const dome = pl.mount === "ceiling";
-    const fov = pl.fov ?? (dome ? 360 : 90);
-    const reach = pl.reach ?? (dome ? 3 : 4.5);
-    const a = ((pl.rotation ?? 0) * Math.PI) / 180;
-    const at = (t: number, r: number): [number, number] => this.toScreen([pl.x - Math.sin(a + t) * r, pl.z + Math.cos(a + t) * r]);
-    const [cx, cy] = this.toScreen([pl.x, pl.z]);
-    const half = ((Math.min(fov, 359.9) * Math.PI) / 180) / 2;
-    const [x0, y0] = at(-half, reach);
-    const [x1, y1] = at(half, reach);
-    const rp = reach * this._view.scale;
-    const path = fov >= 360 ? "" : `M${cx} ${cy}L${x0} ${y0}A${rp} ${rp} 0 ${half > Math.PI / 2 ? 1 : 0} 1 ${x1} ${y1}Z`;
-    const [hx, hy] = at(0, reach);
-    return svg`<g class="nf-wedge ${sel ? "nf-wedge-sel" : ""}">
-      ${fov >= 360 ? svg`<circle cx=${cx} cy=${cy} r=${rp} />` : svg`<path d=${path} />`}
-      ${sel && this.isAdmin && !pl.locked
-        ? svg`<g class="nf-rotate" data-aim=${pl.entity_id}>
-            <line x1=${cx} y1=${cy} x2=${hx} y2=${hy} />
-            <circle cx=${hx} cy=${hy} r="16" class="nf-hit" />
-            <circle cx=${hx} cy=${hy} r="8" />
-            <path d="M${hx - 4} ${hy - 1}a4 4 0 1 1 2 3.5" />
-          </g>`
-        : nothing}
-    </g>`;
-  }
-
-  private renderHandles(room: Room) {
-    const pts = room.points;
-    const n = pts.length;
-    const edges = pts.map((a, i) => {
-      const b = pts[(i + 1) % n];
-      const [ax, ay] = this.toScreen(a);
-      const [bx, by] = this.toScreen(b);
-      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      const mx = (ax + bx) / 2;
-      const my = (ay + by) / 2;
-      // label outside the room: offset along the edge normal away from the centroid
-      const [cx, cy] = this.toScreen(centroid(pts));
-      let nx = -(by - ay);
-      let ny = bx - ax;
-      const nl = Math.hypot(nx, ny) || 1;
-      nx /= nl;
-      ny /= nl;
-      if (nx * (mx - cx) + ny * (my - cy) < 0) {
-        nx = -nx;
-        ny = -ny;
-      }
-      const screenLen = Math.hypot(bx - ax, by - ay);
-      return svg`
-        ${screenLen > 50 ? svg`<text class="nf-dim" x=${mx + nx * 16} y=${my + ny * 16 + 4}>${formatNumber(this.hass, len, 2)} m</text>` : nothing}
-        ${screenLen > 36 ? svg`<g data-mid=${i} class="nf-mid"><circle cx=${mx} cy=${my} r="14" class="nf-hit" /><circle cx=${mx} cy=${my} r="6" /><path d="M${mx - 3} ${my}h6M${mx} ${my - 3}v6" /></g>` : nothing}
-      `;
-    });
-    const vertices = pts.map((p, i) => {
-      const [x, y] = this.toScreen(p);
-      return svg`<g data-vertex=${i} class=${i === this.sel.corner ? "nf-vertex nf-vertex-sel" : "nf-vertex"}><circle cx=${x} cy=${y} r="16" class="nf-hit" /><circle cx=${x} cy=${y} r="6" /></g>
-        <text class="nf-vertex-no" x=${x + 9} y=${y - 9}>${i + 1}</text>`;
-    });
-    return svg`<g>${edges}${vertices}</g>`;
-  }
-
-  private renderDraft() {
-    const drag = this.drag;
-    if (drag?.kind === "freewall") {
-      const [x0, y0] = this.toScreen(drag.start);
-      const [x1, y1] = this.toScreen(drag.end);
-      const l = Math.hypot(drag.end[0] - drag.start[0], drag.end[1] - drag.start[1]);
-      return svg`<g pointer-events="none">
-        <line class="nf-draft nf-draft-wall" x1=${x0} y1=${y0} x2=${x1} y2=${y1} />
-        <text class="nf-dim" x=${(x0 + x1) / 2} y=${(y0 + y1) / 2 - 10}>${formatNumber(this.hass, l, 2)} m</text>
-      </g>`;
-    }
-    if (drag?.kind === "rect") {
-      const [x0, y0] = this.toScreen(drag.start);
-      const [x1, y1] = this.toScreen(drag.end);
-      const w = Math.abs(drag.end[0] - drag.start[0]);
-      const d = Math.abs(drag.end[1] - drag.start[1]);
-      return svg`<g pointer-events="none">
-        <rect class="nf-draft" x=${Math.min(x0, x1)} y=${Math.min(y0, y1)} width=${Math.abs(x1 - x0)} height=${Math.abs(y1 - y0)} />
-        <text class="nf-dim" x=${(x0 + x1) / 2} y=${Math.min(y0, y1) - 8}>${formatNumber(this.hass, w, 2)} × ${formatNumber(this.hass, d, 2)} m</text>
-      </g>`;
-    }
-    if (this._tool !== "polygon" && this._tool !== "measure") return nothing;
-    const pts = [...this._draft, ...(this._cursor ? [this._cursor] : [])].map((p) => this.toScreen(p));
-    return svg`<g pointer-events="none">
-      ${pts.length > 1 ? svg`<polyline class="nf-draft" points=${pts.map((p) => p.join(",")).join(" ")} />` : nothing}
-      ${this._tool === "measure"
-        ? this._draft.slice(1).map((p, i) => {
-            const a = this.toScreen(this._draft[i]);
-            const b = this.toScreen(p);
-            return svg`<text class="nf-dim" x=${(a[0] + b[0]) / 2} y=${(a[1] + b[1]) / 2 - 6}>${formatNumber(this.hass, Math.hypot(p[0] - this._draft[i][0], p[1] - this._draft[i][1]), 2)} m</text>`;
-          })
-        : nothing}
-      ${this._draft.map((p, i) => {
-        const [x, y] = this.toScreen(p);
-        return svg`<circle class=${i === 0 && this._draft.length >= 3 ? "nf-draft-pt nf-draft-first" : "nf-draft-pt"} cx=${x} cy=${y} r=${i === 0 && this._draft.length >= 3 ? 9 : 5} />`;
-      })}
-      ${this._cursor ? svg`<circle class="nf-cursor" cx=${this.toScreen(this._cursor)[0]} cy=${this.toScreen(this._cursor)[1]} r="4" />` : nothing}
-    </g>`;
-  }
-
-  private renderGuides() {
-    const g = this._guides;
-    const { w, h } = this._size;
-    return svg`<g pointer-events="none">
-      ${g.x !== undefined ? svg`<line class="nf-guide" x1=${this.toScreen([g.x, 0])[0]} y1="0" x2=${this.toScreen([g.x, 0])[0]} y2=${h} />` : nothing}
-      ${g.z !== undefined ? svg`<line class="nf-guide" x1="0" y1=${this.toScreen([0, g.z])[1]} x2=${w} y2=${this.toScreen([0, g.z])[1]} />` : nothing}
-      ${g.point ? svg`<circle class="nf-snap" cx=${this.toScreen(g.point)[0]} cy=${this.toScreen(g.point)[1]} r="9" />` : nothing}
-    </g>`;
-  }
 
   /** A tap in the 3D pane: select there, and fold the sidebar away (the bar under the pane has the essentials). */
   private selectFrom3d(kind: "room" | "furniture" | "device", id: string | null): void {

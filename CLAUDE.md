@@ -12,3 +12,4 @@
 - After each phase: commit and push to `dev`, check CI, and tell the user in German what is new and how to test it. Only a release (merge to `main`) is published.
 
 - **Changelog:** every change that reaches users goes into `CHANGELOG.md` in the same commit, under the version it ships in, sorted into **Added**, **Changed** and **Fixed** (bump `manifest.json` when a release is cut). Say what the user notices, not what the code did. Use the same text for the GitHub release notes.
+- **README is shown inside HACS too, which does not resolve relative paths:** keep every image and link in `README.md` absolute (`raw.githubusercontent.com/therealMRBK/NextFloor/main/…` for images, `github.com/therealMRBK/NextFloor/blob/main/…` for files).

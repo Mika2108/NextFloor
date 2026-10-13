@@ -1,4 +1,4 @@
-<p align="center"><img src="custom_components/nextfloor/brand/icon@2x.png" width="110" alt="NextFloor logo"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/custom_components/nextfloor/brand/icon@2x.png" width="110" alt="NextFloor logo"></p>
 
 <h1 align="center">NextFloor</h1>
 
@@ -17,15 +17,15 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 <a href="https://github.com/therealMRBK/NextFloor/releases"><img src="https://img.shields.io/github/v/release/therealMRBK/NextFloor?style=flat-square" alt="Release"></a>
 <a href="https://github.com/therealMRBK/NextFloor/actions"><img src="https://img.shields.io/github/actions/workflow/status/therealMRBK/NextFloor/ci.yml?branch=main&style=flat-square&label=CI" alt="CI"></a>
 <a href="https://hacs.xyz"><img src="https://img.shields.io/badge/HACS-custom-orange?style=flat-square" alt="HACS"></a>
-<a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue?style=flat-square" alt="MIT"></a>
+<a href="https://github.com/therealMRBK/NextFloor/blob/main/LICENSE"><img src="https://img.shields.io/badge/licence-MIT-blue?style=flat-square" alt="MIT"></a>
 <a href="#made-with-ai"><img src="https://img.shields.io/badge/built%20with-AI%20assistance-8a63d2?style=flat-square" alt="Built with AI"></a>
 </p>
 
-<p align="center"><img src="docs/images/demo-live.gif" alt="NextFloor in a real house: the house turns, the ground floor opens, a room panel with its lights and devices"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/demo-live.gif" alt="NextFloor in a real house: the house turns, the ground floor opens, a room panel with its lights and devices"></p>
 
 <p align="center">🎬 <a href="https://therealmrbk.github.io/NextFloor/tutorial/">Watch the setup video in your browser, from the empty page (45 min, English voice, subtitles en/de)</a></p>
 
-<p align="center">📖 <a href="docs/manual.md">Manual</a> · <a href="docs/anleitung.md">Anleitung (Deutsch)</a> · 🗺️ <a href="ROADMAP.md">Roadmap</a> · 📝 <a href="CHANGELOG.md">Changelog</a></p>
+<p align="center">📖 <a href="https://github.com/therealMRBK/NextFloor/blob/main/docs/manual.md">Manual</a> · <a href="https://github.com/therealMRBK/NextFloor/blob/main/docs/anleitung.md">Anleitung (Deutsch)</a> · 🗺️ <a href="https://github.com/therealMRBK/NextFloor/blob/main/ROADMAP.md">Roadmap</a> · 📝 <a href="https://github.com/therealMRBK/NextFloor/blob/main/CHANGELOG.md">Changelog</a></p>
 
 ---
 
@@ -46,14 +46,14 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 ## 🖼️ Gallery
 
 <table>
-<tr><td align="center" width="33%"><a href="docs/images/view-room.jpg"><img src="docs/images/view-room.jpg" alt="Live room view with its panel"></a><br><sub>Live room view with its panel</sub></td><td align="center" width="33%"><a href="docs/images/editor.jpg"><img src="docs/images/editor.jpg" alt="Plan editor with 3D beside it"></a><br><sub>Plan editor with 3D beside it</sub></td><td align="center" width="33%"><a href="docs/images/view-stacked.jpg"><img src="docs/images/view-stacked.jpg" alt="Floors stacked"></a><br><sub>Floors stacked</sub></td></tr>
-<tr><td align="center" width="33%"><a href="docs/images/view-energy.jpg"><img src="docs/images/view-energy.jpg" alt="Energy flow"></a><br><sub>Energy flow</sub></td><td align="center" width="33%"><a href="docs/images/view-weather-rain.jpg"><img src="docs/images/view-weather-rain.jpg" alt="Weather outside"></a><br><sub>Weather outside</sub></td><td align="center" width="33%"><a href="docs/images/view-media.jpg"><img src="docs/images/view-media.jpg" alt="TV screens"></a><br><sub>TV screens</sub></td></tr>
-<tr><td align="center" width="33%"><a href="docs/images/view-heat.jpg"><img src="docs/images/view-heat.jpg" alt="Heat map"></a><br><sub>Heat map</sub></td><td align="center" width="33%"><a href="docs/images/view-cut.jpg"><img src="docs/images/view-cut.jpg" alt="Cut-away walls"></a><br><sub>Cut-away walls</sub></td><td align="center" width="33%"><a href="docs/images/tablet.jpg"><img src="docs/images/tablet.jpg" alt="Wall tablet"></a><br><sub>Wall tablet</sub></td></tr>
-<tr><td align="center" width="33%"><a href="docs/images/editor-furniture.jpg"><img src="docs/images/editor-furniture.jpg" alt="Furniture library"></a><br><sub>Furniture library</sub></td><td align="center" width="33%"><a href="docs/images/furniture-ikea.jpg"><img src="docs/images/furniture-ikea.jpg" alt="IKEA sizes"></a><br><sub>IKEA sizes</sub></td><td align="center" width="33%"><a href="docs/images/vehicles-tesla.jpg"><img src="docs/images/vehicles-tesla.jpg" alt="Tesla models"></a><br><sub>Tesla models</sub></td></tr>
+<tr><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-room.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-room.jpg" alt="Live room view with its panel"></a><br><sub>Live room view with its panel</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/editor.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/editor.jpg" alt="Plan editor with 3D beside it"></a><br><sub>Plan editor with 3D beside it</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-stacked.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-stacked.jpg" alt="Floors stacked"></a><br><sub>Floors stacked</sub></td></tr>
+<tr><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-energy.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-energy.jpg" alt="Energy flow"></a><br><sub>Energy flow</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-weather-rain.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-weather-rain.jpg" alt="Weather outside"></a><br><sub>Weather outside</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-media.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-media.jpg" alt="TV screens"></a><br><sub>TV screens</sub></td></tr>
+<tr><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-heat.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-heat.jpg" alt="Heat map"></a><br><sub>Heat map</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-cut.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-cut.jpg" alt="Cut-away walls"></a><br><sub>Cut-away walls</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/tablet.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/tablet.jpg" alt="Wall tablet"></a><br><sub>Wall tablet</sub></td></tr>
+<tr><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/editor-furniture.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/editor-furniture.jpg" alt="Furniture library"></a><br><sub>Furniture library</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/furniture-ikea.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/furniture-ikea.jpg" alt="IKEA sizes"></a><br><sub>IKEA sizes</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/vehicles-tesla.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/vehicles-tesla.jpg" alt="Tesla models"></a><br><sub>Tesla models</sub></td></tr>
 </table>
 
 <table>
-<tr><td align="center" width="33%"><a href="docs/images/view-room.jpg"><img src="docs/images/view-room.jpg" alt="Neon"></a><br><sub>Neon</sub></td><td align="center" width="33%"><a href="docs/images/view-blueprint.jpg"><img src="docs/images/view-blueprint.jpg" alt="Blueprint"></a><br><sub>Blueprint</sub></td><td align="center" width="33%"><a href="docs/images/view-day.jpg"><img src="docs/images/view-day.jpg" alt="Day"></a><br><sub>Day</sub></td></tr>
+<tr><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-room.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-room.jpg" alt="Neon"></a><br><sub>Neon</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-blueprint.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-blueprint.jpg" alt="Blueprint"></a><br><sub>Blueprint</sub></td><td align="center" width="33%"><a href="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-day.jpg"><img src="https://raw.githubusercontent.com/therealMRBK/NextFloor/main/docs/images/view-day.jpg" alt="Day"></a><br><sub>Day</sub></td></tr>
 </table>
 
 ## 🚀 Installation
@@ -111,7 +111,7 @@ idle_orbit: false       # optional: kiosk, slow camera turn after the idle retur
 
 ## 📦 Your own 3D models
 
-Own a model of a vehicle (`.glb`)? Open **Extensions** in the NextFloor panel, choose the file, turn the front towards you, pick the level of detail and store it on your Home Assistant. NextFloor does the preparation in the browser and ships no models. See [docs/models.md](docs/models.md).
+Own a model of a vehicle (`.glb`)? Open **Extensions** in the NextFloor panel, choose the file, turn the front towards you, pick the level of detail and store it on your Home Assistant. NextFloor does the preparation in the browser and ships no models. See [docs/models.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/models.md).
 
 ## 🔒 Privacy
 
@@ -125,7 +125,7 @@ What that means for you:
 
 - **It is tested, but young.** There are automated tests (frontend logic, the furniture packs, the Home Assistant side) and releases are looked at in a real browser and installed on a real Home Assistant, but it has far fewer users than most integrations. Expect rough edges and report them.
 - **Back up before you trust it.** The plan lives in Home Assistant's `.storage`; the editor has a backup and restore of the whole plan.
-- **Read the code if it matters to you.** It is MIT licensed and small enough to read. Pull requests are welcome, also ones written with AI, as long as you say so and have run the checks (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+- **Read the code if it matters to you.** It is MIT licensed and small enough to read. Pull requests are welcome, also ones written with AI, as long as you say so and have run the checks (see [CONTRIBUTING.md](https://github.com/therealMRBK/NextFloor/blob/main/CONTRIBUTING.md)).
 
 ## 🛠️ Development
 
@@ -145,7 +145,7 @@ npm run screenshot  # renders preview/index.html (invented demo data) with a loc
 - **Preview without Home Assistant**: open `preview/index.html` through any local web server.
 - **Deploy to a test instance**: create `deploy.local.json` with `{"target": "<config>/custom_components/nextfloor"}` and run `npm run deploy` in `frontend/`.
 - **Python tests** run in CI with `pytest-homeassistant-custom-component`.
-- **Furniture packs**: the built-in packs are generated by `tools/build_packs.py`. The format of your own packs is described in [docs/packs.md](docs/packs.md) (German).
+- **Furniture packs**: the built-in packs are generated by `tools/build_packs.py`. The format of your own packs is described in [docs/packs.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/packs.md) (German).
 
 </details>
 
@@ -155,6 +155,6 @@ npm run screenshot  # renders preview/index.html (invented demo data) with a loc
 
 ## Licence
 
-MIT, see [LICENSE](LICENSE). NextFloor ships [three.js](https://threejs.org) (MIT), [Lit](https://lit.dev) (BSD-3-Clause); their notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT, see [LICENSE](https://github.com/therealMRBK/NextFloor/blob/main/LICENSE). NextFloor ships [three.js](https://threejs.org) (MIT), [Lit](https://lit.dev) (BSD-3-Clause); their notices are in [THIRD_PARTY_NOTICES.md](https://github.com/therealMRBK/NextFloor/blob/main/THIRD_PARTY_NOTICES.md).
 
 "Home Assistant" is a trademark of its owners; "Tesla" and the Tesla model names are trademarks of Tesla, Inc., and "IKEA" and its product names are trademarks of Inter IKEA Systems B.V.; they are used here only to name the sizes and models. NextFloor is an independent community project and not affiliated with or endorsed by Nabu Casa, Tesla or IKEA.

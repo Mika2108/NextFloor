@@ -23,6 +23,8 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 
 <p align="center"><img src="docs/images/demo-live.gif" alt="NextFloor in a real house: the house turns, the ground floor opens, a room panel with its lights and devices"></p>
 
+<p align="center">🎬 <a href="https://github.com/therealMRBK/NextFloor/releases/download/v0.8.0/nextfloor-tutorial.en.mp4">Setup video, from the empty page (56 min, no sound yet)</a></p>
+
 <p align="center">📖 <a href="docs/manual.md">Manual</a> · <a href="docs/anleitung.md">Anleitung (Deutsch)</a> · 🗺️ <a href="ROADMAP.md">Roadmap</a> · 📝 <a href="CHANGELOG.md">Changelog</a></p>
 
 ---

@@ -79,7 +79,7 @@ function drawBuiltIn(b: Builder, f: Furniture, w: number, d: number, h: number, 
       washbasin(b, w, d, h);
       return "yes";
     case "tv_board":
-      tvBoard(b, w, d, h);
+      tvBoard(b, w, d, h, f.ambilight === 0 ? EDGE_FURN : undefined);
       return "yes";
     case "plant":
       plant(b, w, d, h);
@@ -147,7 +147,7 @@ function drawBuiltIn(b: Builder, f: Furniture, w: number, d: number, h: number, 
       coffeeTable(b, w, d, h);
       return "yes";
     case "tv_wall":
-      tvWall(b, w, d, h);
+      tvWall(b, w, d, h, f.ambilight === 0 ? EDGE_FURN : undefined);
       return "no";
     case "parking": {
       // only the marking of the spot: a vehicle standing in it is added by the viewer

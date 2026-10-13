@@ -215,3 +215,13 @@ test("pack items: parts scaled to the size, a chosen colour for painted parts, l
   const unknown = draw(piece("pack:gone:thing"));
   assert.ok(unknown.buf.count > 0, "a missing pack item stays a plain box");
 });
+
+test("a TV set to no glow loses its bright blue rim, with the same shape", () => {
+  const brightest = (l: LineBuffer) => (l as unknown as { c: number[] }).c.reduce((a, v) => a + v, 0);
+  for (const type of ["tv_board", "tv_wall"]) {
+    const lit = draw(piece(type, { w: 1.6, d: 0.4, h: 0.5 }));
+    const dark = draw(piece(type, { w: 1.6, d: 0.4, h: 0.5, ambilight: 0 }));
+    assert.equal(dark.buf.count, lit.buf.count, type);
+    assert.ok(brightest(dark.lines) < brightest(lit.lines), type);
+  }
+});

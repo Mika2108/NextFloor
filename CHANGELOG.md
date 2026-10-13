@@ -2,7 +2,7 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
-## 0.8.0 (unreleased, on `dev`)
+## 0.8.0
 
 ### Added
 
@@ -11,6 +11,10 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 - Every model is visible in the demo's showcase.
 - **Compass control:** under Settings a dial shows where north lies, with **Swap north ↔ south** (180°) and quarter turns. Turning the compass never moves the drawing, the roof faces or the solar fields; sunlight, wind and the compass directions of roof faces follow it. So a plan drawn the wrong way round is fixed in one tap, without placing the solar fields again.
 - **Real map under the plan (off by default):** a dimmed OpenStreetMap (or your own tile address) lies under the plan in the editor and under the house in 3D, turned by the compass. Start at Home Assistant's location, set the visibility and detail level, and move the map with arrow buttons until the house sits on its plot. Nothing is loaded while it is off.
+
+### Fixed
+
+- **TV without glow still had a blue frame:** with *Glow behind the TV* set to 0 the TV's own bright blue outline stayed. It now takes the plain furniture outline, so a TV set to no glow is not lit at all.
 
 ### Changed
 

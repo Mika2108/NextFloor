@@ -142,17 +142,17 @@ export function stairs(b: Builder, w: number, d: number, h: number): void {
 }
 
 /** A TV on a low unit with a stand. */
-export function tvBoard(b: Builder, w: number, d: number, h: number): void {
+export function tvBoard(b: Builder, w: number, d: number, h: number, rim: Parameters<Builder["block"]>[2] = EDGE_GLOW): void {
   cabinet(b, w, d, h, Math.max(2, Math.round(w / 0.6)), h * 0.55, true);
   const screen = Math.min(w * 0.8, 1.45);
   b.block({ x: [-0.1, 0.1], y: [h, h + 0.02], z: [-d / 2 + 0.08, -d / 2 + 0.24] }, M.metal);
   b.block({ x: [-0.02, 0.02], y: [h + 0.02, h + 0.12], z: [-d / 2 + 0.14, -d / 2 + 0.18] }, M.metal);
-  b.block({ x: [-screen / 2, screen / 2], y: [h + 0.1, h + 0.1 + screen * 0.56], z: [-d / 2 + 0.12, -d / 2 + 0.16] }, M.dark, EDGE_GLOW);
+  b.block({ x: [-screen / 2, screen / 2], y: [h + 0.1, h + 0.1 + screen * 0.56], z: [-d / 2 + 0.12, -d / 2 + 0.16] }, M.dark, rim);
 }
 
 /** A flat screen on a wall bracket, centred at 1.3 m. */
-export function tvWall(b: Builder, w: number, d: number, h: number): void {
+export function tvWall(b: Builder, w: number, d: number, h: number, rim: Parameters<Builder["block"]>[2] = EDGE_GLOW): void {
   const y0 = 1.3 - h / 2;
   b.block({ x: [-0.12, 0.12], y: [y0 + h * 0.3, y0 + h * 0.7], z: [-d / 2, -d / 2 + 0.03] }, M.metal);
-  b.block({ x: [-w / 2, w / 2], y: [y0, y0 + h], z: [-d / 2 + 0.03, d / 2] }, M.dark, EDGE_GLOW);
+  b.block({ x: [-w / 2, w / 2], y: [y0, y0 + h], z: [-d / 2 + 0.03, d / 2] }, M.dark, rim);
 }

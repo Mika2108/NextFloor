@@ -49,6 +49,7 @@ for (const l of ["de", "en"]) {
   }
   writeFileSync(join(root, `transcript.${l}.md`), lines.join("\n"));
 }
+for (const l of ["de", "en"]) writeFileSync(join(root, `narration.${l}.txt`), segments.map((s, i) => `${String(i + 1).padStart(3, "0")}: ${s[l]}`).join("\n\n") + "\n");
 writeFileSync(join(root, "chapters.txt"), chapters.map((c) => `${short(c.start)} ${c.title.en}`).join("\n") + "\n");
 writeFileSync(join(root, "narration.json"), JSON.stringify({ seconds: offset, segments: segments.map((s, i) => ({ id: i + 1, start: +s.start.toFixed(2), end: +s.end.toFixed(2), de: s.de, en: s.en })) }, null, 1));
 console.log(`${mp4}: ${short(offset)} (${segments.length} segments, ${chapters.length} chapters)`);

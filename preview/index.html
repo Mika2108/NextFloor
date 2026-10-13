@@ -329,6 +329,13 @@ const params = new URLSearchParams(location.search);
         hass.states["weather.zuhause"].state = "rainy";
       }
       let current = hass;
+      // window.nfDemoSet(entity, state, attributes): changes what a real Home Assistant would report (the tutorial recorder uses it)
+      window.nfDemoSet = (id, state, attributes = {}) => {
+        const old = current.states[id] ?? { entity_id: id, attributes: {} };
+        current = { ...current, states: { ...current.states, [id]: { ...old, state: state ?? old.state, attributes: { ...old.attributes, ...attributes } } } };
+        if (window.nfCard) window.nfCard.hass = current;
+        else if (window.nfPanel) window.nfPanel.hass = current;
+      };
       await import("../custom_components/nextfloor/frontend/nextfloor.js");
       if (params.has("site")) {
         // ?site: the public online demo says what it is and where to get NextFloor
@@ -368,7 +375,7 @@ const params = new URLSearchParams(location.search);
         let config = {
           type: "custom:nextfloor-card",
           quality: "low",
-          floor: params.get("floor") || "eg",
+          floor: params.get("floor") || building.floors.find((f) => f.id === "eg")?.id || building.floors[0]?.id || "eg",
           flows: false,
           controls: ["walls", "temperature"],
           fullscreen_button: true,

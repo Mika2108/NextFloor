@@ -171,6 +171,19 @@ export class Recorder {
     return at;
   }
 
+  /** Presses and holds (the quick menu opens on a long press). */
+  async longPress(target, { hold = 0.9 } = {}) {
+    const at = await this.point(target);
+    await this.page.evaluate((a, b) => window.__tut.ripple(a, b), at.x, at.y);
+    await this.page.mouse.move(at.x, at.y);
+    await this.page.mouse.down();
+    await sleep(hold * 1000);
+    await this.page.mouse.up();
+    await sleep(700);
+    await this.frame();
+    this.hold(0.6);
+  }
+
   /** Presses and drags between two points, with a frame on the way every few pixels. */
   async drag(from, to, { frames = 14, up = true } = {}) {
     await this.glide(from.x, from.y);
@@ -265,6 +278,75 @@ export class Recorder {
   /** A small note in the picture (a keyboard shortcut, a value). */
   async note(text) {
     await this.page.evaluate((t) => window.__tut.note(t), text);
+  }
+
+  /** Picks a device in an entity field: the pointer goes to the field under the label, the search text is typed and the entry clicked. */
+  async pick(labelKey, query, optionText) {
+    const label = this.t(labelKey);
+    const at = await this.page.evaluate(
+      `(() => { ${DEEP} const want = ${JSON.stringify(label)}; const lab = all("label, div, span").filter(visible).find((el) => { const own = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join("").replace(/\\s+/g, " ").trim(); return own === want; }); if (!lab) return null; lab.scrollIntoView({ block: "center" }); const lr = lab.getBoundingClientRect(); const input = all("input").filter(visible).filter((i) => { const q = i.getBoundingClientRect(); return q.top >= lr.top + 4 && q.top - lr.bottom < 90 && q.left < lr.right + 40 && q.right > lr.left - 40; }).sort((x, y) => x.getBoundingClientRect().top - y.getBoundingClientRect().top)[0]; if (!input) return null; input.scrollIntoView({ block: "center" }); const r = input.getBoundingClientRect(); return { x: Math.round(r.left + Math.min(r.width / 2, 140)), y: Math.round(r.top + r.height / 2) }; })()`,
+    );
+    if (!at) throw new Error(`no entity field under: ${label}`);
+    await this.click(at, { after: 0.2 });
+    await this.page.keyboard.down("Control");
+    await this.page.keyboard.press("KeyA");
+    await this.page.keyboard.up("Control");
+    for (const ch of query) {
+      await this.page.keyboard.type(ch, { delay: 30 });
+    }
+    await this.show(1.2, 400);
+    try {
+      await this.click(optionText ? { text: optionText } : { css: "[role=option]", nth: 0 });
+    } catch (e) {
+      const seen = await this.page.evaluate(`(() => { ${DEEP} return all("li, [role=option], [role=listbox]").filter(visible).map((el) => textOf(el).slice(0, 50)).slice(0, 10); })()`);
+      console.log("  [pick] options seen:", JSON.stringify(seen));
+      await this.page.screenshot({ path: "/tmp/tut-dump.png" });
+      throw e;
+    }
+  }
+
+  /** Turns the 3D camera in small steps (a frame after each): angles in radians, distance as a factor. */
+  async orbit({ theta = 0, phi = 0, zoom = 1, frames = 20 } = {}) {
+    for (let i = 1; i <= frames; i++) {
+      await this.page.evaluate(
+        (k, t, p, z) => {
+          const v = document.querySelector("nextfloor-panel").shadowRoot.querySelector("nf-view3d");
+          if (!window.__orbit0) window.__orbit0 = v.viewer.getView();
+          const w = { ...window.__orbit0 };
+          w.theta = window.__orbit0.theta + t * k;
+          w.phi = Math.min(1.3, Math.max(0.15, window.__orbit0.phi + p * k));
+          w.radius = window.__orbit0.radius * (1 + (z - 1) * k);
+          v.viewer.flyTo(w, 1);
+        },
+        i / frames,
+        theta,
+        phi,
+        zoom,
+      );
+      await sleep(80);
+      await this.frame();
+    }
+    await this.page.evaluate(() => {
+      const v = document.querySelector("nextfloor-panel").shadowRoot.querySelector("nf-view3d");
+      window.__orbit0 = v.viewer.getView();
+    });
+  }
+
+  /** Opens another page of the demo (the overlay is put on again). */
+  async navigate(query) {
+    await this.page.goto(`${this.base}/preview/index.html?noshowcase&lang=${this.lang}&ha=dark${query ? "&" + query : ""}`, { waitUntil: "networkidle0", timeout: 180000 });
+    await sleep(1800);
+    await this.page.evaluate(OVERLAY);
+    const ok = await this.page.evaluate(() => !!window.__tut);
+    if (!ok) throw new Error("overlay missing after navigation");
+    this.cursor = { x: 640, y: 360 };
+  }
+
+  /** After a click that reloads the page (the showcase pages): waits for it and puts the overlay on again. */
+  async reinject(ms = 3500) {
+    await sleep(ms);
+    await this.page.evaluate(OVERLAY);
+    await this.page.evaluate((x, y) => window.__tut.move(x, y), this.cursor.x, this.cursor.y);
   }
 
   /** For writing episodes: what is on screen right now (buttons, fields) and a screenshot at /tmp/tut-dump.png. */

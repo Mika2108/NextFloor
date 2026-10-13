@@ -158,7 +158,7 @@ export async function run(r) {
   const inside = await plan(3, 2.3);
   await r.click({ x: inside.x, y: inside.y });
   await r.show(0.8);
-  await r.spotAt({ key: "wall_heights" });
+  await r.spotAt({ css: ".nf-wallbox, [class*=wall]", nth: 0 }).catch((e) => console.log("  [skipped spot]", e.message));
   await r.show(1.5);
   await r.spot(null);
   r.say(S(

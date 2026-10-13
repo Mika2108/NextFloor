@@ -61,17 +61,19 @@ for (const n of numbers) {
   }
   console.log(`\n=== episode ${n}: ${episode.title.en} (${lang})`);
   const t0 = Date.now();
-  await r.start({ query });
+  await r.start({ query: [query, episode.query].filter(Boolean).join("&") });
   try {
     await episode.run(r);
   } catch (e) {
-    console.log("FAILED at", r.time.toFixed(1), "s:", e.message);
+    console.log("FAILED at", r.time.toFixed(1), "s:", e.message, "\n", String(e.stack).split("\n").slice(0, 5).join("\n"));
     await r.page.screenshot({ path: join(dir, "failure.png") });
     await r.browser.close();
     r.server.close();
     process.exit(1);
   }
-  writeFileSync(join(outRoot, "state", `${name}.json`), JSON.stringify(await r.stateJson(), null, 1));
+  // an episode that leaves for another page (the model showcase) hands on the plan it was given
+  if (episode.keepState) writeFileSync(join(outRoot, "state", `${name}.json`), readFileSync(previous));
+  else writeFileSync(join(outRoot, "state", `${name}.json`), JSON.stringify(await r.stateJson(), null, 1));
   const done = await r.finish(name);
   console.log(`episode ${n}: ${done.seconds.toFixed(0)} s of video, ${done.frames} frames, ${done.segments} narration segments, recorded in ${Math.round((Date.now() - t0) / 1000)} s`);
 }

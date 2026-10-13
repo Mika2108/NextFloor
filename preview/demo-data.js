@@ -243,9 +243,11 @@ for (const [suffix, name] of [
 }
 // devices with a power sensor of their own
 for (const [id, device] of [
-  ["camera.wohnzimmer", "d_cam"],
-  ["binary_sensor.wohnzimmer_kamera_bewegung", "d_cam"],
-  ["binary_sensor.wohnzimmer_kamera_person", "d_cam"],
+  ["sensor.van_ladestand", "d_van"],
+  ["sensor.van_reichweite", "d_van"],
+  ["sensor.van_ladeleistung", "d_van"],
+  ["lock.van", "d_van"],
+  ["switch.van_klima", "d_van"],
   ["media_player.fernseher", "d_tv"],
   ["sensor.fernseher_leistung", "d_tv"],
   ["switch.kaffeemaschine", "d_kaffee"],

@@ -2,6 +2,12 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## 0.8.1
+
+### Fixed
+
+- **Blue light frame around a TV that is on, even with *Glow behind the TV* at 0:** the glow frame that fades out around the screen of a TV that is on ignored the setting. With 0 it is now gone completely, and values below 100 make it weaker. (0.8.0 only removed the bright outline of the TV's body.)
+
 ## 0.8.0
 
 ### Added

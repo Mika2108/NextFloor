@@ -199,6 +199,8 @@ export interface SurfaceGrab {
 export interface ScreenState {
   color: [number, number, number];
   level: number;
+  /** Strength of the glow frame around the screen: 1 is the usual, 0 draws none (the item's own *Glow behind the TV*). */
+  halo?: number;
   /** Furniture with a state: glowing faces on top of the item instead of a screen – the whole top, or a half of it. */
   faces?: { part: "all" | "left" | "right" | "top" | "bottom"; color: [number, number, number]; level: number }[];
 }
@@ -1793,8 +1795,10 @@ export class NextFloorViewer {
       buf.tri(P(r.x0, r.y0, z), P(r.x1, r.y0, z), P(r.x1, r.y1, z), core);
       buf.tri(P(r.x0, r.y0, z), P(r.x1, r.y1, z), P(r.x0, r.y1, z), core);
       // glow frame fading out around the screen
-      const g = 0.18 + 0.12 * st.level;
-      const halo = core.clone().multiplyScalar(0.5);
+      const strength = Math.min(1.5, st.halo ?? 1);
+      if (strength <= 0) continue;
+      const g = (0.18 + 0.12 * st.level) * Math.min(1, strength);
+      const halo = core.clone().multiplyScalar(0.5 * strength);
       const inner = [P(r.x0, r.y0, z), P(r.x1, r.y0, z), P(r.x1, r.y1, z), P(r.x0, r.y1, z)];
       const outer = [P(r.x0 - g, r.y0 - g, z + 0.01), P(r.x1 + g, r.y0 - g, z + 0.01), P(r.x1 + g, r.y1 + g, z + 0.01), P(r.x0 - g, r.y1 + g, z + 0.01)];
       for (let i = 0; i < 4; i++) {

@@ -804,7 +804,7 @@ export class NfView3d extends LitElement {
           // many TV integrations (Samsung, LG) only report "on", never "playing": on is lit, dimmed
           const tvOn = kindOf(st.entity_id) === "media" && ["playing", "on", "paused", "idle"].includes(st.state);
           const color = lit ? lit.color : isActive(st) || tvOn ? ([0.22, 0.88, 1] as [number, number, number]) : null;
-          if (color) screens.set(f.id, { color, level: st.state === "playing" ? 1 : 0.6 });
+          if (color) screens.set(f.id, { color, level: st.state === "playing" ? 1 : 0.6, halo: f.ambilight ?? 1 });
         }
         if (taken.has(id)) continue;
         taken.add(id);

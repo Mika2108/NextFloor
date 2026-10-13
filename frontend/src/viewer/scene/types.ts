@@ -126,6 +126,8 @@ export interface SurfaceGrab {
 export interface ScreenState {
   color: [number, number, number];
   level: number;
+  /** Strength of the glow frame around the screen: 1 is the usual, 0 draws none (the item's own *Glow behind the TV*). */
+  halo?: number;
   /** Furniture with a state: glowing faces on top of the item instead of a screen, the whole top or a half of it. */
   faces?: { part: "all" | "left" | "right" | "top" | "bottom"; color: [number, number, number]; level: number }[];
 }

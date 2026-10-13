@@ -220,7 +220,7 @@ export class NextFloorCardEditor extends LitElement {
         ${followOrForce(f, "flows", "flows", v.flows)} ${followOrForce(f, "holograms", "holos", v.holograms)}
       </div>
       ${this.controlsSection()} ${this.floorThumbsToggle()} ${switchOption(f, "room_names", "card_room_names")} ${switchOption(f, "energy", "card_energy")}
-      ${switchOption(f, "room_panel", "card_room_panel", "card_room_panel_hint")} ${switchOption(f, "fullscreen_button", "card_fullscreen_button", "card_fullscreen_button_hint")}
+      ${switchOption(f, "room_buttons", "card_room_buttons", "card_room_buttons_hint")} ${switchOption(f, "room_panel", "card_room_panel", "card_room_panel_hint")} ${switchOption(f, "fullscreen_button", "card_fullscreen_button", "card_fullscreen_button_hint")}
       ${switchOption(f, "explode", "card_explode")} ${switchOption(f, "roof_fade", "card_roof_fade", "card_roof_fade_hint")} ${switchOption(f, "stats", "card_stats", "card_stats_hint")}`;
   }
 

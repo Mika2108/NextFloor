@@ -2,6 +2,12 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## 0.8.2
+
+### Added
+
+- **Room buttons on the dashboard card:** a new switch *Room buttons* in the card editor puts a row of buttons, one per room, along the top of the card. A tap opens the room (switching to its floor first when needed), a second tap closes it. In the house view the rooms of all floors show, grouped by floor. Asked for in discussion #2.
+
 ## 0.8.1
 
 ### Fixed

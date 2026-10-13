@@ -17,6 +17,7 @@ export const DEFAULTS: Partial<CardConfig> = {
   theme: "neon",
   energy: true,
   room_panel: true,
+  room_buttons: false,
   fill: false,
   controls: false,
   fullscreen_button: false,
@@ -36,7 +37,7 @@ export const DEFAULTS: Partial<CardConfig> = {
 };
 
 /** The yes/no options that get a plain checkbox. */
-export type SwitchOption = "explode" | "roof_fade" | "energy" | "room_panel" | "stats" | "fullscreen_button" | "room_names" | "alerts" | "alert_jump" | "scenes" | "idle_orbit" | "weather";
+export type SwitchOption = "explode" | "roof_fade" | "energy" | "room_panel" | "room_buttons" | "stats" | "fullscreen_button" | "room_names" | "alerts" | "alert_jump" | "scenes" | "idle_orbit" | "weather";
 
 export type Choice = [value: string, label: I18nKey];
 

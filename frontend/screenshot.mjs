@@ -57,6 +57,7 @@ const shots = [
   { name: "map-3d-south", dev: true, query: "?map&north=180", width: 1280, height: 800 },
   { name: "map-editor", dev: true, query: "?map", width: 1280, height: 800, editor: true, editorScript: "e.fit();" },
   { name: "settings-map", dev: true, query: "?map", width: 1400, height: 1100, editor: true, editorScript: "const d = [...e.renderRoot.querySelectorAll('details')].find((x) => x.querySelector('summary')?.textContent.includes('Einstellungen')); if (d) { d.open = true; d.scrollIntoView({ block: 'start' }); }" },
+  { name: "card-rooms", dev: true, query: "?card&roombuttons", width: 1400, height: 820, click: "Wohnzimmer" },
   { name: "view-house", query: "?pv=5400&flows", width: 1280, height: 800 },
   { name: "view-floor-eg", query: "?pv=5400&flows", width: 1280, height: 800, click: "Erdgeschoss" },
   { name: "view-room", query: "", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },

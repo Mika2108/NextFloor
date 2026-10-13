@@ -27,6 +27,40 @@ export const cardStyles = css`
     padding: 16px;
     text-align: center;
   }
+  /* the room buttons: a row along the top, clear of the toggles at the left and the corner buttons at the right */
+  .nf-card-rooms {
+    position: absolute;
+    top: 8px;
+    left: 56px;
+    right: 56px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  /* with the room's side panel open the row ends where the panel starts */
+  @container nf (min-width: 700px) {
+    .nf-card-rooms-beside {
+      right: 372px;
+    }
+  }
+  .nf-card-rooms::-webkit-scrollbar {
+    display: none;
+  }
+  .nf-card-rooms button {
+    flex: none;
+  }
+  .nf-card-rooms-floor {
+    flex: none;
+    color: var(--nf-soft);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-left: 6px;
+  }
   .nf-card-controls {
     position: absolute;
     left: 60px;

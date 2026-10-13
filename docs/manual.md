@@ -85,7 +85,7 @@ Built in and free; they only need the devices you already have.
 
 ## Dashboard card
 
-Add *NextFloor* in the dashboard's card dialog (`type: custom:nextfloor-card`). The visual editor sets floor, size, look, accent, walls, quality, floors below, markers, heat map, power flow, cards, switches in the card, central star, room names, energy values, room details on tap, full screen, floors apart, roof fade, warnings, scene buttons and weather. The same options exist in YAML under the names shown in the editor.
+Add *NextFloor* in the dashboard's card dialog (`type: custom:nextfloor-card`). The visual editor sets floor, size, look, accent, walls, quality, floors below, markers, heat map, power flow, cards, switches in the card, room buttons, central star, room names, energy values, room details on tap, full screen, floors apart, roof fade, warnings, scene buttons and weather. The same options exist in YAML under the names shown in the editor.
 
 ## Wall tablet
 

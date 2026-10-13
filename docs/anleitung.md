@@ -85,7 +85,7 @@ Eingebaut und kostenlos; sie brauchen nur die Geräte, die du schon hast.
 
 ## Dashboard-Karte
 
-Im Karten-Dialog des Dashboards *NextFloor* hinzufügen (`type: custom:nextfloor-card`). Der visuelle Editor stellt Etage, Größe, Aussehen, Akzent, Wände, Qualität, Etagen darunter, Symbole, Heatmap, Stromfluss, Karten, Schalter in der Karte, zentralen Stern, Raumnamen, Energiewerte, Raumdetails beim Antippen, Vollbild, Etagen auseinander, Dach ausblenden, Warnungen, Szenen-Knöpfe und Wetter ein. Dieselben Optionen gibt es in YAML unter den im Editor gezeigten Namen.
+Im Karten-Dialog des Dashboards *NextFloor* hinzufügen (`type: custom:nextfloor-card`). Der visuelle Editor stellt Etage, Größe, Aussehen, Akzent, Wände, Qualität, Etagen darunter, Symbole, Heatmap, Stromfluss, Karten, Schalter in der Karte, Raum-Knöpfe, zentralen Stern, Raumnamen, Energiewerte, Raumdetails beim Antippen, Vollbild, Etagen auseinander, Dach ausblenden, Warnungen, Szenen-Knöpfe und Wetter ein. Dieselben Optionen gibt es in YAML unter den im Editor gezeigten Namen.
 
 ## Wandtablet
 

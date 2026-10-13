@@ -4,6 +4,7 @@ import { html, LitElement, nothing, type PropertyValues, type TemplateResult } f
 import { BuildingController } from "./building-controller.ts";
 import type { CardConfig, CardControl } from "./card-config.ts";
 import { KioskTimers } from "./card/kiosk.ts";
+import { roomButtons } from "./card/room-buttons.ts";
 import { cardStyles } from "./card/styles.ts";
 import "./components/room-panel.ts";
 import "./components/view3d.ts";
@@ -228,6 +229,26 @@ export class NextFloorCard extends LitElement {
     </div>`;
   }
 
+  /** One chip per room above the model; a tap opens the room (its floor first, when another floor shows), a second tap closes it. */
+  private renderRoomButtons(s: Stage): TemplateResult | typeof nothing {
+    const b = this.data.building;
+    if (!this._config?.room_buttons || !b || this._clean) return nothing;
+    const groups = roomButtons(b, s.floorId);
+    if (!groups.length) return nothing;
+    const several = groups.length > 1;
+    const open = (floorId: string, roomId: string) => {
+      if (this.canSwitch && floorId !== s.floorId) this._floorId = floorId;
+      this._roomId = roomId === this._roomId ? null : roomId;
+    };
+    return html`<div class="nf-card-rooms ${this._roomId && this._config?.room_panel !== false ? "nf-card-rooms-beside" : ""}" role="group" aria-label=${this.t("card_room_buttons")}>
+      ${groups.map(
+        (g) => html`${several ? html`<span class="nf-card-rooms-floor">${g.floorName}</span>` : nothing}${g.rooms.map(
+          (r) => html`<button class="nf-chip" aria-pressed=${r.id === this._roomId} @click=${() => open(g.floorId, r.id)}>${r.name}</button>`,
+        )}`,
+      )}
+    </div>`;
+  }
+
   /** The corner buttons: full screen, and a link to another dashboard. */
   private renderCorners(): TemplateResult {
     const c = this._config;
@@ -337,6 +358,7 @@ export class NextFloorCard extends LitElement {
           ? this.renderStage(s)
           : html`<p class="nf-card-msg">${this.data.error ?? (b ? translate(this.hass, "no_building") : translate(this.hass, "loading"))}</p>`}
         ${this._roomId && b && c?.room_panel !== false ? this.renderRoomPanel() : nothing}
+        ${this.renderRoomButtons(s)}
         ${s.showBar && b ? this.renderBar(s) : nothing}
         ${this.renderCorners()}
       </div>

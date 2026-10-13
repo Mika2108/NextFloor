@@ -60,6 +60,8 @@ export interface CardConfig {
   dashboard_label?: string;
   /** Small pictures of the floors to switch between them (default: on without a start floor). */
   floor_thumbs?: boolean;
+  /** A row of buttons, one per room, to open a room straight from the card (default off). */
+  room_buttons?: boolean;
   /** Warnings (smoke, water, alarm, window in the rain) as pulsing rooms and a banner (default true). */
   alerts?: boolean;
   /** Jump to the room of a new warning (default false). */

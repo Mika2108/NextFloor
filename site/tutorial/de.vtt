@@ -1,0 +1,644 @@
+WEBVTT
+
+00:00:01.524 --> 00:00:15.333
+Willkommen! In diesem Video richten wir NextFloor komplett von Grund auf ein. Wir starten genau dort, wo du nach der Installation zum ersten Mal das Panel öffnest: Es ist noch nichts gezeichnet, die Seite ist leer.
+
+00:00:15.333 --> 00:00:30.856
+NextFloor zeichnet dein Zuhause direkt in Home Assistant und zeigt es als lebendiges 3D-Modell. Lichter leuchten in ihrer Farbe, Rollläden bewegen sich, und du kannst alles direkt im Modell bedienen. Dafür brauchst du nur deinen Grundriss und ein paar Minuten.
+
+00:00:30.856 --> 00:00:39.506
+Oben links findest du drei Reiter. Der erste ist die 3D-Ansicht: Das ist das Modell deines Hauses, so wie du es später jeden Tag benutzt.
+
+00:00:39.506 --> 00:00:51.564
+Der zweite Reiter ist der Editor. Hier zeichnest du Räume, setzt Türen, Fenster und Möbel und verbindest alles mit deinen Geräten. Den Editor sehen nur Administratoren.
+
+00:00:51.564 --> 00:01:02.351
+Der dritte Reiter heißt Erweiterungen. Dort lädst du später eigene 3D-Modelle hoch, zum Beispiel für dein Auto. Dazu kommen wir in einem eigenen Kapitel.
+
+00:01:02.351 --> 00:01:09.418
+Mitten auf der Seite steht der Hinweis, dass es noch keinen Grundriss gibt. Mit einem Klick auf „Editor öffnen“ geht es los.
+
+00:01:10.323 --> 00:01:25.363
+So sieht der Editor aus. Oben links ist die Werkzeugleiste: Auswählen, Rechteck, Freie Form, Wand, Türen und Fenster, Möbel, Außen, Bodenöffnung, Dach und Energie. Jedes Werkzeug lernen wir der Reihe nach kennen.
+
+00:01:25.363 --> 00:01:37.889
+Die zweite Leiste enthält Rückgängig und Wiederholen, „Alles zeigen“ passt den Plan ins Fenster, „3D daneben“ blendet die 3D-Ansicht neben dem Plan ein, und mit dem Schloss sperrst du den Grundriss gegen versehentliches Verschieben.
+
+00:01:37.889 --> 00:01:49.826
+Rechts steht die Seitenleiste. Sie zeigt immer das, was gerade ausgewählt ist, und ganz oben die Etagen deines Hauses. Da der Plan leer ist, sehen wir hier noch nicht viel.
+
+00:01:49.826 --> 00:01:56.521
+Alle Werkzeuge sind noch ausgegraut, denn zuerst brauchen wir eine Etage. Wir klicken auf „Etage hinzufügen“.
+
+00:01:56.521 --> 00:02:11.721
+NextFloor zeigt dir jetzt die Etagen, die in Home Assistant angelegt sind. Wenn du eine davon wählst, bleiben Plan und Home Assistant verbunden: Die Räume können später ihren Bereichen zugeordnet werden. Alternativ legst du mit „Leere Etage“ eine Etage ohne Verbindung an.
+
+00:02:11.721 --> 00:02:15.186
+Wir nehmen das Erdgeschoss aus Home Assistant.
+
+00:02:15.186 --> 00:02:28.365
+Die Etage ist da, und die Werkzeuge sind jetzt aktiv. Rechts siehst du die Einstellungen der Etage. Oben steht der Name. Du kannst ihn jederzeit ändern, auch wenn er mit dem Namen in Home Assistant übereinstimmt.
+
+00:02:28.365 --> 00:02:42.479
+Die Höhe über dem Boden legt fest, wo die Etage im Haus steht. Das Erdgeschoss steht auf null, das Obergeschoss später auf etwa 2,8 Meter. Mit „Etage verschieben“ schiebst du die ganze Etage um einen Betrag, und „90° drehen“ dreht sie.
+
+00:02:42.479 --> 00:02:51.934
+Die Raumhöhe gilt für alle Wände der Etage. Standard sind zwei Komma fünf Meter. Für einzelne Wände kannst du sie später anpassen.
+
+00:02:51.934 --> 00:03:07.946
+Mit „Etage in Home Assistant“ legst du fest, zu welcher Etage in Home Assistant diese Etage gehört. Und mit „Räume aus HA-Bereichen anlegen“ erzeugt NextFloor für jeden Bereich einen Raum. Das ist praktisch, wir zeichnen die Räume aber selbst, damit du siehst, wie es geht.
+
+00:03:08.111 --> 00:03:16.326
+Jetzt zeichnen wir die Räume. Das schnellste Werkzeug ist das Rechteck. Wir wählen es in der Werkzeugleiste aus.
+
+00:03:16.326 --> 00:03:26.426
+Unten links steht immer ein kurzer Hinweis zum aktiven Werkzeug. Beim Rechteck heißt er: Ziehen, um ein Rechteck zu zeichnen.
+
+00:03:26.426 --> 00:03:41.038
+Wir beginnen mit dem Wohnzimmer. Wir drücken an der linken oberen Ecke, ziehen zur rechten unteren Ecke und lassen los. Während des Ziehens zeigt NextFloor die Seitenlängen an. Die Maße rasten auf das Raster ein, standardmäßig auf fünf Zentimeter.
+
+00:03:41.038 --> 00:03:51.309
+Der Raum ist gezeichnet und gleich ausgewählt. Das Werkzeug ist wieder auf „Auswählen“ gesprungen. Rechts erscheinen die Eigenschaften des Raums. Als Erstes geben wir ihm einen Namen.
+
+00:03:51.309 --> 00:04:02.567
+Mit dem Bereich verbindest du den Raum mit Home Assistant. Alle Geräte, die in Home Assistant diesem Bereich zugeordnet sind, kann NextFloor dann automatisch in diesem Raum anzeigen. Wir wählen den Bereich Wohnzimmer.
+
+00:04:02.567 --> 00:04:12.397
+Das Material bestimmt, wie der Boden in 3D aussieht: Holz, Eiche, Fliesen, Teppich, Stein oder Beton. Das Wohnzimmer bekommt Eichenparkett.
+
+00:04:12.397 --> 00:04:23.294
+Darunter stehen Position und Größe des Raums in Metern. Du kannst die Zahlen direkt eintippen, wenn du es genau haben willst. Wir lassen sie, wie sie sind: sechs mal vier Komma sechs Meter.
+
+00:04:23.904 --> 00:04:32.693
+Jede Ecke des ausgewählten Raums hat einen Griff. Wenn du an einem Griff ziehst, wandert die Ecke. Probieren wir es aus: Wir ziehen die rechte obere Ecke ein Stück nach oben.
+
+00:04:32.693 --> 00:04:41.906
+Das war nur ein Versuch, deshalb machen wir es mit „Rückgängig“ ungeschehen. Fast alles im Editor lässt sich rückgängig machen, auch mit Strg plus Z.
+
+00:04:41.906 --> 00:04:53.598
+In der Mitte jeder Kante sitzt ein Plus. Ein Klick darauf fügt eine zusätzliche Ecke ein, mit der du Räume mit Nischen oder schrägen Wänden formst. Auch das nehmen wir gleich wieder zurück.
+
+00:04:54.235 --> 00:05:05.485
+Jetzt kommt die Küche rechts neben das Wohnzimmer. Wir wählen wieder das Rechteck und ziehen. Die Ecken rasten an den vorhandenen Wänden ein, und die Wand dazwischen gehört beiden Räumen.
+
+00:05:05.485 --> 00:05:11.610
+Unter dem Wohnzimmer liegt das Schlafzimmer. Es bekommt den Bereich Schlafzimmer und einen Teppichboden.
+
+00:05:11.610 --> 00:05:16.513
+Daneben das Bad, wieder mit Fliesen.
+
+00:05:17.033 --> 00:05:24.560
+Nicht jeder Raum ist ein Rechteck. Der Flur bekommt eine L-Form. Dafür gibt es das Werkzeug „Freie Form“.
+
+00:05:24.560 --> 00:05:34.136
+Hier setzt du Punkt für Punkt die Ecken des Raums. Zum Schließen tippst du auf den ersten Punkt oder drückst Enter. Mit Escape brichst du ab.
+
+00:05:34.745 --> 00:05:50.645
+Die Wände entstehen automatisch aus den Raumkanten. Außenwände sind standardmäßig vierundzwanzig Zentimeter dick, Innenwände zwölf. Das stellst du unter Einstellungen ein. Für einzelne Wände findest du im Raum-Formular einen Bereich „Wandhöhen“.
+
+00:05:50.645 --> 00:05:56.412
+Zuerst passen wir die Ansicht an: „Alles zeigen“ rückt den ganzen Plan ins Fenster.
+
+00:05:56.412 --> 00:06:12.489
+Dort hat jede Wand eine Höhe, eine Dicke und eine Schere, mit der du eine Wand in Teile schneidest. Setzt du die Höhe niedriger, wird aus der Wand eine Brüstung oder eine Theke. „Keine Wand“ lässt die Kante offen, zum Beispiel zwischen Wohnzimmer und Essbereich.
+
+00:06:13.045 --> 00:06:24.099
+Nicht jede Wand gehört zu einem Raum. Eine Trennwand mitten im Wohnzimmer, eine halbe Wand zum Essbereich oder eine Brüstung zeichnest du mit dem Werkzeug „Wand“.
+
+00:06:24.099 --> 00:06:34.035
+Der Hinweis unten: Ziehen, um eine einzelne Wand zu zeichnen. Mit der Umschalt-Taste bleibt sie gerade, mit Alt rastet sie nicht ein. Wir ziehen eine kurze Wand.
+
+00:06:34.035 --> 00:06:52.299
+Die Wand ist ausgewählt. Im Formular stellst du Länge, Dicke und Höhe ein. Eine niedrigere Höhe macht aus ihr eine halbe Wand oder Brüstung. Wo sie auf eine Raumwand trifft, wird die Ecke sauber verbunden. An den Griffen verschiebst du die Enden, und an der Linie die ganze Wand.
+
+00:06:52.299 --> 00:06:57.141
+Für unser Haus brauchen wir sie nicht, deshalb löschen wir sie mit „Löschen“ wieder.
+
+00:06:57.798 --> 00:07:13.439
+Zeichnest du Räume von Hand, bleiben manchmal winzige Lücken zwischen zwei Wänden, die man kaum sieht, in 3D aber als Spalt auftauchen. Dafür gibt es im Etagen-Formular „Lücken schließen“. NextFloor sucht solche Stellen und zieht die Wände zusammen.
+
+00:07:13.439 --> 00:07:24.949
+Ist der Plan fertig, sperrst du ihn mit dem Schloss „Grundriss“, damit Räume, Wände, Türen, Fenster und Außenflächen nicht aus Versehen verschoben werden. Einzelne Stücke lassen sich auch mit „Fixieren“ sperren.
+
+00:07:25.606 --> 00:07:38.493
+Hast du schon einen Grundriss als Bild, etwa vom Bauplan oder als Foto, kannst du ihn als Vorlage hinter den Plan legen und nachzeichnen. Das findest du unter „Vorlage“ in der Seitenleiste.
+
+00:07:38.493 --> 00:07:53.472
+Nach dem Hochladen schiebst du das Bild mit der Maus, skalierst es an der Ecke und drehst es am Griff darüber. Mit zwei Punkten richtest du es gerade, und mit einer bekannten Länge, etwa einer Wand, stellst du den Maßstab ein. Dann zeichnest du die Räume direkt darauf.
+
+00:07:54.037 --> 00:08:01.476
+Unsere Räume haben noch keine Öffnungen. Dafür gibt es das Werkzeug „Türen und Fenster“. Wir wählen es aus.
+
+00:08:01.476 --> 00:08:14.300
+Der Hinweis unten sagt es schon: Tippe auf eine Wand, um eine Tür oder ein Fenster einzusetzen. Die Art wählst du danach rechts. Wir beginnen mit der Haustür an der unteren Wand des Flurs.
+
+00:08:14.300 --> 00:08:32.501
+Die Öffnung sitzt in der Wand und ist ausgewählt. Das Werkzeug ist wieder auf „Auswählen“ gesprungen. Rechts siehst du alle Arten: Tür, Haustür, Doppeltür, Fenster, Doppelfenster, Terrassentür, Balkontür, Garagentor und Glaswand. Als Haustür nehmen wir die Haustür.
+
+00:08:32.501 --> 00:08:45.916
+Breite, Position und Höhe stellst du darunter in Metern ein. „Mitte von der Ecke“ ist der Abstand der Türmitte von der Raumecke. Die Haustür soll genau mittig in der Wand sitzen, das sind null Komma acht Meter.
+
+00:08:45.916 --> 00:08:56.767
+Mit „Anschlag wechseln“ drehst du die Seite, an der die Tür angeschlagen ist, und „Öffnungsrichtung umkehren“ lässt sie nach außen statt nach innen aufgehen. Beides siehst du sofort im Plan.
+
+00:08:57.337 --> 00:09:06.448
+Jetzt die Türen im Haus. Zwischen Flur und Küche setzen wir eine normale Tür. Wir wählen wieder das Werkzeug und tippen auf die gemeinsame Wand.
+
+00:09:06.448 --> 00:09:18.490
+Standardmäßig wird eine normale Tür eingesetzt. Das passt hier, also lassen wir es dabei. Der Stil steht auf „Automatisch“: In einer Außenwand wird daraus eine Haustür, innen eine Zimmertür.
+
+00:09:18.490 --> 00:09:22.307
+Dasselbe machen wir vom Flur ins Bad…
+
+00:09:22.307 --> 00:09:25.525
+…und vom Wohnzimmer ins Schlafzimmer.
+
+00:09:26.002 --> 00:09:32.358
+Fenster funktionieren genauso. Wir setzen ein Doppelfenster in die obere Wand des Wohnzimmers.
+
+00:09:32.358 --> 00:09:44.163
+Bei Fenstern gibt es zusätzlich die Brüstungshöhe, also wie hoch die Fensterunterkante über dem Boden liegt. Das Doppelfenster hat zwei Flügel, und mit „Hauptflügel wechseln“ bestimmst du, welcher davon der Hauptflügel ist.
+
+00:09:44.163 --> 00:10:04.672
+Jetzt wird es spannend: Weiter unten kannst du dem Fenster Geräte zuordnen. Der Rollladen steht auf „Automatisch“. NextFloor hat im Bereich Wohnzimmer einen Rollladen gefunden und nimmt ihn. Genauso den Fensterkontakt, den Terrassentür-Sensor. Damit bewegt sich der Rollladen im Modell mit, und das Fenster zeigt, ob es offen ist.
+
+00:10:04.672 --> 00:10:19.292
+Willst du ein anderes Gerät zuweisen, klickst du in das Feld und tippst einen Teil des Namens. Die Liste zeigt passende Geräte mit ihrem Bereich und der Entity-ID. Ein Klick wählt das Gerät aus. Wir tippen „Roll“.
+
+00:10:19.292 --> 00:10:27.012
+Wichtig: NextFloor schaltet dabei nichts. Die Zuordnung sagt nur, welches Gerät zu diesem Fenster gehört.
+
+00:10:27.012 --> 00:10:35.439
+Die restlichen Fenster setzen wir ohne viele Worte: ein Fenster in die Küche, eines ins Schlafzimmer und ein kleines ins Bad.
+
+00:10:35.439 --> 00:10:42.934
+Eine Tür oder ein Fenster entfernst du, indem du es auswählst und unten auf „Löschen“ klickst oder die Entf-Taste drückst.
+
+00:10:43.301 --> 00:10:50.693
+Ein Raum ohne Möbel wirkt leer, deshalb richten wir ihn jetzt ein. Dafür gibt es das Werkzeug „Möbel“.
+
+00:10:50.693 --> 00:10:58.338
+Der Hinweis unten sagt: Tippe auf einen Raum, dann wähle rechts ein Möbelstück. Wir tippen auf das Wohnzimmer.
+
+00:10:58.338 --> 00:11:22.228
+Rechts steht jetzt die Möbelbibliothek. Neue Möbel landen in der Mitte des gewählten Raums, das steht oben darüber. Die Bibliothek ist in Bereiche gegliedert: Leuchten, Wohnen, Essen, Küche, Schlafen, Bad und Wäsche, Arbeiten und Sonstiges, Parken. Ein Klick auf eine Überschrift klappt den Bereich auf oder zu.
+
+00:11:22.228 --> 00:11:36.973
+Unter den eingebauten Möbeln folgen die mitgelieferten Packs. Das sind große Sammlungen mit hunderten weiteren Möbelstücken, etwa ein Wohnzimmer-Pack, eine Küche oder ein Heimkino. Sie lassen sich genauso benutzen.
+
+00:11:36.973 --> 00:11:49.782
+Wenn du etwas Bestimmtes suchst, tippst du es einfach ins Suchfeld. Die Suche findet deutsche und englische Namen, den Namen des Packs und auch mehrere Wörter in beliebiger Reihenfolge. Wir suchen ein Ecksofa.
+
+00:11:50.050 --> 00:11:56.869
+Wir beginnen mit einem einfachen Sofa aus dem Bereich Wohnen. Ein Klick darauf setzt es in die Mitte des Raums.
+
+00:11:56.869 --> 00:12:08.499
+Das Sofa ist ausgewählt. An den vier Ecken sitzen Griffe, mit denen du die Größe änderst, und unten ein Griff zum Drehen. Wir ziehen das Sofa mit der Maus an die obere Wand unter das Fenster.
+
+00:12:08.499 --> 00:12:24.274
+Rechts im Formular siehst du alle Werte des Stücks. Der Name ist optional und hilft dir später bei der Suche. Darunter stehen die Position, die Größe in Metern und die Drehung in Grad. Du kannst jeden Wert eintippen, wenn du es genau haben willst.
+
+00:12:24.274 --> 00:12:40.786
+Mit den Knöpfen „90° links“ und „90° rechts“ drehst du das Stück in Viertelschritten, „Spiegeln“ vertauscht links und rechts, zum Beispiel bei einem Ecksofa. „Duplizieren“ legt eine Kopie an, und „Löschen“ entfernt das Stück. „Fixieren“ sperrt es gegen versehentliches Verschieben.
+
+00:12:41.297 --> 00:12:50.679
+Den Rest des Wohnzimmers richten wir jetzt zügig ein und geben die Positionen als Zahlen ein. Zuerst der Teppich, damit er unter den anderen Möbeln liegt.
+
+00:12:50.679 --> 00:12:54.472
+Dann der Couchtisch auf dem Teppich.
+
+00:12:54.472 --> 00:13:03.672
+Der Fernseher steht auf einem TV-Board an der gegenüberliegenden Wand. Das Board schaut standardmäßig nach unten, deshalb drehen wir es um hundertachtzig Grad, damit es zum Sofa zeigt.
+
+00:13:03.672 --> 00:13:08.316
+Ein Sessel links vom Couchtisch, zur Mitte gedreht…
+
+00:13:08.316 --> 00:13:12.237
+…ein Regal in der Ecke und eine Pflanze am Fenster.
+
+00:13:12.861 --> 00:13:23.441
+Jetzt wird das Modell lebendig: Wir bringen die Geräte aus Home Assistant in den Plan. Dazu wählen wir mit „Auswählen“ den Raum, zum Beispiel das Wohnzimmer.
+
+00:13:23.441 --> 00:13:32.264
+Ganz unten im Raum-Formular steht der Abschnitt „Geräte“. Er zeigt die Geräte, die in Home Assistant zu diesem Bereich gehören, hier zwölf.
+
+00:13:32.264 --> 00:13:52.201
+Mit den Reitern darüber wechselst du die Quelle: „Dieser Bereich“, „Andere Bereiche“ für Geräte, die in einem anderen Raum stehen, und „Ohne Bereich“ für Geräte, die in Home Assistant noch keinem Bereich zugeordnet sind, zum Beispiel die Gartenbeleuchtung. Im Suchfeld findest du ein Gerät über seinen Namen.
+
+00:13:52.201 --> 00:14:05.762
+Jede Zeile hat vier Knöpfe: Das Auge blendet das Gerät im Raum-Fenster der 3D-Ansicht aus, „Aa“ gibt ihm einen eigenen Namen, der Stern fügt es dem Raum-Fenster hinzu, ohne es zu platzieren, und „Platzieren“ setzt es in den Plan.
+
+00:14:06.009 --> 00:14:11.309
+Wir platzieren das Deckenlicht. Ein Klick auf „Platzieren“ neben „Deckenlicht“.
+
+00:14:11.309 --> 00:14:19.315
+NextFloor hat daraus eine Deckenleuchte gemacht, die mit dem Licht verbunden ist. Wir wählen sie im Plan aus, indem wir sie antippen.
+
+00:14:19.315 --> 00:14:36.225
+Im Formular steht bei „Licht oder Schalter“ das verbundene Gerät, das Wohnzimmer-Deckenlicht. Darunter kannst du für Farbe und Helligkeit ein anderes Gerät angeben, falls ein Relais nur ein- und ausschaltet, während die Lampe selbst Farbe und Helligkeit kennt.
+
+00:14:36.225 --> 00:14:55.283
+Mit „Leuchten in 3D“ regelst du, wie stark das Licht im Modell glüht. Hundert Prozent sind so hell, wie das Gerät meldet. Wer LED-Streifen hat, die zu hell wirken, stellt hier weniger ein. „Vor dem Schalten fragen“ verhindert, dass ein Antippen in 3D das Licht versehentlich schaltet.
+
+00:14:55.283 --> 00:15:09.225
+Die Markierung in 3D bestimmt, ob zusätzlich ein kleines Symbol mit dem Gerätezustand über der Leuchte schwebt: automatisch, immer, ohne Watt oder gar nicht. Du kannst dem Symbol auch ein eigenes Icon geben.
+
+00:15:09.225 --> 00:15:16.094
+Das war die erste Leuchte. Genauso setzen wir die Stehlampe und das LED-Band aus der Liste.
+
+00:15:16.462 --> 00:15:24.429
+Nicht nur Leuchten lassen sich verbinden, auch Möbel. Wir wählen das TV-Board im Wohnzimmer aus.
+
+00:15:24.429 --> 00:15:47.099
+Unter der Position steht „TV, Media Player oder Steckdose“. NextFloor hat im Bereich Wohnzimmer einen Fernseher gefunden und ihn automatisch verbunden, das siehst du an „Automatisch“. Läuft der Fernseher, leuchtet der Bildschirm im Modell in der Farbe der App, etwa Netflix rot oder YouTube, und zeigt Titel oder Cover.
+
+00:15:47.099 --> 00:16:04.171
+„Leuchten hinter dem TV“ ist das Ambilight an der Wand hinter dem Fernseher. Hundert Prozent ist die volle Stärke. Passt es nicht zu deinem Wohnzimmer, zum Beispiel weil du hinter dem Fernseher eigene LED-Streifen hast, senkst du den Wert oder stellst ihn auf null, dann ist das Leuchten ganz aus.
+
+00:16:04.171 --> 00:16:17.471
+Und der Leistungssensor, ebenfalls automatisch gefunden, zeigt später, wie viele Watt der Fernseher gerade zieht. Genauso funktionieren Kühlschränke, Waschmaschinen, Drucker und viele andere Möbel aus den Packs.
+
+00:16:18.251 --> 00:16:30.751
+Ein Haus steht nicht im Leeren. Mit dem Werkzeug „Außen“ zeichnest du die Flächen rund ums Haus: Rasen, Terrasse, Wege, Einfahrt, Pool, Beete, Hecken und Zäune.
+
+00:16:30.751 --> 00:16:37.914
+Der Hinweis unten: Ziehen, um eine Außenfläche aufzuziehen. Wir beginnen mit dem Rasen links neben dem Haus.
+
+00:16:37.914 --> 00:16:50.414
+Die Fläche ist ausgewählt, und rechts steht ihr Formular. Oben wählst du die Art. Die Standardart ist Rasen, das passt. Darunter stehen Position und Größe.
+
+00:16:50.414 --> 00:17:14.831
+„Höhenversatz“ senkt eine Fläche unter den Boden oder hebt sie an, zum Beispiel eine Einfahrt, die zu einer tiefer liegenden Garage führt, oder eine erhöhte Terrasse. „Gefälle“ neigt eine Fläche: Du gibst den Höhenunterschied ein und die Richtung, in die sie abfällt. „Umriss zeigen“ blendet die leuchtende Kante ein oder aus, und „Aus den Flächen darunter ausschneiden“ macht aus der Fläche ein Loch in den Flächen darunter, praktisch für einen Teich mitten im Rasen.
+
+00:17:14.831 --> 00:17:21.005
+Oberhalb des Hauses kommt die Terrasse. Wir ziehen sie auf und stellen die Art um.
+
+00:17:21.005 --> 00:17:28.303
+Vor der Haustür führt ein Weg entlang. Ein Weg ist schmal, deshalb ziehen wir ihn schmal auf.
+
+00:17:28.303 --> 00:17:32.338
+Rechts neben dem Haus legen wir einen Pool an.
+
+00:17:32.338 --> 00:17:44.157
+Außerdem ein Beet vor dem Rasen und eine Hecke, die den Garten begrenzt. Bei Hecken und Zäunen kannst du im Formular die Höhe einstellen, zum Beispiel zweieinhalb Meter für eine Thuja-Hecke.
+
+00:17:44.157 --> 00:17:58.190
+Außenflächen werden in 3D mit Rasen, Holz, Wasser und Stein dargestellt. Wie du Außenleuchten, zum Beispiel Wegleuchten und Gartenspots, aus der Möbelbibliothek dazusetzt, siehst du später im Kapitel über Leuchten.
+
+00:17:58.835 --> 00:18:08.578
+Ein Haus hat meist mehr als eine Etage. Wir legen das Obergeschoss an: „Etage hinzufügen“ und diesmal das Obergeschoss aus Home Assistant.
+
+00:18:08.578 --> 00:18:22.945
+NextFloor stellt die neue Etage automatisch auf die richtige Höhe, hier zwei Komma sieben fünf Meter über dem Erdgeschoss. Im Plan siehst du gestrichelt die Umrisse der Etage darunter. Daran richtest du die neuen Wände aus.
+
+00:18:22.945 --> 00:18:30.896
+Mit den Etagen-Reitern oben wechselst du zwischen den Etagen. Die Reihenfolge ändern „Nach oben“ und „Nach unten“.
+
+00:18:30.896 --> 00:18:42.791
+Jetzt zeichnen wir die Räume des Obergeschosses mit dem Rechteck, wie im Erdgeschoss: ein Kinderzimmer oben links, ein Arbeitszimmer daneben, ein Bad und ein Gästezimmer darunter.
+
+00:18:42.791 --> 00:18:55.489
+Das Bad oben und das Gästezimmer haben in Home Assistant keinen eigenen Bereich. Das ist kein Problem: Räume ohne Bereich funktionieren genauso, du kannst ihnen Geräte aber nur über „Andere Bereiche“ oder „Ohne Bereich“ zuordnen.
+
+00:18:55.657 --> 00:19:04.785
+Damit man nach oben kommt, brauchen wir eine Treppe. Wir wechseln ins Erdgeschoss, wählen den Flur und öffnen die Möbelbibliothek.
+
+00:19:04.785 --> 00:19:18.265
+Im Pack „Treppen und Geländer“ finden wir gerade, L-förmige, U-förmige und Wendeltreppen, Raumspartreppen, eine Außentreppe und Geländer aus Metall, Glas und Holz. Wir nehmen die gerade Treppe.
+
+00:19:18.265 --> 00:19:30.104
+Die Stufen steigen von der Vorderkante nach hinten an. Reicht die Treppe bis zur Etage darüber, schneidet sie dort die Treppenöffnung automatisch in den Boden. Wir schauen im Obergeschoss nach.
+
+00:19:30.104 --> 00:19:41.583
+Ein Loch im Boden brauchst du auch ohne Treppe, zum Beispiel für eine Galerie oder einen Schacht. Dafür gibt es das Werkzeug „Bodenöffnung“: Du ziehst die Öffnung einfach auf, wo der Boden fehlen soll.
+
+00:19:41.921 --> 00:19:52.338
+Wer beim Zeichnen sehen will, wie das Haus in 3D aussieht, schaltet „3D daneben“ ein. Der Editor zeigt dann links den Plan und rechts das 3D-Modell.
+
+00:19:52.338 --> 00:20:05.851
+Das Modell dreht sich mit der Maus: Ziehen dreht, das Mausrad zoomt, und mit rechter Maustaste oder zwei Fingern verschiebst du die Ansicht. Alles, was du im Plan änderst, siehst du sofort im Modell.
+
+00:20:05.851 --> 00:20:18.406
+Mit den Knöpfen „Ansicht als Start der Etage“ und „Ansicht als Start des Raums“ merkst du dir die aktuelle Blickrichtung. Tippst du die Etage oder den Raum später in 3D an, fliegt die Kamera genau dorthin.
+
+00:20:18.999 --> 00:20:41.239
+Leuchten sind in NextFloor eigene Möbelstücke mit einem Licht dahinter. In der Möbelbibliothek gibt es dafür einen eigenen Bereich mit zwölf Typen: Deckenleuchte, Einbauspot, Aufbauspot, LED-Panel, Pendelleuchte, Stehlampe, Deckenfluter, Tischlampe, Wandleuchte, LED-Streifen, Wegeleuchte und Gartenspot.
+
+00:20:41.239 --> 00:21:00.446
+Jeder Typ hat seine eigene Bauform und leuchtet anders. Die Deckenleuchte und der Spot sitzen an der Decke, die Stehlampe steht auf dem Boden, die Tischlampe auf einem Möbel, die Wandleuchte an der Wand. Pendelleuchten hängen an einer Schnur. Die Höhe stellst du im Formular ein, bei der Pendelleuchte ist sie die Abhängung unter der Decke.
+
+00:21:01.019 --> 00:21:10.230
+Oft hängen mehrere Einbauspots an einem Dimmer. Dafür musst du sie nicht einzeln setzen. Wir wählen die Küche aus und klicken auf „Spots setzen“.
+
+00:21:10.230 --> 00:21:25.543
+Du wählst die Art der Leuchte, die Zahl der Spalten und Reihen und das Licht, dem alle folgen sollen. NextFloor verteilt die Leuchten gleichmäßig im Raum. Wir nehmen Einbauspots, drei Spalten, zwei Reihen und das Küchenlicht.
+
+00:21:25.543 --> 00:21:34.935
+Sechs Spots, ein Licht: Schaltest du das Küchenlicht, leuchten alle sechs. Mit „Rückgängig“ nimmst du die Aktion auf einen Schlag zurück, falls das Raster nicht passt.
+
+00:21:35.459 --> 00:21:49.533
+Außenleuchten gehören nicht zu einem Raum. Wir holen sie über den Raum-Abschnitt „Geräte“ mit dem Reiter „Ohne Bereich“, denn Gartenlichter haben in Home Assistant meist keinen Bereich. Dazu wählen wir einen beliebigen Raum aus, zum Beispiel das Wohnzimmer.
+
+00:21:49.533 --> 00:21:58.514
+Hier stehen die Wegeleuchten und der Pool-Spot. Wir platzieren die Wegeleuchten und ziehen sie danach an den Weg vor der Haustür.
+
+00:21:58.514 --> 00:22:05.559
+Außenleuchten beleuchten die Außenflächen und die Fassade. Das ist in 3D besonders schön, wenn es dunkel wird.
+
+00:22:06.208 --> 00:22:13.191
+Ein Haus braucht ein Dach, und für Solarmodule ganz besonders. Das Werkzeug „Dach“ baut es aus deinen Räumen. Wir wählen es aus.
+
+00:22:13.191 --> 00:22:29.268
+Der Editor schaltet dabei von selbst die 3D-Ansicht daneben dazu, denn ein Dach beurteilt man am besten in 3D. Im Plan sind Räume und Möbel gesperrt, damit du nichts verschiebst: Du bearbeitest nur Dachflächen.
+
+00:22:29.268 --> 00:22:43.398
+Wir klicken auf „Dachflächen aus den Räumen erzeugen“. NextFloor schlägt zu jeder zusammenhängenden Gebäudeteil-Fläche ein Dach vor, hier ein großes Satteldach über dem Haus und ein kleines über dem Anbau.
+
+00:22:43.398 --> 00:23:00.572
+Jede Dachfläche hat Form, Firstrichtung, Traufhöhe und Neigung. Ein Klick auf einen Eintrag in der Liste wählt sie aus, ziehen verschiebt sie, und an den Ecken änderst du die Größe. Mit „Zurück zu einem Dach“ gehst du zur einfachen Dachform aus den Einstellungen zurück, und „Erneut aus den Räumen erzeugen“ beginnt von vorn.
+
+00:23:00.572 --> 00:23:08.265
+Dachfenster setzt du mit „Dachfenster“ auf eine Dachfläche. Sie bekommen wie normale Fenster einen Rollladen und einen Kontakt.
+
+00:23:08.623 --> 00:23:22.647
+Jetzt kommt die Energie. Das Werkzeug „Energie“ zeigt oben eine Einrichtungs-Checkliste: Solarfeld auf das Dach setzen, Zähler hinzufügen, Wechselrichter hinzufügen. Home-Batterie und Netzanschluss sind optional.
+
+00:23:22.647 --> 00:23:38.982
+Wir beginnen mit dem Solarfeld. „Solarfeld“ legt ein Feld auf die am besten passende Dachfläche, nämlich die größte, die nach Süden schaut. Dafür nutzt NextFloor den Kompass aus den Einstellungen. Stimmt der Kompass nicht, wird das Feld auf der falschen Seite angelegt. Dazu kommen wir gleich.
+
+00:23:38.982 --> 00:24:01.001
+Das Feld liegt in der Dachneigung. Du ziehst es im Plan an eine andere Stelle, auch auf eine andere Dachfläche. Rechts stellst du Reihen und Spalten, Hoch- oder Querformat und die Zahl der Module ein. Für Felder auf Flachdächern oder im Garten gibt es „Freistehend“ mit Neigung, und „An der Wand“ für Fassadenmodule.
+
+00:24:01.001 --> 00:24:11.822
+Jetzt der Stromzähler und der Wechselrichter. Beide sind Geräte und stehen unter „Geräte“ der Energie-Seite. Wir fügen den Zähler und den Wechselrichter hinzu.
+
+00:24:11.822 --> 00:24:24.718
+Die Geräte stehen in der Etage, die oben gewählt ist, und lassen sich im Plan verschieben. Mit einem Leistungssensor zeigen sie ihre Watt, der Zähler nimmt den Netzsensor, und ein Wechselrichter bekommt seine Strings.
+
+00:24:24.718 --> 00:24:41.081
+Ganz unten steht die Energiebilanz mit Feldern für Netz, Solarproduktion, Batterie, Verbrauch und Tarif. Alle stehen auf „Automatisch“. Mit „Aus dem Energie-Dashboard übernehmen“ liest NextFloor die Sensoren, die du in Home Assistant schon für das Energie-Dashboard eingerichtet hast.
+
+00:24:41.081 --> 00:24:51.147
+In der 3D-Ansicht fliegen später Energieteilchen von den Solarmodulen zum Wechselrichter, zum Haus, zum Akku und zum Netz, schneller und dichter, je mehr Strom fließt.
+
+00:24:51.622 --> 00:24:57.522
+In der Seitenleiste stehen weiter unten die Einstellungen für das ganze Haus. Wir klappen sie auf.
+
+00:24:57.522 --> 00:25:12.271
+Zuerst die Wanddicken. Außenwände sind standardmäßig vierundzwanzig Zentimeter dick, Innenwände zwölf. Das Raster ist die Schrittweite, auf die beim Zeichnen eingerastet wird, fünf Zentimeter. Mit der Alt-Taste zeichnest du einmalig ohne Einrasten.
+
+00:25:12.795 --> 00:25:36.094
+Jetzt der Kompass, ein wichtiger Punkt. Die Scheibe zeigt, wo Norden im Plan liegt. Der Plan hat kein eigenes Norden: Standardmäßig zeigt Norden im Plan nach oben. Davon hängen drei Dinge ab: das Sonnenlicht, das durch die Fenster fällt, die Windrichtung bei Wetter und die Himmelsrichtungen der Dachflächen. Und damit auch, wo ein neues Solarfeld hinkommt.
+
+00:25:36.094 --> 00:25:52.343
+Hast du den Plan so gezeichnet, dass oben nicht Norden ist, oder stimmen Nord und Süd nicht mit der Wirklichkeit überein, musst du nichts neu zeichnen und keine Solarfelder neu anlegen. Du drehst einfach den Kompass. „Nord und Süd tauschen“ dreht ihn um hundertachtzig Grad. Wir probieren es.
+
+00:25:52.343 --> 00:26:09.942
+Der Pfeil zeigt jetzt nach unten. Zeichnung, Dachflächen und Solarfelder sind unverändert. Geändert haben sich nur die Himmelsrichtungen: Was eben noch Süden war, ist jetzt Norden. Mit den Knöpfen für neunzig Grad drehst du in kleineren Schritten, und im Feld darüber gibst du jeden beliebigen Winkel ein.
+
+00:26:09.942 --> 00:26:14.508
+Wir drehen den Kompass für unser Haus wieder zurück, denn hier stimmt er.
+
+00:26:14.822 --> 00:26:26.188
+Darunter kannst du eine echte Landkarte hinter den Plan legen, um das Haus genau auf sein Grundstück zu setzen. Die Karte ist standardmäßig aus und lädt dann auch nichts aus dem Internet. Wir schalten sie ein.
+
+00:26:26.188 --> 00:26:42.398
+Die Karte startet am Standort von Home Assistant, im Plan und im 3D-Modell. Dein Browser lädt die Kartenkacheln direkt vom Kartenserver, standardmäßig OpenStreetMap. Unten rechts steht der Quellenhinweis. Die Karte ist gedimmt, damit der Plan im Vordergrund bleibt.
+
+00:26:42.398 --> 00:27:02.051
+Mit „Sichtbarkeit“ stellst du ein, wie stark die Karte durchscheint, und die Detailstufe bestimmt die Schärfe. Mit den Pfeilknöpfen verschiebst du die Karte unter dem Plan, bis das Haus auf seinem Grundstück sitzt. Der Schritt darunter legt fest, wie weit ein Klick schiebt. Mit dem Kompass drehst du die Karte, falls das Haus schräg steht.
+
+00:27:02.051 --> 00:27:10.569
+Du kannst auch eine eigene Kachel-Adresse eintragen, wenn du eine andere Kartenquelle nutzen darfst. Für unser Beispiel schalten wir die Karte wieder aus.
+
+00:27:11.470 --> 00:27:20.876
+Weiter unten wählst du die Dachform für das ganze Haus, kein Dach, Flachdach, Satteldach oder eigene Dachflächen, mit Neigung und Überstand.
+
+00:27:20.876 --> 00:27:39.778
+Das Wetter-Gerät bestimmt, welche Wetter-Entity das Wetter am Haus steuert, und darunter schaltest du die Effekte einzeln ein oder aus: Regen, Schnee, Nebel, Wolken, Blitze, Sonne und Mond. Die Warnung „Fenster offen bei Regen“ und die Sonnenflecken durch die Fenster stellst du hier ebenfalls ein.
+
+00:27:40.286 --> 00:27:51.758
+Im Zentralmenü der 3D-Ansicht stehen unter den Sammelschaltern deine Favoriten. Welche das sind, legst du in den Editor-Einstellungen unter „Favoriten“ fest. Wir klappen den Abschnitt auf.
+
+00:27:51.758 --> 00:28:02.830
+Favoriten können Szenen, Skripte, Automationen, Schalter und Buttons sein, zum Beispiel „Gute Nacht“. Du suchst sie im Feld „Favorit hinzufügen“ und klickst auf einen Treffer.
+
+00:28:02.830 --> 00:28:22.309
+Mit „Eigener Knopf“ legst du einen Knopf an, der einen Dashboard-Pfad öffnet, die Details einer Entity zeigt, einen Dienst aufruft oder ein browser_mod-Popup mit deiner eigenen Karte öffnet. Du gibst ihm einen Namen, ein Symbol und das Ziel, zum Beispiel einen Pfad zum Rollladen-Dashboard.
+
+00:28:22.309 --> 00:28:30.372
+„Station oder Playlist“ im Abschnitt Klang legt Radiosender und Playlists fest, die im Schnellmenü eines Lautsprechers zum Starten stehen.
+
+00:28:31.062 --> 00:28:48.952
+Wechseln wir in die 3D-Ansicht. Oben stehen jetzt Warnungen. NextFloor überwacht Rauch, Gas, CO, Wasser, Alarmanlage und Fenster, die bei Regen offen stehen. Hier meldet die Küche Rauch, und mehrere Fenster stehen offen, während es regnet.
+
+00:28:48.952 --> 00:29:00.456
+Der betroffene Raum pulsiert rot. Ein Tippen auf die Warnung springt in den Raum. So siehst du sofort, wo etwas los ist, auch in einem großen Haus.
+
+00:29:00.456 --> 00:29:13.656
+Im Raum-Fenster stehen außerdem Szenen und Skripte des Bereichs als Knöpfe, zum Beispiel „Kino“ oder „Lesen“ im Wohnzimmer. Ein Klick startet die Szene, und das Haus verändert sich sofort.
+
+00:29:14.112 --> 00:29:20.915
+Der Plan ist fertig. Wir wechseln jetzt auf den Reiter „3D“ und sehen uns an, was daraus geworden ist.
+
+00:29:20.915 --> 00:29:37.818
+Das ist dein Haus als lebendiges Modell: das Dach mit den Solarmodulen, die Terrasse, der Pool und der Weg. In den Räumen leuchten die Lampen, und im Wohnzimmer läuft gerade der Fernseher mit einer Serie. Alles, was du in Home Assistant einrichtest, siehst du hier live.
+
+00:29:38.000 --> 00:29:46.529
+Du bewegst dich mit der Maus. Ziehen mit der linken Taste dreht das Haus. Wir drehen es einmal ein Stück.
+
+00:29:46.529 --> 00:29:57.728
+Das Mausrad zoomt hinein und heraus, und mit der rechten Maustaste, oder auf dem Touchscreen mit zwei Fingern, verschiebst du die Ansicht. Auf einem Tablet zoomst du mit zwei Fingern.
+
+00:29:57.728 --> 00:30:10.857
+Oben stehen die Etagen und Räume als Knöpfe. „Alle Etagen“ zeigt das ganze Haus. Ein Klick auf eine Etage lässt die Kamera dorthin fliegen und blendet die Etagen darüber aus. Wir wählen das Erdgeschoss.
+
+00:30:10.857 --> 00:30:21.693
+Ein Klick auf einen Raum fliegt hinein. Wir nehmen das Wohnzimmer. Rechts öffnet sich das Raum-Fenster mit den Geräten dieses Raums. Dazu gleich mehr.
+
+00:30:21.693 --> 00:30:33.549
+Links am Rand siehst du kleine Bilder der Etagen. Ein Klick darauf wechselt die Etage, auch ohne die Leiste oben. „Zurück“ unten bringt dich eine Ebene hoch, und die Escape-Taste tut dasselbe.
+
+00:30:33.921 --> 00:30:53.018
+Oben rechts stellst du das Aussehen ein. Die Qualität ist „Automatisch“: NextFloor wählt selbst, was dein Gerät schafft. Für Wandtablets gibt es „Tablet“ mit weniger Effekten und für starke Rechner „Hoch“ mit Lichtkegeln und weichen Schatten. Ganz rechts zeigt „FPS“ die Bildrate.
+
+00:30:53.018 --> 00:31:06.485
+Daneben die Themen: „Neon“ ist der leuchtende Look, „Blueprint“ wirkt wie ein Bauplan, und „Tag“ ist hell und eignet sich für helle Räume. Der Farbpunkt dahinter ändert die Akzentfarbe. Wir sehen uns alle drei an.
+
+00:31:06.485 --> 00:31:19.273
+Die drei Knöpfe daneben bestimmen, welche Symbole über den Geräten schweben. „Keine“ blendet sie aus, „Wichtige“ zeigt nur die wichtigen, zum Beispiel offene Fenster, und „Alle“ zeigt alle Geräte mit ihrem Zustand.
+
+00:31:19.926 --> 00:31:30.868
+Unten sitzen die wichtigsten Schalter. „Hohe Wände“ und „Schnitt“ legen fest, ob du die Wände ganz siehst oder in Brüsthöhe abgeschnitten, damit du in die Räume hineinsehen kannst.
+
+00:31:30.868 --> 00:31:41.930
+„Auseinander“ zieht die Etagen für den Überblick auseinander, „Gestapelt“ setzt sie wieder aufeinander, und „Dach bleibt“ hält das Dach auch dann, wenn du in eine Etage hineinzoomst.
+
+00:31:41.930 --> 00:31:56.060
+Die Heatmap färbt die Räume nach Messwerten ein: „Temperatur“, „Feuchte“ und „CO₂“. „Werte“ schreibt die Zahlen in die Räume. Eine Legende zeigt die Farbskala. Wir sehen uns die Temperatur an.
+
+00:31:56.060 --> 00:32:05.994
+„Raumnamen“ blendet die Namen der Räume ein, und „Wetter“ schaltet die Wettereffekte am Haus ein oder aus. Darauf kommen wir bei den Live-Funktionen zurück.
+
+00:32:06.587 --> 00:32:12.077
+Jetzt bedienen wir das Haus. Dazu fliegen wir ins Wohnzimmer.
+
+00:32:12.077 --> 00:32:31.463
+Rechts steht das Raum-Fenster. Es zeigt alle Geräte des Raums nach Art geordnet: Lichter, Rollläden, Medien und Sensoren. Wichtig für dieses Video: Wir arbeiten hier in der Demo mit erfundenen Geräten, deshalb darf alles geschaltet werden. In deinem echten Home Assistant schaltet ein Klick das echte Gerät.
+
+00:32:31.463 --> 00:32:39.617
+Bei den Lichtern schaltet ein Klick auf den Namen das Licht ein oder aus. Wir schalten die Stehlampe aus.
+
+00:32:39.617 --> 00:32:51.078
+Darunter stellst du die Helligkeit und die Farbtemperatur mit Reglern ein, und die Farbpunkte setzen schnell eine Farbe, vom warmen Orange bis zu Blau, Pink und Grün. Wir schalten die Lampe wieder ein und färben sie.
+
+00:32:51.078 --> 00:33:01.632
+Die Lampe leuchtet im Modell jetzt blau, und der Lichtschein fällt auf Boden und Möbel. „Alle aus“ schaltet alle Lichter des Raums auf einmal aus.
+
+00:33:01.632 --> 00:33:17.942
+Rollläden haben die Knöpfe Auf, Stopp und Zu und einen Positionsregler. Medien haben Zurück, Wiedergabe oder Pause, Weiter und die Lautstärke. Darunter stehen die Sensoren des Raums, hier der Stromverbrauch des Fernsehers und der Terrassentür-Kontakt.
+
+00:33:17.942 --> 00:33:29.510
+Mit „Weitere Geräte des Bereichs“ blendest du die übrigen Geräte ein, die nicht im Plan platziert sind. Welche Geräte im Raum-Fenster erscheinen, steuerst du im Editor mit dem Auge und dem Stern in der Geräteliste.
+
+00:33:29.699 --> 00:33:39.399
+Du kannst die Geräte auch direkt im 3D-Modell bedienen. Ein Antippen einer Lampe schaltet sie. Wir tippen die Deckenlampe an.
+
+00:33:39.399 --> 00:33:52.507
+Ein langer Druck öffnet das Schnellmenü: Helligkeit, Farbe und die Details des Geräts, ohne dass du das Raum-Fenster brauchst. Auch bei Rollläden öffnet schon ein Antippen ihr Schnellmenü mit Auf, Zu und Positionen.
+
+00:33:53.407 --> 00:34:07.418
+Der Stern links unten ist das Zentralmenü: alle Lichter und alle Rollläden der Etage oder des ganzen Hauses auf einmal, dazu deine Favoriten. Favoriten sind Szenen, Skripte, Automationen und Schalter, die du in den Editor-Einstellungen festlegst.
+
+00:34:07.784 --> 00:34:20.489
+Die Lupe unten links öffnet die Suche „Wo ist …?“. Du tippst den Namen eines Geräts oder Raums, und ein Treffer lässt die Kamera hinfliegen, während das Gerät aufblinkt. Praktisch in großen Häusern.
+
+00:34:21.000 --> 00:34:27.955
+Zum Haus gehört noch eine Garage. Wir zeichnen sie mit dem Rechteck rechts neben die Küche.
+
+00:34:27.955 --> 00:34:40.344
+Das Tor setzen wir mit „Türen und Fenster“ an die rechte Außenwand und wählen als Art „Garagentor“. Ein Garagentor kann mit einem Antrieb verbunden werden. In 3D fährt es dann hoch und runter und zeigt, ob es offen ist.
+
+00:34:40.700 --> 00:34:51.658
+Jetzt der Stellplatz. In der Möbelbibliothek gibt es den Bereich „Parken“ mit dem Stellplatz. Wir wählen die Garage aus und setzen den Stellplatz hinein.
+
+00:34:51.658 --> 00:35:05.818
+Der Stellplatz zeigt in 3D ein Fahrzeug, solange dein Auto da ist. Du wählst bei „Fahrzeug“ das Modell, zum Beispiel einen Transporter aus dem Pack „Fahrzeuge“, und mit „Größe“ passt du es an. Ohne Fahrzeug-Pack bleibt die Liste leer.
+
+00:35:05.818 --> 00:35:20.943
+Der Sensor „Auto da“ sagt, wann das Fahrzeug im Stellplatz steht, zum Beispiel ein Ortungssensor oder ein Bewegungsmelder. Erscheint das Auto nicht, stimmt meist dieser Sensor nicht. Ohne Sensor steht das Fahrzeug immer da.
+
+00:35:20.943 --> 00:35:41.237
+Unten wählst du eine beliebige Entity deines Autos. NextFloor findet über das Gerät des Autos alles andere von selbst: Ladestand, Reichweite, Stecker, Innentemperatur und die Knöpfe für Schloss, Klima und Laden. Daraus entsteht in 3D eine Karte über dem Stellplatz, die wir uns im Kapitel über die Live-Funktionen ansehen.
+
+00:35:41.712 --> 00:35:59.953
+Jetzt kommen die Live-Funktionen. Sie holen in die 3D-Ansicht, was im Haus gerade passiert: das Wetter, den Stromfluss, laufende Fernseher und Musik und das Auto. Sie sind eingebaut, kostenlos und brauchen keine Einrichtung außer den Geräten, die du schon hast.
+
+00:36:00.309 --> 00:36:12.525
+Mit dem Schalter „Wetter“ unten zeigt die 3D-Ansicht das Wetter über deinem Grundstück. Dafür liest NextFloor eine Wetter-Entity aus Home Assistant. Gerade scheint die Sonne. Wir lassen es regnen.
+
+00:36:12.525 --> 00:36:23.256
+Der Regen fällt schräg mit dem echten Wind, die Wolken ziehen mit ihren Schatten über das Grundstück und verdunkeln die Szene. Die Windrichtung hängt vom Kompass ab, den wir vorhin eingestellt haben.
+
+00:36:23.256 --> 00:36:37.810
+Bei Schnee schneit es leise. Genauso gibt es Hagel, Schneeregen, Nebel, Gewitter mit Blitzen, die neben dem Haus einschlagen, und bei klarem Wetter stehen Sonne und Mond in ihrer echten Richtung am Himmel.
+
+00:36:37.810 --> 00:36:44.281
+Wer es ruhiger mag, schaltet den Schalter „Wetter“ aus oder wählt in den Editor-Einstellungen einzelne Effekte ab.
+
+00:36:44.635 --> 00:36:55.368
+Der Schalter „Stromfluss“ blendet die Energie ein. Die Solarmodule funkeln mit ihrer Produktion, und Energieteilchen fliegen in Bögen zum Wechselrichter und weiter zu den Verbrauchern.
+
+00:36:55.368 --> 00:37:08.990
+Je mehr Strom fließt, desto schneller und dichter sind die Teilchen. Eine Glaskarte über dem Dach zeigt die Bilanz: Solar, Verbrauch, Akku und Netzbezug, und wie autark das Haus gerade ist.
+
+00:37:09.494 --> 00:37:25.438
+Fliegen wir ins Wohnzimmer. Der Fernseher läuft: Auf dem Bildschirm im Modell steht in der Farbe der App, was gerade läuft, hier Netflix. Dahinter leuchtet ein sanftes Ambilight an der Wand.
+
+00:37:25.438 --> 00:37:37.265
+Wechselt der Fernseher die App, wechselt die Farbe und der Titel. Das Ambilight lässt sich pro Fernseher in der Stärke einstellen oder ganz abschalten, wenn du hinter dem Fernseher eigene LED-Streifen hast.
+
+00:37:37.265 --> 00:37:53.221
+Laufen Lautsprecher oder Fernseher, schwebt über ihnen eine Karte mit Cover, Titel und Interpret. Antippen gibt dir Zurück, Wiedergabe oder Pause, Weiter und die Lautstärke. Schallringe in der Farbe der App breiten sich aus, lauter heißt weiter.
+
+00:37:53.221 --> 00:38:00.918
+Lautsprecher einer Multiroom-Gruppe verbindet ein leuchtender Faden. Mit dem Schalter „Karten“ blendest du alle schwebenden Karten gemeinsam aus oder ein.
+
+00:38:01.477 --> 00:38:19.688
+Zuletzt das Auto in der Garage. Über dem Stellplatz zeigt eine Glaskarte den Ladestand mit Farbring, die Reichweite, ob und mit wie viel Leistung geladen wird, den Stecker und die Innentemperatur. Dazu kommen Knöpfe für Schloss, Klima und Laden.
+
+00:38:19.688 --> 00:38:32.302
+Lädt das Auto, fliegen Energieteilchen von der Wallbox hinein. Ist das Auto weg, steht auf der Karte, wo es gerade ist. Die passenden Entitäten findet NextFloor selbst am Gerät des Autos.
+
+00:38:32.955 --> 00:38:41.810
+Der dritte Reiter heißt Erweiterungen. Hier lädst du eigene 3D-Modelle hoch, ohne etwas von Hand auf den Server kopieren zu müssen.
+
+00:38:41.810 --> 00:38:57.054
+Für einige Fahrzeuge kann NextFloor ein echtes 3D-Modell zeigen, wenn du eines besitzt, zum Beispiel für dein eigenes Auto. Jede Zeile ist ein Platz: Sie nennt das Fahrzeug und den Dateinamen, und daneben steht, ob schon ein Modell vorhanden ist.
+
+00:38:57.054 --> 00:39:16.565
+Wir wählen beim Tesla Model 3 „Modell hinzufügen“ und eine Datei im glb-Format aus. NextFloor bereitet das Modell direkt im Browser auf: Es dreht es richtig herum, macht es leichter, entfernt Texturen und markiert den Lack, damit er sich später umfärben lässt. Dann legt es die Datei auf deinem Home Assistant ab.
+
+00:39:16.565 --> 00:39:32.515
+Fertig: Bei diesem Platz steht jetzt „vorhanden“, und du kannst das Modell ersetzen oder entfernen. Nur Administratoren können Modelle hochladen. Modelle bis zwölf Megabyte werden angenommen. Ein Fahrzeug ohne Modell sieht aus wie bisher.
+
+00:39:32.515 --> 00:39:44.575
+Die Möbel-Packs brauchen keine Einrichtung: Sie sind alle schon da und stehen in der Möbelbibliothek des Editors. Wenn du sehen möchtest, wie jedes einzelne Modell aussieht, gibt es in der Online-Demo eine Modellschau.
+
+00:39:45.204 --> 00:39:54.309
+Die Modellschau zeigt alle Modelle in einem Raum, zehn pro Seite, in der Reihenfolge, in der sie stehen. Die Namen stehen in der Liste unten links.
+
+00:39:54.309 --> 00:40:06.261
+Über die Auswahl wechselst du die Gruppe, grundlegende Modelle oder eines der Packs. Mit „weiter“ und „zurück“ blätterst du, und das 3D-Modell lässt sich wie immer drehen und zoomen.
+
+00:40:06.872 --> 00:40:23.973
+Das Modell musst du nicht im Panel öffnen: NextFloor bringt eine Dashboard-Karte mit, die das Haus auf jedem Home-Assistant-Dashboard zeigt. Hier siehst du links den visuellen Editor der Karte, so wie ihn Home Assistant im Karten-Dialog zeigt, und rechts die Karte selbst.
+
+00:40:23.973 --> 00:40:40.383
+Du fügst die Karte in einem Dashboard über „Karte hinzufügen“ hinzu und suchst nach NextFloor. Eine Zeile Konfiguration reicht: Typ „custom:nextfloor-card“. Alles Weitere stellst du bequem im Editor ein, und die Karte rechts folgt sofort.
+
+00:40:40.383 --> 00:40:55.283
+Oben legst du fest, was die Karte zeigt. „Etage“ wählt das ganze Haus oder eine einzelne Etage, mit der die Karte startet. „Größe“ legt fest, ob sie eine feste Höhe hat oder den Bildschirm füllt. Wir wählen das ganze Haus.
+
+00:40:55.283 --> 00:41:13.372
+„Aussehen“ wechselt zwischen Neon, Blueprint und Tag, und die Akzentfarbe färbt Linien und Knöpfe um. „Wände“ stellt Hohe Wände oder Schnitt ein, die Qualität kennst du schon, und „Etagen darunter“ bestimmt, ob die Etagen unter der gewählten gedimmt, gestapelt oder ausgeblendet erscheinen.
+
+00:41:13.372 --> 00:41:28.437
+Im Abschnitt „Anzeige“ stellst du Symbole, Heatmap, Stromfluss und Karten ein. Stromfluss und Karten können dem Betrachter überlassen werden, mit einem Schalter in der Karte, oder immer an oder immer aus sein. Wir schalten die Symbole auf „Alle“.
+
+00:41:28.437 --> 00:41:52.372
+Darunter sitzen Kästchen für die Schalter in der Karte, den Stern mit dem Zentralmenü, eigene Namen an den Symbolen und die Option, mit versteckten Bedienelementen zu starten, damit nur das 3D-Bild bleibt. Weitere Optionen: Etagen als Miniaturen, Raumnamen, Energiewerte oben, Raumdetails beim Antippen, ein Vollbild-Knopf und das Auseinanderziehen der Etagen.
+
+00:41:52.372 --> 00:42:09.567
+Unter „Funktionen“ schaltest du Warnungen, den Sprung in den Raum einer neuen Warnung, Szenen-Knöpfe im Raum und das Wetter am Haus ein oder aus. Warnungen zeigen Rauch, Gas, CO, Wasser, Alarmanlage und offene Fenster bei Regen als Banner über der Karte.
+
+00:42:10.103 --> 00:42:24.554
+Ganz unten steht der Abschnitt „Wandtablet“. Damit wird die Karte zum Dauerbetrieb an der Wand: Nach einer Zeit ohne Berührung kehrt sie von selbst zur Startansicht zurück, damit niemand in einem Raum hängen bleibt.
+
+00:42:24.554 --> 00:42:43.376
+Die Nachtabdunkelung dimmt die Karte nachts, entweder nach der Sonne oder in einem Zeitraum, den du angibst. Dabei ruhen Farbeffekte, und die Anzeige wird dunkel, damit das Tablet im Schlafzimmer nicht blendet. Als Bildschirmschoner dreht sich nach der Rückkehr die Kamera langsam um das Haus. Ein Knopf kann außerdem zu einem anderen Dashboard führen.
+
+00:42:43.376 --> 00:42:51.325
+Für Tablets stellst du die Qualität auf „Tablet“. Das ist die leichteste Einstellung und ideal für Fire-Tablets und andere Wandtablets.
+
+00:42:51.882 --> 00:43:00.491
+Dein Plan ist jetzt viel Arbeit wert. Damit er nicht verloren geht, gibt es im Editor ganz unten den Abschnitt „Sicherung“. Wir klappen ihn auf.
+
+00:43:00.491 --> 00:43:14.186
+„Exportieren“ speichert den Plan als Datei, „Importieren“ liest ihn wieder ein, auch in einer anderen Installation. „Als Vorlage teilen“ erzeugt eine Datei ohne persönliche Angaben wie Geräte, die du mit anderen teilen kannst.
+
+00:43:14.186 --> 00:43:34.955
+„Alles sichern“ packt zusätzlich alle Hintergrund- und Bildschirmbilder und die installierten Packs in eine einzige Datei. Mit „Vollsicherung wiederherstellen“ spielst du sie in dieselbe oder eine andere Installation zurück. Der Plan, die Bilder und die Packs liegen in Home Assistant unter „.storage“, und nichts davon verlässt deine Installation.
+
+00:43:34.955 --> 00:43:44.967
+Vor größeren Änderungen lohnt sich eine Sicherung. Und falls doch etwas schiefgeht: „Rückgängig“ im Editor und die Tastenkombination Strg plus Z machen die letzten Schritte ungeschehen.
+
+00:43:45.625 --> 00:44:02.899
+Das war die komplette Einrichtung von NextFloor von Grund auf: Etagen, Räume, Türen und Fenster, Möbel, Geräte, Außenflächen, Treppe, Dach und Solarstrom, Kompass und Karte, und dazu die Bedienung in 3D, die Live-Funktionen, eigene Modelle, die Dashboard-Karte und die Sicherung.
+
+00:44:02.899 --> 00:44:14.240
+Nimm dir für dein eigenes Haus ruhig Zeit. Wichtig sind zuerst die Räume und die Wände, alles Weitere kannst du jederzeit ergänzen. Und denk daran: Rückgängig ist immer nur einen Klick entfernt.
+
+00:44:14.240 --> 00:44:33.380
+Wenn du Fragen hast, etwas nicht funktioniert oder dir eine Funktion fehlt, melde dich auf GitHub. Über „Problem melden“ und „Idee vorschlagen“ im Editor kommst du direkt dorthin. NextFloor ist kostenlos und Open Source. Viel Spaß mit deinem Zuhause in 3D!
+

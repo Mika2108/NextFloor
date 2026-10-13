@@ -1,0 +1,644 @@
+WEBVTT
+
+00:00:01.524 --> 00:00:15.333
+Welcome! In this video we set up NextFloor completely from scratch. We start exactly where you are after the installation, the first time you open the panel: nothing is drawn yet, the page is empty.
+
+00:00:15.333 --> 00:00:30.856
+NextFloor draws your home right inside Home Assistant and shows it as a living 3D model. Lights glow in their colours, blinds move, and you can control everything straight in the model. All it needs is your floor plan and a few minutes.
+
+00:00:30.856 --> 00:00:39.506
+Top left there are three tabs. The first is the 3D view: the model of your house, the way you will use it every day.
+
+00:00:39.506 --> 00:00:51.564
+The second tab is the editor. This is where you draw rooms, place doors, windows and furniture, and connect everything to your devices. Only administrators see the editor.
+
+00:00:51.564 --> 00:01:02.351
+The third tab is called Extensions. That is where you upload your own 3D models later, for example for your car. We will get to that in a chapter of its own.
+
+00:01:02.351 --> 00:01:09.418
+In the middle of the page a note says there is no floor plan yet. One click on “Open editor” gets us started.
+
+00:01:10.323 --> 00:01:25.363
+This is the editor. Top left is the toolbar: Select, Rectangle, Free shape, Wall, Doors and windows, Furniture, Outdoor, Floor opening, Roof and Energy. We get to know each tool in turn.
+
+00:01:25.363 --> 00:01:37.889
+The second bar holds Undo and Redo; “Show all” fits the plan into the window, “3D beside” shows the 3D view next to the plan, and the lock protects the floor plan against accidental moves.
+
+00:01:37.889 --> 00:01:49.826
+On the right is the side panel. It always shows whatever is selected, and at the very top the floors of your house. Since the plan is empty, there is not much to see yet.
+
+00:01:49.826 --> 00:01:56.521
+All tools are greyed out because we need a floor first. We click “Add floor”.
+
+00:01:56.521 --> 00:02:11.721
+NextFloor now lists the floors that exist in Home Assistant. If you pick one of them, the plan and Home Assistant stay connected: rooms can be assigned to their areas later. Alternatively “Empty floor” creates a floor with no connection.
+
+00:02:11.721 --> 00:02:15.186
+We take the ground floor from Home Assistant.
+
+00:02:15.186 --> 00:02:28.365
+The floor is there and the tools are active. On the right you see the settings of the floor. At the top is the name. You can change it any time, even if it matches the name in Home Assistant.
+
+00:02:28.365 --> 00:02:42.479
+The elevation sets where the floor stands in the house. The ground floor stands at zero, the upper floor later at about 2.8 metres. “Shift the floor” moves the whole floor by an amount, and “Turn 90°” rotates it.
+
+00:02:42.479 --> 00:02:51.934
+The ceiling height applies to all walls of the floor. The default is two point five metres. You can adjust it for single walls later.
+
+00:02:51.934 --> 00:03:07.946
+“Floor in Home Assistant” sets which Home Assistant floor this floor belongs to. And “Add rooms from HA areas” creates a room for every area. That is handy, but we will draw the rooms ourselves so you can see how it works.
+
+00:03:08.111 --> 00:03:16.326
+Now we draw the rooms. The fastest tool is the rectangle. We pick it in the toolbar.
+
+00:03:16.326 --> 00:03:26.426
+At the bottom left there is always a short hint for the active tool. For the rectangle it says: drag to draw a rectangle.
+
+00:03:26.426 --> 00:03:41.038
+We start with the living room. We press at the top left corner, drag to the bottom right corner and let go. While dragging, NextFloor shows the side lengths. The sizes snap to the grid, by default to five centimetres.
+
+00:03:41.038 --> 00:03:51.309
+The room is drawn and selected right away. The tool has jumped back to “Select”. On the right the properties of the room appear. First we give it a name.
+
+00:03:51.309 --> 00:04:02.567
+With the area you connect the room to Home Assistant. All devices assigned to this area in Home Assistant can then be shown in this room automatically. We choose the area Wohnzimmer.
+
+00:04:02.567 --> 00:04:12.397
+The material decides how the floor looks in 3D: wood, oak, tiles, carpet, stone or concrete. The living room gets oak parquet.
+
+00:04:12.397 --> 00:04:23.294
+Below are the position and size of the room in metres. You can type the numbers directly if you want it exact. We leave them as they are: six by four point six metres.
+
+00:04:23.904 --> 00:04:32.693
+Every corner of the selected room has a handle. Dragging a handle moves the corner. Let us try it: we drag the top right corner up a little.
+
+00:04:32.693 --> 00:04:41.906
+That was only a test, so we undo it with “Undo”. Almost everything in the editor can be undone, also with Ctrl plus Z.
+
+00:04:41.906 --> 00:04:53.598
+In the middle of every edge there is a plus. A click on it inserts an additional corner, with which you shape rooms with niches or slanted walls. We take that back as well.
+
+00:04:54.235 --> 00:05:05.485
+Now the kitchen goes to the right of the living room. We pick the rectangle again and drag. The corners snap to the existing walls, and the wall in between belongs to both rooms.
+
+00:05:05.485 --> 00:05:11.610
+Below the living room is the bedroom. It gets the area Schlafzimmer and a carpet floor.
+
+00:05:11.610 --> 00:05:16.513
+Next to it the bathroom, with tiles again.
+
+00:05:17.033 --> 00:05:24.560
+Not every room is a rectangle. The hallway gets an L shape. For that there is the “Free shape” tool.
+
+00:05:24.560 --> 00:05:34.136
+Here you place the corners of the room one by one. To close it, tap the first corner or press Enter. Escape cancels.
+
+00:05:34.745 --> 00:05:50.645
+The walls are created automatically from the room edges. Exterior walls are twenty-four centimetres thick by default, interior walls twelve. You set that under Settings. For single walls the room form has a section called “Wall heights”.
+
+00:05:50.645 --> 00:05:56.412
+First we adjust the view: “Show all” fits the whole plan into the window.
+
+00:05:56.412 --> 00:06:12.489
+There every wall has a height, a thickness and a pair of scissors with which you cut a wall into parts. A lower height turns the wall into a parapet or a counter. “No wall” leaves the edge open, for example between living room and dining area.
+
+00:06:13.045 --> 00:06:24.099
+Not every wall belongs to a room. A partition in the middle of the living room, a half wall towards the dining area or a parapet you draw with the “Wall” tool.
+
+00:06:24.099 --> 00:06:34.035
+The hint at the bottom: drag to draw a single wall. With the Shift key it stays straight, with Alt it does not snap. We drag a short wall.
+
+00:06:34.035 --> 00:06:52.299
+The wall is selected. In the form you set length, thickness and height. A lower height turns it into a half wall or parapet. Where it meets a room wall, the corner is joined cleanly. At the handles you move the ends, and at the line the whole wall.
+
+00:06:52.299 --> 00:06:57.141
+We do not need it for our house, so we delete it again with “Delete”.
+
+00:06:57.798 --> 00:07:13.439
+If you draw rooms by hand, tiny gaps sometimes remain between two walls, hardly visible but showing up as a slit in 3D. For that there is “Close gaps” in the floor form. NextFloor looks for such places and pulls the walls together.
+
+00:07:13.439 --> 00:07:24.949
+When the plan is done, you lock it with the “Floor plan” lock so that rooms, walls, doors, windows and outdoor areas are not moved by accident. Single pieces can also be locked with “Fix”.
+
+00:07:25.606 --> 00:07:38.493
+If you already have a floor plan as a picture, say from the building plans or as a photo, you can put it behind the plan as a template and trace it. You find that under “Template” in the side panel.
+
+00:07:38.493 --> 00:07:53.472
+After uploading, you move the picture with the mouse, scale it at the corner and turn it at the handle above it. With two points you straighten it, and with a known length, such as a wall, you set the scale. Then you draw the rooms right on top.
+
+00:07:54.037 --> 00:08:01.476
+Our rooms have no openings yet. For that there is the “Doors and windows” tool. We select it.
+
+00:08:01.476 --> 00:08:14.300
+The hint at the bottom says it already: tap a wall to add a door or window. You choose the kind afterwards on the right. We begin with the front door on the lower wall of the hallway.
+
+00:08:14.300 --> 00:08:32.501
+The opening sits in the wall and is selected. The tool has jumped back to “Select”. On the right you see all kinds: door, front door, double door, window, double window, terrace door, French doors, garage door and glass wall. For the entrance we take the front door.
+
+00:08:32.501 --> 00:08:45.916
+Width, position and height are set below in metres. “Centre from corner” is the distance of the door centre from the room corner. The front door should sit exactly in the middle of the wall, that is zero point eight metres.
+
+00:08:45.916 --> 00:08:56.767
+“Swap hinge side” changes the side the door is hinged on, and “Reverse opening direction” makes it open outwards instead of inwards. You see both immediately in the plan.
+
+00:08:57.337 --> 00:09:06.448
+Now the doors inside the house. Between the hallway and the kitchen we place a normal door. We pick the tool again and tap the shared wall.
+
+00:09:06.448 --> 00:09:18.490
+A normal door is placed by default. That fits here, so we leave it. The style is on “Automatic”: in an exterior wall it becomes a front door, inside a room door.
+
+00:09:18.490 --> 00:09:22.307
+We do the same from the hallway into the bathroom…
+
+00:09:22.307 --> 00:09:25.525
+…and from the living room into the bedroom.
+
+00:09:26.002 --> 00:09:32.358
+Windows work the same way. We place a double window in the upper wall of the living room.
+
+00:09:32.358 --> 00:09:44.163
+Windows also have a sill height, how high the lower edge of the window sits above the floor. The double window has two leaves, and “Swap main leaf” decides which of them is the main leaf.
+
+00:09:44.163 --> 00:10:04.672
+Now it gets interesting: further down you can assign devices to the window. The blind is on “Automatic”. NextFloor found a blind in the area Wohnzimmer and uses it. The same for the window contact, the terrace door sensor. With that the blind moves along in the model, and the window shows whether it is open.
+
+00:10:04.672 --> 00:10:19.292
+To assign a different device, click into the field and type part of its name. The list shows matching devices with their area and entity ID. A click picks the device. We type “Roll”.
+
+00:10:19.292 --> 00:10:27.012
+Important: NextFloor does not switch anything here. The assignment only says which device belongs to this window.
+
+00:10:27.012 --> 00:10:35.439
+The remaining windows we place without many words: one in the kitchen, one in the bedroom and a small one in the bathroom.
+
+00:10:35.439 --> 00:10:42.934
+To remove a door or window, select it and click “Delete” at the bottom, or press the Delete key.
+
+00:10:43.301 --> 00:10:50.693
+A room without furniture looks empty, so now we furnish it. For that there is the “Furniture” tool.
+
+00:10:50.693 --> 00:10:58.338
+The hint at the bottom says: tap a room, then pick an item on the right. We tap the living room.
+
+00:10:58.338 --> 00:11:22.228
+On the right is now the furniture library. New items land in the middle of the chosen room, as it says above. The library is divided into sections: lights, living, dining, kitchen, sleeping, bath and laundry, work and other, parking. A click on a heading folds the section open or closed.
+
+00:11:22.228 --> 00:11:36.973
+Below the built-in furniture follow the packs that come with NextFloor. These are large collections with hundreds more pieces, for example a living room pack, a kitchen or a home cinema. They are used in just the same way.
+
+00:11:36.973 --> 00:11:49.782
+If you are looking for something specific, just type it into the search field. The search finds German and English names, the name of the pack, and even several words in any order. We look for a corner sofa.
+
+00:11:50.050 --> 00:11:56.869
+We start with a simple sofa from the living section. One click puts it in the middle of the room.
+
+00:11:56.869 --> 00:12:08.499
+The sofa is selected. At its four corners there are handles for changing the size, and at the bottom a handle for turning. We drag the sofa with the mouse to the upper wall under the window.
+
+00:12:08.499 --> 00:12:24.274
+In the form on the right you see all values of the piece. The name is optional and helps you search later. Below are the position, the size in metres and the rotation in degrees. You can type any value if you want it exact.
+
+00:12:24.274 --> 00:12:40.786
+With the buttons “90° left” and “90° right” you turn the piece in quarter steps, “Mirror” swaps left and right, for example for a corner sofa. “Duplicate” makes a copy, and “Delete” removes the piece. “Fix” locks it against accidental moves.
+
+00:12:41.297 --> 00:12:50.679
+We furnish the rest of the living room quickly now and enter the positions as numbers. First the rug, so that it lies under the other furniture.
+
+00:12:50.679 --> 00:12:54.472
+Then the coffee table on the rug.
+
+00:12:54.472 --> 00:13:03.672
+The TV stands on a TV board against the opposite wall. By default the board faces down, so we turn it by one hundred and eighty degrees to face the sofa.
+
+00:13:03.672 --> 00:13:08.316
+An armchair to the left of the coffee table, turned towards the middle…
+
+00:13:08.316 --> 00:13:12.237
+…a shelf in the corner and a plant by the window.
+
+00:13:12.861 --> 00:13:23.441
+Now the model comes alive: we bring the devices from Home Assistant into the plan. For that we select the room with “Select”, for example the living room.
+
+00:13:23.441 --> 00:13:32.264
+At the very bottom of the room form is the “Devices” section. It shows the devices that belong to this area in Home Assistant, twelve here.
+
+00:13:32.264 --> 00:13:52.201
+With the tabs above you change the source: “This area”, “Other areas” for devices that stand in another room, and “No area” for devices that are not assigned to an area in Home Assistant yet, for example the garden lights. In the search field you find a device by its name.
+
+00:13:52.201 --> 00:14:05.762
+Every row has four buttons: the eye hides the device in the room panel of the 3D view, “Aa” gives it a name of its own, the star adds it to the room panel without placing it, and “Place” puts it into the plan.
+
+00:14:06.009 --> 00:14:11.309
+We place the ceiling light. One click on “Place” next to “Deckenlicht”.
+
+00:14:11.309 --> 00:14:19.315
+NextFloor has turned it into a ceiling lamp that is connected to the light. We select it in the plan by tapping it.
+
+00:14:19.315 --> 00:14:36.225
+In the form, “Light or switch” holds the connected device, the living room ceiling light. Below it you can name another device for colour and brightness, in case a relay only switches on and off while the bulb itself knows colour and brightness.
+
+00:14:36.225 --> 00:14:55.283
+With “Glow in 3D” you set how strongly the light glows in the model. One hundred percent is as bright as the device reports. If you have LED strips that look too bright, set less here. “Ask before switching” prevents a tap in 3D from switching the light by accident.
+
+00:14:55.283 --> 00:15:09.225
+The marker in 3D decides whether a small symbol with the device state also floats above the lamp: automatic, always, without watts, or not at all. You can also give the symbol an icon of your own.
+
+00:15:09.225 --> 00:15:16.094
+That was the first light. In the same way we place the floor lamp and the LED strip from the list.
+
+00:15:16.462 --> 00:15:24.429
+It is not only lights that can be connected, furniture can be too. We select the TV board in the living room.
+
+00:15:24.429 --> 00:15:47.099
+Under the position there is “TV, media player or smart plug”. NextFloor found a TV in the area Wohnzimmer and connected it automatically, you can tell by “Automatic”. While the TV plays, the screen in the model glows in the colour of the app, for example Netflix red or YouTube, and shows the title or cover.
+
+00:15:47.099 --> 00:16:04.171
+“Glow behind the TV” is the ambilight on the wall behind the television. One hundred percent is full strength. If it does not suit your living room, for example because you have LED strips of your own behind the TV, lower the value or set it to zero, and the glow is off completely.
+
+00:16:04.171 --> 00:16:17.471
+And the power sensor, also found automatically, later shows how many watts the TV draws right now. Fridges, washing machines, printers and many other pieces from the packs work the same way.
+
+00:16:18.251 --> 00:16:30.751
+A house does not stand in an empty space. With the “Outdoor” tool you draw the areas around the house: lawn, terrace, paths, driveway, pool, flower beds, hedges and fences.
+
+00:16:30.751 --> 00:16:37.914
+The hint at the bottom: drag to draw an outdoor area. We start with the lawn to the left of the house.
+
+00:16:37.914 --> 00:16:50.414
+The area is selected and its form is on the right. At the top you choose the kind. The default kind is lawn, which fits. Below are position and size.
+
+00:16:50.414 --> 00:17:14.831
+“Height offset” lowers an area below the ground or raises it, for example a driveway leading to a lower garage, or a raised terrace. “Slope” tilts an area: you enter the height difference and the direction it falls towards. “Show the outline” turns the glowing edge on or off, and “Cut out of the areas beneath” makes the area a hole in the areas below it, handy for a pond in the middle of a lawn.
+
+00:17:14.831 --> 00:17:21.005
+Above the house comes the terrace. We drag it out and change the kind.
+
+00:17:21.005 --> 00:17:28.303
+In front of the front door a path leads along. A path is narrow, so we draw it narrow.
+
+00:17:28.303 --> 00:17:32.338
+To the right of the house we lay out a pool.
+
+00:17:32.338 --> 00:17:44.157
+Also a flower bed in front of the lawn and a hedge that borders the garden. For hedges and fences you can set the height in the form, for example two and a half metres for a thuja hedge.
+
+00:17:44.157 --> 00:17:58.190
+In 3D outdoor areas are shown with grass, wood, water and stone. How to add outdoor lights, for example path lights and garden spots, from the furniture library you will see later in the chapter about lights.
+
+00:17:58.835 --> 00:18:08.578
+A house usually has more than one floor. We add the upper floor: “Add floor” and this time the Obergeschoss from Home Assistant.
+
+00:18:08.578 --> 00:18:22.945
+NextFloor puts the new floor at the right height automatically, here two point seven five metres above the ground floor. In the plan you see the outlines of the floor below, dashed. You align the new walls with them.
+
+00:18:22.945 --> 00:18:30.896
+With the floor tabs at the top you switch between the floors. “Move up” and “Move down” change the order.
+
+00:18:30.896 --> 00:18:42.791
+Now we draw the rooms of the upper floor with the rectangle, as on the ground floor: a kids' room at the top left, a study next to it, a bathroom and a guest room below.
+
+00:18:42.791 --> 00:18:55.489
+The bathroom upstairs and the guest room have no area of their own in Home Assistant. That is no problem: rooms without an area work the same way, you can only assign devices to them through “Other areas” or “No area”.
+
+00:18:55.657 --> 00:19:04.785
+To get upstairs we need a staircase. We switch to the ground floor, choose the hallway and open the furniture library.
+
+00:19:04.785 --> 00:19:18.265
+In the pack “Stairs and railings” we find straight, L-shaped, U-shaped and spiral staircases, space-saving stairs, outdoor steps and railings in metal, glass and wood. We take the straight staircase.
+
+00:19:18.265 --> 00:19:30.104
+The steps rise from the front edge towards the back. If the stairs reach the floor above, they cut the stairwell into the floor there automatically. We take a look at the upper floor.
+
+00:19:30.104 --> 00:19:41.583
+You also need a hole in the floor without stairs, for example for a gallery or a shaft. For that there is the “Floor opening” tool: you simply drag out the opening where the floor should be missing.
+
+00:19:41.921 --> 00:19:52.338
+If you want to see how the house looks in 3D while you draw, switch on “3D beside”. The editor then shows the plan on the left and the 3D model on the right.
+
+00:19:52.338 --> 00:20:05.851
+The model turns with the mouse: dragging rotates, the wheel zooms, and with the right mouse button or two fingers you move the view. Whatever you change in the plan you see in the model right away.
+
+00:20:05.851 --> 00:20:18.406
+With the buttons “View as this floor's start” and “View as this room's start” you remember the current viewing direction. When you tap the floor or the room in 3D later, the camera flies exactly there.
+
+00:20:18.999 --> 00:20:41.239
+In NextFloor lights are pieces of furniture of their own with a light behind them. In the furniture library there is a section of its own with twelve types: ceiling light, downlight, surface spot, LED panel, pendant light, floor lamp, floor uplight, table lamp, wall light, LED strip, path light and garden spot.
+
+00:20:41.239 --> 00:21:00.446
+Every type has its own shape and glows differently. The ceiling light and the spot sit on the ceiling, the floor lamp stands on the floor, the table lamp on a piece of furniture, the wall light on the wall. Pendant lights hang on a cord. You set the height in the form; for the pendant light it is the drop below the ceiling.
+
+00:21:01.019 --> 00:21:10.230
+Often several downlights hang on one dimmer. You do not have to place them one by one. We select the kitchen and click “Place spots”.
+
+00:21:10.230 --> 00:21:25.543
+You choose the kind of lamp, the number of columns and rows, and the light that all of them follow. NextFloor spreads the lamps evenly across the room. We take downlights, three columns, two rows and the kitchen light.
+
+00:21:25.543 --> 00:21:34.935
+Six spots, one light: when you switch the kitchen light, all six glow. With “Undo” you take the action back in one go if the grid does not fit.
+
+00:21:35.459 --> 00:21:49.533
+Outdoor lights do not belong to a room. We fetch them through the “Devices” section of the room with the “No area” tab, because garden lights usually have no area in Home Assistant. For that we select any room, for example the living room.
+
+00:21:49.533 --> 00:21:58.514
+Here are the path lights and the pool spot. We place the path lights and then drag them to the path in front of the front door.
+
+00:21:58.514 --> 00:22:05.559
+Outdoor lights light the outdoor areas and the facade. That looks especially good in 3D when it gets dark.
+
+00:22:06.208 --> 00:22:13.191
+A house needs a roof, and for solar modules especially. The “Roof” tool builds it from your rooms. We select it.
+
+00:22:13.191 --> 00:22:29.268
+The editor switches on the 3D view beside the plan by itself, because a roof is best judged in 3D. In the plan, rooms and furniture are locked so that you do not move anything: you only edit roof sections.
+
+00:22:29.268 --> 00:22:43.398
+We click “Create roof sections from the rooms”. NextFloor proposes a roof for every connected part of the building, here a large gable roof over the house and a small one over the extension.
+
+00:22:43.398 --> 00:23:00.572
+Every section has a shape, ridge direction, eave height and pitch. A click on an entry in the list selects it, dragging moves it, and at the corners you change the size. “Back to one roof” returns to the simple roof shape from the settings, and “Create again from the rooms” starts over.
+
+00:23:00.572 --> 00:23:08.265
+You put roof windows on a roof section with “Roof window”. Like normal windows they get a blind and a contact.
+
+00:23:08.623 --> 00:23:22.647
+Now for the energy. The “Energy” tool shows a setup checklist at the top: put a solar field on the roof, add the meter, add an inverter. Home battery and grid connection are optional.
+
+00:23:22.647 --> 00:23:38.982
+We begin with the solar field. “Solar field” puts a field on the best-fitting roof section, the largest one that looks south. For this NextFloor uses the compass from the settings. If the compass is wrong, the field is placed on the wrong side. We will get to that in a moment.
+
+00:23:38.982 --> 00:24:01.001
+The field lies in the slope of the roof. You drag it in the plan to another place, even onto another roof section. On the right you set rows and columns, portrait or landscape and the number of modules. For fields on flat roofs or in the garden there is “Free-standing” with a tilt, and “On a wall” for facade modules.
+
+00:24:01.001 --> 00:24:11.822
+Now the electricity meter and the inverter. Both are devices and are listed under “Devices” on the energy page. We add the meter and the inverter.
+
+00:24:11.822 --> 00:24:24.718
+The devices stand on the floor chosen at the top and can be moved in the plan. With a power sensor they show their watts, the meter takes the grid sensor, and an inverter gets its strings.
+
+00:24:24.718 --> 00:24:41.081
+At the bottom is the energy balance with fields for grid, solar production, battery, consumption and tariff. All are on “Automatic”. “Take over from the energy dashboard” reads the sensors you have already set up for the energy dashboard in Home Assistant.
+
+00:24:41.081 --> 00:24:51.147
+In the 3D view, energy particles later fly from the solar modules to the inverter, the house, the battery and the grid, faster and denser the more power flows.
+
+00:24:51.622 --> 00:24:57.522
+Further down the side panel are the settings for the whole house. We unfold them.
+
+00:24:57.522 --> 00:25:12.271
+First the wall thicknesses. Exterior walls are twenty-four centimetres thick by default, interior walls twelve. The grid is the step the drawing snaps to, five centimetres. With the Alt key you draw without snapping for a moment.
+
+00:25:12.795 --> 00:25:36.094
+Now the compass, an important point. The dial shows where north lies in the plan. The plan has no north of its own: by default north points up in the plan. Three things depend on it: the sunlight falling through the windows, the wind direction in the weather, and the compass directions of the roof sections. And with that, where a new solar field goes.
+
+00:25:36.094 --> 00:25:52.343
+If you drew the plan with north not at the top, or if north and south do not match reality, you do not have to redraw anything or place the solar fields again. You simply turn the compass. “Swap north and south” turns it by one hundred and eighty degrees. We try it.
+
+00:25:52.343 --> 00:26:09.942
+The arrow now points down. The drawing, roof sections and solar fields are unchanged. Only the compass directions have changed: what was south a moment ago is now north. With the ninety degree buttons you turn in smaller steps, and in the field above you enter any angle you like.
+
+00:26:09.942 --> 00:26:14.508
+We turn the compass back for our house, because here it is right.
+
+00:26:14.822 --> 00:26:26.188
+Below that you can put a real map behind the plan, to place the house exactly on its plot. The map is off by default and then loads nothing from the internet. We switch it on.
+
+00:26:26.188 --> 00:26:42.398
+The map starts at the location of Home Assistant, in the plan and in the 3D model. Your browser loads the map tiles straight from the map server, OpenStreetMap by default. The credit is shown at the bottom right. The map is dimmed so that the plan stays in the foreground.
+
+00:26:42.398 --> 00:27:02.051
+With “Visibility” you set how much the map shows through, and the detail level decides the sharpness. With the arrow buttons you move the map under the plan until the house sits on its plot. The step below sets how far one click moves it. With the compass you turn the map if the house is at an angle.
+
+00:27:02.051 --> 00:27:10.569
+You can also enter a tile address of your own if you may use another map source. For our example we switch the map off again.
+
+00:27:11.470 --> 00:27:20.876
+Further down you pick the roof shape for the whole house: no roof, flat roof, gable roof or sections of your own, with pitch and overhang.
+
+00:27:20.876 --> 00:27:39.778
+The weather entity decides which weather entity drives the weather at the house, and below it you switch the effects on or off one by one: rain, snow, fog, clouds, lightning, sun and moon. The warning “window open while it rains” and the sunlight patches through the windows are also set here.
+
+00:27:40.286 --> 00:27:51.758
+In the central menu of the 3D view your favourites stand below the group switches. Which ones they are you set in the editor settings under “Favourites”. We unfold the section.
+
+00:27:51.758 --> 00:28:02.830
+Favourites can be scenes, scripts, automations, switches and buttons, for example “Gute Nacht”. You search for them in the field “Add a favourite” and click a hit.
+
+00:28:02.830 --> 00:28:22.309
+With “Own button” you create a button that opens a dashboard path, shows the details of an entity, calls a service or opens a browser_mod popup with your own card. You give it a name, a symbol and the target, for example a path to the blinds dashboard.
+
+00:28:22.309 --> 00:28:30.372
+“Station or playlist” in the Sound section sets radio stations and playlists that are offered for starting in the quick menu of a speaker.
+
+00:28:31.062 --> 00:28:48.952
+Let us switch to the 3D view. Warnings now show at the top. NextFloor watches smoke, gas, CO, water, alarm panel and windows that are open in the rain. Here the kitchen reports smoke, and several windows are open while it rains.
+
+00:28:48.952 --> 00:29:00.456
+The room concerned pulses red. A tap on the warning jumps into the room. That way you see at once where something is going on, even in a big house.
+
+00:29:00.456 --> 00:29:13.656
+In the room panel scenes and scripts of the area also stand as buttons, for example “Kino” or “Lesen” in the living room. One click starts the scene, and the house changes at once.
+
+00:29:14.112 --> 00:29:20.915
+The plan is done. Now we switch to the “3D” tab and look at what has become of it.
+
+00:29:20.915 --> 00:29:37.818
+This is your house as a living model: the roof with the solar modules, the terrace, the pool and the path. In the rooms the lamps glow, and in the living room the TV is playing a series right now. Everything you set up in Home Assistant you see here, live.
+
+00:29:38.000 --> 00:29:46.529
+You move around with the mouse. Dragging with the left button turns the house. We turn it a little.
+
+00:29:46.529 --> 00:29:57.728
+The mouse wheel zooms in and out, and with the right mouse button, or with two fingers on a touch screen, you move the view. On a tablet you zoom with two fingers.
+
+00:29:57.728 --> 00:30:10.857
+At the top the floors and rooms are shown as buttons. “All floors” shows the whole house. A click on a floor makes the camera fly there and hides the floors above it. We choose the ground floor.
+
+00:30:10.857 --> 00:30:21.693
+A click on a room flies in. We take the living room. On the right the room panel opens with the devices of this room. More on that in a moment.
+
+00:30:21.693 --> 00:30:33.549
+On the left edge you see small pictures of the floors. A click on them switches the floor, even without the bar at the top. “Back” at the bottom takes you one level up, and the Escape key does the same.
+
+00:30:33.921 --> 00:30:53.018
+At the top right you set the look. The quality is “Auto”: NextFloor decides by itself what your device can handle. For wall tablets there is “Tablet” with fewer effects, and for powerful computers “High” with light cones and soft shadows. Far right “FPS” shows the frame rate.
+
+00:30:53.018 --> 00:31:06.485
+Next to it the themes: “Neon” is the glowing look, “Blueprint” looks like a construction plan, and “Day” is bright and suits light rooms. The colour dot behind it changes the accent colour. We look at all three.
+
+00:31:06.485 --> 00:31:19.273
+The three buttons next to it decide which symbols float above the devices. “None” hides them, “Important” shows only the important ones, for example open windows, and “All” shows all devices with their state.
+
+00:31:19.926 --> 00:31:30.868
+At the bottom are the most important switches. “Tall walls” and “Cut” decide whether you see the walls complete or cut off at chest height so that you can see into the rooms.
+
+00:31:30.868 --> 00:31:41.930
+“Apart” pulls the floors apart for an overview, “Stacked” puts them on top of each other again, and “Roof stays” keeps the roof even when you zoom into a floor.
+
+00:31:41.930 --> 00:31:56.060
+The heat map colours the rooms by measured values: “Temp.”, “Humidity” and “CO₂”. “Values” writes the numbers into the rooms. A legend shows the colour scale. We look at the temperature.
+
+00:31:56.060 --> 00:32:05.994
+“Room names” shows the names of the rooms, and “Weather” switches the weather effects at the house on or off. We come back to that with the live features.
+
+00:32:06.587 --> 00:32:12.077
+Now we control the house. To do that we fly into the living room.
+
+00:32:12.077 --> 00:32:31.463
+On the right is the room panel. It shows all devices of the room sorted by kind: lights, blinds, media and sensors. Important for this video: here in the demo we work with invented devices, so everything may be switched. In your real Home Assistant a click switches the real device.
+
+00:32:31.463 --> 00:32:39.617
+For the lights a click on the name switches the light on or off. We switch the floor lamp off.
+
+00:32:39.617 --> 00:32:51.078
+Below that you set the brightness and the colour temperature with sliders, and the colour dots quickly set a colour, from warm orange to blue, pink and green. We switch the lamp on again and colour it.
+
+00:32:51.078 --> 00:33:01.632
+The lamp now glows blue in the model, and the light falls on the floor and the furniture. “All off” switches off all lights of the room at once.
+
+00:33:01.632 --> 00:33:17.942
+Blinds have the buttons Open, Stop and Close and a position slider. Media have Previous, Play or Pause, Next and the volume. Below are the sensors of the room, here the power draw of the TV and the terrace door contact.
+
+00:33:17.942 --> 00:33:29.510
+With “More devices of the area” you show the remaining devices that are not placed in the plan. Which devices appear in the room panel you control in the editor with the eye and the star in the device list.
+
+00:33:29.699 --> 00:33:39.399
+You can also control the devices straight in the 3D model. A tap on a lamp switches it. We tap the ceiling lamp.
+
+00:33:39.399 --> 00:33:52.507
+A long press opens the quick menu: brightness, colour and the details of the device, without needing the room panel. For blinds a tap is enough to open their quick menu with open, close and positions.
+
+00:33:53.407 --> 00:34:07.418
+The star at the bottom left is the central menu: all lights and all blinds of the floor or the whole house at once, plus your favourites. Favourites are scenes, scripts, automations and switches that you set in the editor settings.
+
+00:34:07.784 --> 00:34:20.489
+The magnifier at the bottom left opens the “Where is …?” search. You type the name of a device or room, and a hit makes the camera fly there while the device flashes. Handy in big houses.
+
+00:34:21.000 --> 00:34:27.955
+The house also has a garage. We draw it with the rectangle to the right of the kitchen.
+
+00:34:27.955 --> 00:34:40.344
+We place the door with “Doors and windows” on the right exterior wall and choose “Garage door” as the kind. A garage door can be connected to a drive. In 3D it then moves up and down and shows whether it is open.
+
+00:34:40.700 --> 00:34:51.658
+Now the parking spot. In the furniture library there is the section “Parking” with the parking spot. We select the garage and put the parking spot into it.
+
+00:34:51.658 --> 00:35:05.818
+The parking spot shows a vehicle in 3D while your car is there. Under “Vehicle” you choose the model, for example a van from the “Vehicles” pack, and with “Size” you adapt it. Without the vehicle pack the list stays empty.
+
+00:35:05.818 --> 00:35:20.943
+The sensor “car present” says when the vehicle stands in the spot, for example a tracker or a motion sensor. If the car does not appear, this sensor is usually the reason. Without a sensor the vehicle always stands there.
+
+00:35:20.943 --> 00:35:41.237
+At the bottom you choose any entity of your car. NextFloor finds everything else by itself through the device of the car: charge level, range, plug, inside temperature and the buttons for lock, climate and charging. From that a card over the parking spot is made in 3D, which we look at in the chapter about the live features.
+
+00:35:41.712 --> 00:35:59.953
+Now come the live features. They bring into the 3D view what is happening in the house right now: the weather, the power flow, TVs and music that are playing, and the car. They are built in, free, and need no setup beyond the devices you already have.
+
+00:36:00.309 --> 00:36:12.525
+With the “Weather” switch at the bottom the 3D view shows the weather over your plot. For that NextFloor reads a weather entity from Home Assistant. Right now the sun is shining. We make it rain.
+
+00:36:12.525 --> 00:36:23.256
+The rain falls at an angle with the real wind, the clouds drift over the plot with their shadows and darken the scene. The wind direction depends on the compass we set earlier.
+
+00:36:23.256 --> 00:36:37.810
+With snow it snows quietly. There is hail, sleet, fog, thunderstorms with lightning that strikes beside the house, and in clear weather the sun and moon stand in the sky in their real direction.
+
+00:36:37.810 --> 00:36:44.281
+If you prefer it calmer, switch the “Weather” switch off or pick single effects in the editor settings.
+
+00:36:44.635 --> 00:36:55.368
+The “Power flow” switch shows the energy. The solar modules sparkle with their production, and energy particles fly in arcs to the inverter and on to the consumers.
+
+00:36:55.368 --> 00:37:08.990
+The more power flows, the faster and denser the particles are. A glass card over the roof shows the balance: solar, consumption, battery and grid draw, and how self-sufficient the house is right now.
+
+00:37:09.494 --> 00:37:25.438
+Let us fly into the living room. The TV is on: on the screen in the model, in the colour of the app, is what is playing right now, here Netflix. Behind it a soft ambilight glows on the wall.
+
+00:37:25.438 --> 00:37:37.265
+When the TV changes the app, the colour and title change. The ambilight can be set in strength per TV or switched off completely if you have LED strips of your own behind the TV.
+
+00:37:37.265 --> 00:37:53.221
+When speakers or TVs play, a card floats over them with cover, title and artist. Tapping gives you previous, play or pause, next and the volume. Sound rings in the colour of the app spread out, louder reaches further.
+
+00:37:53.221 --> 00:38:00.918
+Speakers of a multiroom group are joined by a glowing thread. With the “Cards” switch you hide or show all floating cards together.
+
+00:38:01.477 --> 00:38:19.688
+Last the car in the garage. Over the parking spot a glass card shows the charge with a colour ring, the range, whether and with how much power it is charging, the plug and the inside temperature. There are also buttons for lock, climate and charging.
+
+00:38:19.688 --> 00:38:32.302
+While the car charges, energy particles fly into it from the wallbox. When the car is away, the card says where it is. NextFloor finds the matching entities on the device of the car by itself.
+
+00:38:32.955 --> 00:38:41.810
+The third tab is called Extensions. Here you upload 3D models of your own, without having to copy anything to the server by hand.
+
+00:38:41.810 --> 00:38:57.054
+For some vehicles NextFloor can show a real 3D model if you own one, for example of your own car. Every row is a slot: it names the vehicle and the file name, and next to it says whether a model is present already.
+
+00:38:57.054 --> 00:39:16.565
+For the Tesla Model 3 we choose “Add a model” and a file in glb format. NextFloor prepares the model right in the browser: it turns it the right way round, makes it lighter, removes textures and marks the paint so that it can be recoloured later. Then it stores the file on your Home Assistant.
+
+00:39:16.565 --> 00:39:32.515
+Done: this slot now says “in place”, and you can replace or remove the model. Only administrators can upload models. Models up to twelve megabytes are accepted. A vehicle without a model looks as it did before.
+
+00:39:32.515 --> 00:39:44.575
+The furniture packs need no setup: they are all there already and are listed in the furniture library of the editor. If you want to see what every single model looks like, the online demo has a model showcase.
+
+00:39:45.204 --> 00:39:54.309
+The model showcase shows all models in one room, ten per page, in the order in which they stand. The names are listed at the bottom left.
+
+00:39:54.309 --> 00:40:06.261
+With the selection you change the group, basic models or one of the packs. With “next” and “previous” you page through, and the 3D model can be turned and zoomed as always.
+
+00:40:06.872 --> 00:40:23.973
+You do not have to open the model in the panel: NextFloor brings a dashboard card that shows the house on any Home Assistant dashboard. On the left you see the visual editor of the card, just as Home Assistant shows it in the card dialog, and on the right the card itself.
+
+00:40:23.973 --> 00:40:40.383
+You add the card to a dashboard with “Add card” and search for NextFloor. One line of configuration is enough: type “custom:nextfloor-card”. Everything else you set conveniently in the editor, and the card on the right follows immediately.
+
+00:40:40.383 --> 00:40:55.283
+At the top you decide what the card shows. “Floor” picks the whole house or a single floor that the card starts with. “Size” decides whether it has a fixed height or fills the screen. We choose the whole house.
+
+00:40:55.283 --> 00:41:13.372
+“Look” switches between Neon, Blueprint and Day, and the accent colour recolours lines and buttons. “Walls” sets Tall walls or Cut, you know the quality already, and “Floors below” decides whether the floors below the chosen one appear dimmed, stacked or hidden.
+
+00:41:13.372 --> 00:41:28.437
+In the “Show” section you set markers, heat map, power flow and cards. Power flow and cards can be left to the viewer, with a switch in the card, or be always on or always off. We set the markers to “All”.
+
+00:41:28.437 --> 00:41:52.372
+Below are checkboxes for the switches in the card, the star with the central menu, own names at the markers, and the option to start with the controls hidden so that only the 3D picture remains. More options: floors as miniatures, room names, energy values at the top, room details on tap, a full-screen button and the pulling apart of the floors.
+
+00:41:52.372 --> 00:42:09.567
+Under “Features” you switch warnings, the jump into the room of a new warning, scene buttons in the room and the weather at the house on or off. Warnings show smoke, gas, CO, water, alarm panel and open windows in the rain as a banner over the card.
+
+00:42:10.103 --> 00:42:24.554
+At the very bottom is the section “Wall tablet”. It turns the card into a permanent display on the wall: after a time without a touch it returns to the start view by itself, so that nobody stays stuck in a room.
+
+00:42:24.554 --> 00:42:43.376
+Night dimming darkens the card at night, either by the sun or in a time range you give. Colour effects rest, and the display goes dark so that the tablet in the bedroom does not dazzle. As a screensaver the camera turns slowly around the house after the return. A button can also lead to another dashboard.
+
+00:42:43.376 --> 00:42:51.325
+For tablets you set the quality to “Tablet”. That is the lightest setting and ideal for Fire tablets and other wall tablets.
+
+00:42:51.882 --> 00:43:00.491
+Your plan is worth a lot of work now. So that it is not lost, the editor has a “Backup” section at the very bottom. We unfold it.
+
+00:43:00.491 --> 00:43:14.186
+“Export” saves the plan as a file, “Import” reads it in again, also in another installation. “Share as template” makes a file without personal details such as devices, which you can share with others.
+
+00:43:14.186 --> 00:43:34.955
+“Back up everything” also packs all background and screen pictures and the installed packs into a single file. With “Restore a full backup” you play it back into the same or another installation. The plan, the pictures and the packs live in Home Assistant under “.storage”, and none of it leaves your installation.
+
+00:43:34.955 --> 00:43:44.967
+Before bigger changes a backup is worth it. And if something does go wrong: “Undo” in the editor and the key combination Ctrl plus Z take back the last steps.
+
+00:43:45.625 --> 00:44:02.899
+That was the complete setup of NextFloor from scratch: floors, rooms, doors and windows, furniture, devices, outdoor areas, stairs, roof and solar power, compass and map, plus operating it in 3D, the live features, own models, the dashboard card and the backup.
+
+00:44:02.899 --> 00:44:14.240
+Take your time with your own house. What matters first are the rooms and walls, everything else you can add at any time. And remember: undo is always only a click away.
+
+00:44:14.240 --> 00:44:33.380
+If you have questions, something does not work or you miss a feature, get in touch on GitHub. “Report a problem” and “Propose an idea” in the editor take you straight there. NextFloor is free and open source. Have fun with your home in 3D!
+

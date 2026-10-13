@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NextFloor Setup Video</title>
+    <meta name="description" content="Setting up NextFloor from the empty page: floors, rooms, furniture, devices, roof, solar power, the 3D view and more." />
+    <style>
+      :root { --bg: #0b0f18; --panel: #141a26; --line: #243049; --text: #e6ebf5; --soft: #93a0b8; --accent: #37e0ff; }
+      @media (prefers-color-scheme: light) { :root { --bg: #f3f6fb; --panel: #fff; --line: #d3dbe8; --text: #131a28; --soft: #5a6880; --accent: #0a8bb0; } }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
+      header, main { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+      header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; padding-top: 18px; }
+      h1 { font-size: 22px; margin: 0; }
+      header a { color: var(--accent); text-decoration: none; }
+      main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; padding-top: 14px; padding-bottom: 40px; }
+      video { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; }
+      .note { color: var(--soft); font-size: 14px; margin: 8px 2px 0; }
+      nav { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; max-height: 70vh; overflow: auto; }
+      nav h2 { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--soft); margin: 6px 8px; }
+      nav button { display: flex; gap: 10px; width: 100%; text-align: left; padding: 7px 8px; border: 0; border-radius: 8px; background: none; color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+      nav button:hover, nav button.on { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+      nav time { color: var(--soft); font-variant-numeric: tabular-nums; min-width: 3.4em; }
+      @media (max-width: 860px) { main { grid-template-columns: 1fr; } nav { max-height: 320px; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>NextFloor – setting it up from scratch</h1>
+      <a href="../">Online demo</a>
+      <a href="https://github.com/therealMRBK/NextFloor">GitHub</a>
+      <a href="https://github.com/therealMRBK/NextFloor/blob/main/docs/manual.md">Guide</a>
+    </header>
+    <main>
+      <section>
+        <video id="v" controls preload="metadata" playsinline>
+          <source src="nextfloor-tutorial.en.mp4" type="video/mp4" />
+          <track kind="subtitles" srclang="en" label="English" src="en.vtt" default />
+          <track kind="subtitles" srclang="de" label="Deutsch" src="de.vtt" />
+        </video>
+        <p class="note">English voice. Subtitles in English and German (the CC button in the player). The demo behind this video uses invented devices; nothing real is switched. Pick a chapter on the right to jump there.</p>
+      </section>
+      <nav aria-label="Chapters"><h2>Chapters</h2><div id="chapters"></div></nav>
+    </main>
+    <script>
+      const video = document.getElementById("v");
+      const box = document.getElementById("chapters");
+      const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+      let list = [];
+      fetch("chapters.json").then((r) => r.json()).then((chapters) => {
+        list = chapters;
+        for (const c of chapters) {
+          const b = document.createElement("button");
+          b.innerHTML = `<time>${clock(c.t)}</time><span></span>`;
+          b.lastChild.textContent = c.title;
+          b.onclick = () => { video.currentTime = c.t; video.play(); };
+          box.append(b);
+        }
+        const start = Number(new URLSearchParams(location.search).get("t"));
+        if (start) video.currentTime = start;
+      });
+      video.addEventListener("timeupdate", () => {
+        let on = 0;
+        list.forEach((c, i) => { if (video.currentTime >= c.t) on = i; });
+        [...box.children].forEach((b, i) => b.classList.toggle("on", i === on));
+      });
+    </script>
+  </body>
+</html>

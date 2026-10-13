@@ -51,6 +51,10 @@ jobs:
             cp -r "$src/custom_components/nextfloor/packs" "$out/custom_components/nextfloor/"
           }
           assemble src-main _site
+          # the setup video lives at the release (too big for the repository); the page plays it in the browser
+          mkdir -p _site/tutorial
+          cp src-main/site/tutorial/* _site/tutorial/
+          curl -fsSL -o _site/tutorial/nextfloor-tutorial.en.mp4 "https://github.com/therealMRBK/NextFloor/releases/download/v0.8.1/nextfloor-tutorial.en.mp4" || echo "::warning::tutorial video not found at the v0.8.1 release (point this at the newest release that carries it)"
           assemble src-dev _site/dev
           # the development demo says so, so nobody takes it for the release
           for page in _site/dev/index.html _site/dev/preview/index.html; do

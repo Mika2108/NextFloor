@@ -4,6 +4,7 @@
  */
 import { CanvasTexture, DoubleSide, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace, type Scene } from "three";
 import { mapLook, mapShown, mapTiles, planOfMap, templateOf, tileUrl, type MapTile } from "../map-geo.ts";
+import { tileBlob } from "../tiles.ts";
 import type { MapSettings } from "../model.ts";
 
 const TILE_PX = 256;
@@ -87,15 +88,14 @@ export class MapLayer {
   }
 
   private draw(ctx: CanvasRenderingContext2D, tile: MapTile, template: string, generation: number, col: number, row: number): void {
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => {
-      if (generation !== this.generation) return;
-      ctx.drawImage(image, col * TILE_PX, row * TILE_PX, TILE_PX, TILE_PX);
-      if (this.texture) this.texture.needsUpdate = true;
-      this.onChange();
-    };
-    image.src = tileUrl(template, tile);
+    void tileBlob(tileUrl(template, tile))
+      .then((blob) => (blob ? createImageBitmap(blob) : null))
+      .then((bitmap) => {
+        if (!bitmap || generation !== this.generation) return;
+        ctx.drawImage(bitmap, col * TILE_PX, row * TILE_PX, TILE_PX, TILE_PX);
+        if (this.texture) this.texture.needsUpdate = true;
+        this.onChange();
+      });
   }
 
   dispose(): void {

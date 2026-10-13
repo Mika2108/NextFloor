@@ -1,5 +1,6 @@
 import { nothing, svg, type TemplateResult } from "lit";
 import { mapLook, mapShown, mapTiles, templateOf, tileUrl } from "../../../map-geo.ts";
+import { tileObjectUrl } from "../../../tiles.ts";
 import type { BuildingSettings } from "../../../model.ts";
 import type { CanvasContext } from "./context.ts";
 
@@ -15,6 +16,6 @@ export function mapLayer(ctx: CanvasContext, settings: BuildingSettings): Templa
   const [ax, ay] = ctx.toScreen([look.x, look.z]);
   const k = ctx.scale;
   return svg`<g class="nf-map" opacity=${look.opacity} pointer-events="none" transform="translate(${ax} ${ay}) rotate(${settings.north ?? 0})">
-    ${mapTiles(map.lat, map.lon, look.zoom).map((tile) => svg`<image href=${tileUrl(template, tile)} x=${tile.east * k} y=${-tile.north * k} width=${tile.size * k + 0.6} height=${tile.size * k + 0.6} preserveAspectRatio="none" />`)}
+    ${mapTiles(map.lat, map.lon, look.zoom).map((tile) => ({ tile, href: tileObjectUrl(tileUrl(template, tile), ctx.redraw) })).filter((t) => t.href).map(({ tile, href }) => svg`<image href=${href} x=${tile.east * k} y=${-tile.north * k} width=${tile.size * k + 0.6} height=${tile.size * k + 0.6} preserveAspectRatio="none" />`)}
   </g>`;
 }

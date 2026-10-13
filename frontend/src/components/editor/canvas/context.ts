@@ -9,6 +9,8 @@ export interface CanvasContext {
   /** Pixels per metre. */
   scale: number;
   floorId: string | null;
+  /** Asks for another drawing (a map tile has arrived). */
+  redraw: () => void;
 }
 
 /** An SVG points attribute for plan points. */

@@ -416,8 +416,19 @@ export class NfEditor extends LitElement {
   }
 
   /** What the layers drawn over the plan need. */
+  /** Map tiles arrive one by one: draw again once for all that arrived within a few milliseconds. */
+  private redrawQueued = false;
+  private readonly redrawSoon = (): void => {
+    if (this.redrawQueued) return;
+    this.redrawQueued = true;
+    setTimeout(() => {
+      this.redrawQueued = false;
+      this.requestUpdate();
+    }, 30);
+  };
+
   private canvasContext(): CanvasContext {
-    return { host: this.host, toScreen: (p) => this.toScreen(p), toWorld: (x, y) => this.toWorld(x, y), scale: this._view.scale, floorId: this._floorId };
+    return { host: this.host, toScreen: (p) => this.toScreen(p), toWorld: (x, y) => this.toWorld(x, y), scale: this._view.scale, floorId: this._floorId, redraw: this.redrawSoon };
   }
 
   /** What the roof and solar forms need. */

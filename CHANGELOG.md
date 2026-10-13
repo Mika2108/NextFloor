@@ -2,6 +2,12 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## 0.8.3
+
+### Fixed
+
+- **Real map showed "Access blocked" (403) instead of the map:** Home Assistant asks the browser to send no Referer to other sites, and OpenStreetMap's tile servers refuse requests without one. NextFloor now loads every map tile with an explicit referrer policy (only your Home Assistant's address, not the full page address), in the plan and in 3D. The tiles are kept in the browser while the map is on.
+
 ## 0.8.2
 
 ### Added

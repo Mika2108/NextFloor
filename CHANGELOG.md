@@ -14,6 +14,7 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 ### Changed
 
+- **Guide rewritten:** `docs/manual.md` and `docs/anleitung.md` are new, organised by what you do (install, draw, furnish, connect, use) instead of by feature list, and match the current features.
 - **Demo of the development version:** the online demo now has a second page under `/dev/` that always shows the latest state of the `dev` branch (marked "DEV"); the normal demo keeps showing the released version.
 - **Cameras are gone:** the camera wall, flying into a camera's live picture, the motion trail, detection pins, the field-of-view wedge and the camera device kind were removed. Placed `camera.*` entities are no longer shown.
 - **Extensions tab:** it now only holds the upload of your own 3D models and the project links. The feature list and the furniture pack list are gone, and so is the hint box in the furniture library.

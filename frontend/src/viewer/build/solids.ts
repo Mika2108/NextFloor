@@ -5,7 +5,7 @@ import type { Floor, Vec2 } from "../../model.ts";
 import { CAP_OFFSET, LOWER_OFFSET, pushPrism, type GeoBuffer } from "../geo.ts";
 import { NEON, SLAB } from "./look.ts";
 import { clipAlong, unit } from "./outline.ts";
-import { wallHeight, type roofLimits } from "./placement.ts";
+import { wallTops, type roofLimits } from "./placement.ts";
 import type { Span } from "./types.ts";
 
 interface Piece {
@@ -48,17 +48,18 @@ export function buildWallSolids(
   limits: ReturnType<typeof roofLimits>,
   hasRoof: boolean,
 ): void {
-  const { topAt, lowestTop } = limits;
   const cut = Math.min(floor.cut_height, floor.height);
   for (const wall of walls) {
     const bucket = wallBucket.get(wall)!;
     const axis = unit([wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]]);
     const list = (spans.get(wall) ?? []).sort((p, q) => p.s0 - q.s0);
-    const H = wallHeight(wall, floor.height);
+    const tops = wallTops(wall, floor.height, limits);
+    const { H, topAt } = tops;
     const pieces = piecesOf(list, H);
     // under a roof the pieces are cut into short steps, so each step's top lies in one roof plane
     const length = Math.hypot(wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]);
-    const underRoof = hasRoof && lowestTop(wall.a, axis, 0, length, H) < H - 1e-3;
+    // (a sloping wall is cut into steps the same way: its top then lies in one plane per step)
+    const underRoof = (hasRoof || tops.varies) && tops.lowestTop(0, length) < H - 1e-3;
     const steps = underRoof
       ? pieces.flatMap((piece) => {
           const from = Math.max(piece.t0, -0.5);
@@ -82,13 +83,13 @@ export function buildWallSolids(
       const at = (p: Vec2, t: number) => Math.abs(along(p) - t) < 1e-4;
       const skipSide = (p: Vec2, q: Vec2) => (step.inner0 && at(p, step.t0) && at(q, step.t0)) || (step.inner1 && at(p, step.t1) && at(q, step.t1));
       // the roof over this step: the lowest point of its footprint decides what is left of each range
-      const roofTop = underRoof ? Math.min(...poly.map(([x, z]) => topAt(x, z, H))) : H;
+      const roofTop = underRoof ? Math.min(...poly.map(([x, z]) => topAt(x, z))) : H;
       for (const [y0, y1raw] of step.ranges) {
-        const y1 = Math.min(y1raw, underRoof ? Math.max(...poly.map(([x, z]) => topAt(x, z, H))) : y1raw);
+        const y1 = Math.min(y1raw, underRoof ? Math.max(...poly.map(([x, z]) => topAt(x, z))) : y1raw);
         if (y1 - y0 < 1e-4 || roofTop - y0 < 0.01) continue;
         const lintel = y0 > 0.01;
         const sloped = underRoof && y1raw > roofTop;
-        const topOf = (x: number, z: number) => Math.min(y1raw, topAt(x, z, H));
+        const topOf = (x: number, z: number) => Math.min(y1raw, topAt(x, z));
         if (y0 < cut - 1e-6) {
           // the top face at the cut height is only seen while the wall is cut
           const topFold = y1 > cut + 1e-6 ? CAP_OFFSET + bucket : LOWER_OFFSET + bucket;

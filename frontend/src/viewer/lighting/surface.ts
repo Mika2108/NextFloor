@@ -125,7 +125,9 @@ export function buildLightSurface(
 
   const cut = Math.min(floor.cut_height, floor.height);
   walls.forEach((wall, wi) => {
-    const top = Math.min(floor.height, wall.height ?? floor.height);
+    // a sloping wall reaches its higher end here; its lit face is trimmed along the slope below
+    const slope = wall.heightEnd === undefined ? null : ([wall.height ?? floor.height, wall.heightEnd] as const);
+    const top = slope ? Math.max(...slope) : Math.min(floor.height, wall.height ?? floor.height);
     const cutAt = Math.min(cut, top - 0.02);
     const [dx, dz] = [wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]];
     const length = Math.hypot(dx, dz);
@@ -151,7 +153,8 @@ export function buildLightSurface(
       const ceilingAt = (s: number) => {
         const p = point(s, 0);
         const roof = roofUnder?.(p[0], p[2]);
-        return roof == null ? Infinity : roof - 0.02;
+        const sloped = slope ? slope[0] + ((slope[1] - slope[0]) * s) / length - 0.02 : Infinity;
+        return Math.min(sloped, roof == null ? Infinity : roof - 0.02);
       };
       for (let p = 0; p + 1 < stations.length; p++) {
         const span = stations[p + 1] - stations[p];

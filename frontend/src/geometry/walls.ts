@@ -28,8 +28,10 @@ export interface Wall {
   footprint: Vec2[];
   /** Set for a free-standing wall drawn on its own (its id). */
   free?: string;
-  /** Its own height in metres; absent means the full height of the floor. */
+  /** Its own height in metres (at `a`); absent means the full height of the floor. */
   height?: number;
+  /** A sloping wall: the height at `b` (the top runs straight from `height` at a to this one at b; it may rise above the floor height). */
+  heightEnd?: number;
 }
 
 export interface WallOptions {
@@ -55,6 +57,8 @@ interface Piece {
   edge: number;
   t0: number;
   t1: number;
+  /** True when u lies at t0 (the room is stored counter-clockwise), false when u lies at t1. */
+  forward: boolean;
 }
 
 interface RoomEdge {
@@ -115,7 +119,7 @@ function splitEdges(edges: RoomEdge[], verts: Vec2[], eps: number): Piece[] {
     for (let k = 0; k + 1 < stops.length; k++) {
       const [s, n] = [stops[k], stops[k + 1]];
       // distances are measured along the stored edge, from its stored start point
-      pieces.push({ u: s.id, v: n.id, room: e.room, edge: e.edge, t0: e.forward ? s.t : length - n.t, t1: e.forward ? n.t : length - s.t });
+      pieces.push({ u: s.id, v: n.id, room: e.room, edge: e.edge, t0: e.forward ? s.t : length - n.t, t1: e.forward ? n.t : length - s.t, forward: e.forward });
     }
   }
   return pieces;
@@ -137,11 +141,38 @@ function edgeSettings(rooms: readonly Room[], pieces: Piece[]) {
     if (!Array.isArray(h)) return h;
     return h[(partStarts.get(`${p.room}:${p.edge}`) ?? []).indexOf(p.t0)] ?? null;
   };
+  /** The sloping edge of a piece: its start and end height over the whole room edge (both set, a whole edge only). */
+  const slopeOf = (p: Piece): { from: number; to: number; length: number } | null => {
+    const room = roomById.get(p.room);
+    const [from, to] = [room?.wall_heights?.[p.edge], room?.wall_slopes?.[p.edge]];
+    if (!room || typeof from !== "number" || typeof to !== "number" || from <= 0 || to <= 0) return null;
+    const [a, b] = [room.points[p.edge], room.points[(p.edge + 1) % room.points.length]];
+    return { from, to, length: Math.hypot(b[0] - a[0], b[1] - a[1]) };
+  };
+  /** The heights a piece sets at its two ends (u, v); null where it sets none. */
+  const endsOf = (p: Piece): [number | null, number | null] => {
+    const slope = slopeOf(p);
+    if (!slope || slope.length < 1e-9) {
+      const h = heightSet(p);
+      return typeof h === "number" && h > 0 ? [h, h] : [null, null];
+    }
+    const at = (t: number) => slope.from + ((slope.to - slope.from) * t) / slope.length;
+    return p.forward ? [at(p.t0), at(p.t1)] : [at(p.t1), at(p.t0)];
+  };
   return {
-    /** The wall's own height: the lowest one set on its room edges (a shared wall takes the lower setting). */
-    heightOf(list: Piece[]): number | undefined {
-      const heights = list.map(heightSet).filter((h): h is number => typeof h === "number" && h > 0);
-      return heights.length ? Math.min(...heights) : undefined;
+    /**
+     * The wall's own height at its two ends: the lowest one set on its room edges at each end (a shared wall takes the lower
+     * setting). The list starts with the piece the wall's direction follows; a partner runs the other way.
+     */
+    heightsOf(list: Piece[]): { a?: number; b?: number } {
+      let [a, b] = [Infinity, Infinity];
+      for (const p of list) {
+        const [u, v] = endsOf(p);
+        const [atA, atB] = p === list[0] ? [u, v] : [v, u];
+        if (atA !== null) a = Math.min(a, atA);
+        if (atB !== null) b = Math.min(b, atB);
+      }
+      return { ...(a < Infinity ? { a } : {}), ...(b < Infinity ? { b } : {}) };
     },
     /** A thickness set on a room edge; a shared wall takes the thicker one of its two rooms. */
     thicknessOf(list: Piece[]): number | undefined {
@@ -154,6 +185,13 @@ function edgeSettings(rooms: readonly Room[], pieces: Piece[]) {
 }
 
 /** Walls between pieces: two rooms in opposite directions make an interior wall, one room an exterior wall. */
+/** The draft fields for a wall's heights: a level wall has one, a sloping one its start and end. */
+function heightFields(h: { a?: number; b?: number }): { height?: number; heightEnd?: number } {
+  const round = (v: number) => Math.round(v * 1e6) / 1e6;
+  if (h.a === undefined || h.b === undefined) return h.a !== undefined ? { height: round(h.a) } : h.b !== undefined ? { height: round(h.b) } : {};
+  return Math.abs(h.a - h.b) < 1e-6 ? { height: round(h.a) } : { height: round(h.a), heightEnd: round(h.b) };
+}
+
 function pairPieces(pieces: Piece[], rooms: readonly Room[], options: WallOptions, warnings: string[]): { drafts: Draft[]; open: [string, string][] } {
   const settings = edgeSettings(rooms, pieces);
   const groups = new Map<string, Piece[]>();
@@ -174,9 +212,9 @@ function pairPieces(pieces: Piece[], rooms: readonly Room[], options: WallOption
     }
     if (partner) {
       const thickness = settings.thicknessOf(pair) ?? options.interior;
-      drafts.push({ a: first.u, b: first.v, left: thickness / 2, right: thickness / 2, exterior: false, roomLeft: first.room, roomRight: partner.room, sources: pair.map(sourceOf), height: settings.heightOf(pair) });
+      drafts.push({ a: first.u, b: first.v, left: thickness / 2, right: thickness / 2, exterior: false, roomLeft: first.room, roomRight: partner.room, sources: pair.map(sourceOf), ...heightFields(settings.heightsOf(pair)) });
     } else {
-      drafts.push({ a: first.u, b: first.v, left: 0, right: settings.thicknessOf(pair) ?? options.exterior, exterior: true, roomLeft: first.room, roomRight: null, sources: [sourceOf(first)], height: settings.heightOf(pair) });
+      drafts.push({ a: first.u, b: first.v, left: 0, right: settings.thicknessOf(pair) ?? options.exterior, exterior: true, roomLeft: first.room, roomRight: null, sources: [sourceOf(first)], ...heightFields(settings.heightsOf(pair)) });
     }
   }
   return { drafts, open };
@@ -269,6 +307,7 @@ export function generateWalls(rooms: readonly Room[], options: WallOptions, free
       footprint,
       ...(w.free ? { free: w.free } : {}),
       ...(w.height !== undefined ? { height: w.height } : {}),
+      ...(w.heightEnd !== undefined ? { heightEnd: w.heightEnd } : {}),
     };
   });
   return { walls, warnings: [...new Set(warnings)], open };

@@ -46,7 +46,7 @@ export function buildFloorGeometry(
 
   const floors = buildFloors(floor, holes);
   const { buckets, wallBucket } = bucketWalls(walls);
-  const { openings, spans } = placeOpenings(floor, walls, wallBucket, limits.lowestTop);
+  const { openings, spans } = placeOpenings(floor, walls, wallBucket, limits);
 
   const wallBuf = new GeoBuffer();
   buildWallSolids(wallBuf, floor, walls, wallBucket, spans, limits, hasRoof);

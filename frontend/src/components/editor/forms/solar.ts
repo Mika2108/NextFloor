@@ -106,6 +106,7 @@ export function renderSolarForm(deps: RoofPanelDeps, field: SolarField): Templat
   };
   const bounded = (low: number, high: number, round: (v: number) => number = toThousandths) => (v: number) => Math.max(low, Math.min(high, round(v)));
   const turnGround = (rotation: number) => set(turnGroundField(host.doc, field, rotation));
+  const turnFlat = (rotation: number) => set({ rotation: ((Math.round(rotation) % 360) + 360) % 360 || null });
   const flipText = face?.wall ? "solar_flip_wall" : "solar_flip";
   const moduleSize = (key: "module_w" | "module_h", label: I18nKey, fallback: number) => numberField(host, t(label), field[key] ?? fallback, (v) => set({ [key]: bounded(0.3, 3)(v) }), 0.01, 0.3);
   const unevenRows = !!field.layout?.length && new Set(field.layout).size > 1;
@@ -156,10 +157,17 @@ export function renderSolarForm(deps: RoofPanelDeps, field: SolarField): Templat
               html`<button class="nf-chip" ?disabled=${!host.admin} @click=${() => turnGround((field.rotation ?? 0) + 15)}>↻ 15°</button>`,
             )}`
           : html`${numberField(host, t("solar_u"), field.u, (v) => set({ u: toThousandths(v) }), 0.05)} ${numberField(host, t(face?.wall ? "solar_v_wall" : "solar_v"), field.v, (v) => set({ v: toThousandths(v) }), 0.05)}`}
+        ${face?.flat && !ground ? numberField(host, t("solar_rotation"), field.rotation ?? 0, turnFlat, 5) : nothing}
         ${face?.wall ? numberField(host, t("solar_tilt_wall"), field.tilt ?? 0, (v) => set({ tilt: bounded(0, 90, Math.round)(v) }), 5, 0) : nothing}
         ${face?.flat ? numberField(host, t("solar_tilt"), field.tilt ?? 15, (v) => set({ tilt: bounded(0, 45, Math.round)(v) }), 1, 0) : nothing}
         ${face?.wall || face?.flat ? checkField(host, t(flipText), !!field.flip, (flip) => set({ flip })) : nothing}
       </div>
+      ${face?.flat && !ground
+        ? actions(
+            html`<button class="nf-chip" ?disabled=${!host.admin} @click=${() => turnFlat((field.rotation ?? 0) - 90)}>↺ 90°</button>`,
+            html`<button class="nf-chip" ?disabled=${!host.admin} @click=${() => turnFlat((field.rotation ?? 0) + 90)}>↻ 90°</button>`,
+          )
+        : nothing}
       <p class="nf-sub">
         ${t("solar_summary", { n: sum.modules, kwp: formatNumber(host.hass, sum.kwp, 1) })}${sum.modules < planned ? html` · <b>${t("solar_partial", { n: sum.modules, total: planned })}</b>` : nothing}
       </p>

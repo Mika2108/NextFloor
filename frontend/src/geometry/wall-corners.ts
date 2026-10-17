@@ -15,7 +15,9 @@ export interface WallSource {
 /** A wall before its corners are known: between two nodes (indices into the vertex list). */
 export interface Draft {
   free?: string;
+  /** The height at a; with `heightEnd` the top slopes from this height to that one at b. */
   height?: number;
+  heightEnd?: number;
   a: number;
   b: number;
   left: number;
@@ -28,7 +30,8 @@ export interface Draft {
 
 /** The same wall seen from the other end. */
 function reversed(w: Draft): Draft {
-  return { ...w, a: w.b, b: w.a, left: w.right, right: w.left, roomLeft: w.roomRight, roomRight: w.roomLeft };
+  const sloped = w.heightEnd !== undefined;
+  return { ...w, a: w.b, b: w.a, left: w.right, right: w.left, roomLeft: w.roomRight, roomRight: w.roomLeft, height: sloped ? w.heightEnd : w.height, heightEnd: sloped ? w.height : undefined };
 }
 
 /** Joins source ranges, merging consecutive pieces of the same room edge. */
@@ -51,6 +54,8 @@ function continuesInLine(w1: Draft, w2: Draft, verts: Vec2[]): boolean {
   const d2 = unit(sub(verts[w2.b], verts[w2.a]));
   if (Math.abs(cross(d1, d2)) > 1e-6 || dot(d1, d2) <= 0) return false;
   if (w1.free || w2.free) return false;
+  // a sloping wall is one piece of its own: merging would bend its slope
+  if (w1.heightEnd !== undefined || w2.heightEnd !== undefined) return false;
   return (
     w1.height === w2.height &&
     w1.exterior === w2.exterior &&

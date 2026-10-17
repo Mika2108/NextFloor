@@ -180,3 +180,34 @@ test("an opening in a free wall is located on that wall, with its room side on t
   const plain = locateOpening(walls, { wall: undefined, offset: 1 }, { room: rooms[0], edge: 0 })!;
   assert.equal(plain.wall.exterior, true);
 });
+
+test("a sloping wall carries the heights at its two ends, whichever way the room is stored", () => {
+  // the right wall (edge 1, from (4,0) to (4,3)) climbs from 2.5 to 4.7
+  const sloped = room("a", 0, 0, 4, 3, { wall_heights: [null, 2.5, null, null], wall_slopes: [null, 4.7, null, null] });
+  const right = generateWalls([sloped], opts).walls.find((w) => onLine(w, 0, 4))!;
+  const [low, high] = right.a[1] < right.b[1] ? [right.a[1], right.b[1]] : [right.b[1], right.a[1]];
+  assert.equal([low, high].join(), "0,3");
+  assert.deepEqual([right.height, right.heightEnd], right.a[1] < right.b[1] ? [2.5, 4.7] : [4.7, 2.5]);
+  // stored clockwise the wall still climbs towards z = 3
+  const clockwise = { ...sloped, points: [...sloped.points].reverse() as Vec2[], wall_heights: [null, 4.7, null, null], wall_slopes: [null, 2.5, null, null] };
+  const again = generateWalls([clockwise], opts).walls.find((w) => onLine(w, 0, 4))!;
+  const topAtZ3 = again.a[1] === 3 ? again.height : again.heightEnd;
+  assert.equal(topAtZ3, 4.7);
+});
+
+test("a sloping shared wall: the other room runs the other way and its level height caps both ends", () => {
+  const a = room("a", 0, 0, 4, 3, { wall_heights: [null, 2.5, null, null], wall_slopes: [null, 4.7, null, null] });
+  const b = room("b", 4, 0, 8, 3, { wall_heights: [null, null, null, 3.5] });
+  const shared = generateWalls([a, b], opts).walls.find((w) => !w.exterior)!;
+  const [atZ0, atZ3] = shared.a[1] < shared.b[1] ? [shared.height, shared.heightEnd] : [shared.heightEnd, shared.height];
+  assert.equal(atZ0, 2.5);
+  assert.equal(atZ3, 3.5, "the lower setting wins at each end");
+});
+
+test("a wall with no slope has no end height, and an unset or invalid slope is ignored", () => {
+  const plain = generateWalls([room("a", 0, 0, 4, 3, { wall_heights: [1.2, null, null, null] })], opts).walls;
+  assert.ok(plain.every((w) => w.heightEnd === undefined));
+  // a slope without a start height, a zero end height, or heights per part do not slope
+  const odd = generateWalls([room("a", 0, 0, 4, 3, { wall_heights: [null, 2.5, [1, 2], null], wall_slopes: [3, 0, 3, null] })], opts).walls;
+  assert.ok(odd.every((w) => w.heightEnd === undefined));
+});

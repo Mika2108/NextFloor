@@ -2,6 +2,16 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## 0.9.0
+
+### Added
+
+- **Sloping walls:** every wall in the room's wall list has a new button **Sloping**. It gives the wall a height at its start and another at its end, and the top runs straight between them: a lean-to room, a wall that follows a sloping ceiling, clerestory windows high on the tall side. Both heights may be above the floor height. Windows and doors on such a wall stay under its top, so a window near the high end can be taller than one near the low end. A corner added to a sloping wall splits the slope at the height it has there. Asked for in discussion #4.
+- **Outdoor areas can have any shape:** the selected lawn, terrace, pool, fence and so on now shows a **+** in the middle of every edge, like a room. Drag it to add a corner; the corner buttons in the form (**1 ×**, **2 ×** …) take a corner away again. Asked for in discussion #6.
+- **Flat roofs can be reshaped the same way:** the **+** on the edges of a flat or parapet roof turns the rectangle into a free shape, and its corners can be added, dragged and removed. (Pitched roofs stay rectangles over their ridge; L- and T-shaped houses are still built from several sections.) Asked for in discussion #6.
+- **Turn a solar field on a flat roof:** the solar form has **Rotation** with quick **↺ 90°** and **↻ 90°** buttons. The field turns about its middle, its modules and frames turn with it, and it is kept on the roof. Asked for in discussion #5.
+- **Fold the room panel away:** the room panel has a new **−** button next to the ✕. It hides the devices and keeps the room in view, which is what you want on a phone; a tap on the arrow opens it again. The panel starts open for every room. Asked for in discussion #3.
+
 ## 0.8.3
 
 ### Fixed

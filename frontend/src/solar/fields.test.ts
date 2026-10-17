@@ -120,3 +120,35 @@ test("a roof window is a field of one module of its size, sunk into the roof", (
   near(above(corners[0]), LIFT - 0.05, 1e-9);
   assert.equal(windowCorners(face, { ...win, u: 999 }), null);
 });
+
+test("a field on a flat roof turns about its middle, the modules swing with it", () => {
+  const face = flat();
+  const sized = field("x", { rows: 1, cols: 4 });
+  const [w, d] = fieldSize(face, sized);
+  const base = { ...sized, u: face.lu / 2 - w / 2, v: face.ls / 2 - d / 2 };
+  const centre = fieldCenter(face, base);
+  const plan = (f: typeof base) => fieldPlan(face, f).flat();
+  const spread = (points: number[][], axis: 0 | 1) => Math.max(...points.map((p) => p[axis])) - Math.min(...points.map((p) => p[axis]));
+  const straight = plan(base);
+  const turned = plan({ ...base, rotation: 90 });
+  assert.equal(turned.length, straight.length);
+  // a row that ran along the eave now runs across it: the extents swap
+  near(spread(turned, 0), spread(straight, 1), 1e-6);
+  near(spread(turned, 1), spread(straight, 0), 1e-6);
+  const middle = (points: number[][]) => [0, 1].map((i) => (Math.max(...points.map((p) => p[i])) + Math.min(...points.map((p) => p[i]))) / 2);
+  near(middle(turned)[0], centre[0], 1e-6);
+  near(middle(turned)[1], centre[1], 1e-6);
+});
+
+test("a turned field is kept on its face by its middle, and a full turn changes nothing", () => {
+  const face = flat();
+  const base = field("x", { rows: 1, cols: 3, u: 0, v: 0 });
+  const full = field("x", { rows: 1, cols: 3, u: 0, v: 0, rotation: 360 });
+  fieldPlan(face, full).flat(2).forEach((v, i) => near(v, fieldPlan(face, base).flat(2)[i], 1e-9));
+  const turned = field("x", { rows: 1, cols: 3, u: 0, v: 0, rotation: 90 });
+  const moved = { ...turned, ...clampField(face, turned) };
+  assert.equal(fieldModules(face, moved).length, 3, "all modules are on the roof after the clamp");
+  // garden fields and wall fields do not use the field turn
+  const wall = wallFaces(cottage({ type: "flat", pitch: 0, overhang: 0.5 }))[0];
+  assert.deepEqual(fieldPlan(wall, field("x", { rotation: 90 })), fieldPlan(wall, field("x")));
+});

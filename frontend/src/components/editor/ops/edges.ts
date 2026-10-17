@@ -28,6 +28,34 @@ export function setWallHeight(room: Room, edge: number, height: number | null): 
   const list = perEdge<Height>(room.wall_heights, room.points.length);
   list[edge] = height;
   room.wall_heights = allNull(list) ? undefined : (list as Room["wall_heights"]);
+  // a level height ends a slope
+  setSlopeEnd(room, edge, null);
+}
+
+function setSlopeEnd(room: Room, edge: number, end: number | null): void {
+  if (end === null && !room.wall_slopes) return;
+  const slopes = perEdge<number>(room.wall_slopes, room.points.length);
+  slopes[edge] = end;
+  room.wall_slopes = allNull(slopes) ? undefined : (slopes as number[]);
+}
+
+/**
+ * Makes a wall slope: `start` is its height at the first corner of the edge, `end` at the next one. The top runs straight between them
+ * (a lean-to, clerestory windows); both may be above the floor height. Heights are kept between 5 cm and 30 m.
+ */
+export function setWallSlope(room: Room, edge: number, start: number, end: number): void {
+  const [from, to] = [start, end].map((h) => Math.min(30, Math.max(0.05, thousandths(h))));
+  const list = perEdge<Height>(room.wall_heights, room.points.length);
+  list[edge] = from;
+  room.wall_heights = list as Room["wall_heights"];
+  setSlopeEnd(room, edge, to);
+}
+
+/** Levels a sloping wall again: it keeps its start height, and the full floor height when that is not lower. */
+export function clearWallSlope(room: Room, edge: number, floorHeight: number): void {
+  const start = room.wall_heights?.[edge];
+  setSlopeEnd(room, edge, null);
+  if (typeof start === "number" && start >= floorHeight - 0.005) setWallHeight(room, edge, null);
 }
 
 /** Sets the height of one part of an edge that has several parts. Parts that all end up the same collapse to one height. */
@@ -39,6 +67,8 @@ export function setPartHeight(room: Room, edge: number, part: number, height: nu
   parts[part] = height;
   list[edge] = parts.every((h) => h === parts[0]) ? parts[0] : parts;
   room.wall_heights = allNull(list) ? undefined : (list as Room["wall_heights"]);
+  // heights per part and a slope over the whole wall exclude each other
+  setSlopeEnd(room, edge, null);
 }
 
 /**

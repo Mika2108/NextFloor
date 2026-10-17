@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { box, floorWith, opening } from "../../../entities/fixtures.ts";
 import type { Placement } from "../../../model.ts";
+import { setWallSlope } from "./edges.ts";
 import { insertCorner, areaChoice, copyOfRoom, cornerMoved, evenCeilingLights, newRoom, rectangleAfter, removeCorner, removeRoom } from "./rooms.ts";
 
 const lamp = (id: string, x: number, z: number, extra: Partial<Placement> = {}): Placement => ({ entity_id: id, x, z, y: null, ...extra });
@@ -93,4 +94,26 @@ test("a corner inserted on an edge splits it: heights are kept, openings stay on
   assert.deepEqual(floor.rooms[0].wall_heights, [1, 1, null, null, null]);
   assert.deepEqual(floor.openings.map((o) => [o.id, o.edge, o.offset]), [["a", 0, 1], ["b", 1, 1], ["c", 2, 1]]);
   insertCorner(floor, "missing", 0, [0, 0]);
+});
+
+test("a corner on a sloping wall splits the slope: both halves meet at the height the slope has there", () => {
+  const floor = floorWith([box("r", 0, 0, 4, 4)]);
+  const room = floor.rooms[0];
+  setWallSlope(room, 1, 2, 4);
+  // edge 1 runs from (4,0) to (4,4): the new corner halfway stands at 3
+  insertCorner(floor, "r", 1, [4, 2]);
+  assert.deepEqual(room.wall_heights?.slice(1, 3), [2, 3]);
+  assert.deepEqual(room.wall_slopes?.slice(1, 3), [3, 4]);
+  // removing a corner drops the entry of the edge that began there, like the heights
+  assert.equal(removeCorner(floor, "r", 2), true);
+  assert.equal(room.points.length, 4);
+  assert.equal(room.wall_slopes?.length, room.wall_heights?.length);
+});
+
+test("a corner on an edge without slope leaves the slopes of the other walls in place", () => {
+  const floor = floorWith([box("r", 0, 0, 4, 4)]);
+  const room = floor.rooms[0];
+  setWallSlope(room, 2, 1, 3);
+  insertCorner(floor, "r", 0, [2, 0]);
+  assert.deepEqual([room.wall_heights?.[3], room.wall_slopes?.[3]], [1, 3], "the sloping wall is now edge 3");
 });

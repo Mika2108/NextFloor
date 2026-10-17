@@ -12,6 +12,7 @@ export interface OutdoorActions {
   setRectangle(field: "x" | "z" | "w" | "d", value: number): void;
   duplicate(): void;
   remove(): void;
+  removeCorner(index: number): void;
   lockButton: TemplateResult | typeof nothing;
 }
 
@@ -42,6 +43,12 @@ export function renderOutdoorForm(host: EditorHost, area: OutdoorArea, actions: 
       ${area.type === "pergola" ? checkField(host, t("outdoor_bracing"), !!area.bracing, (on) => set({ bracing: on || undefined })) : nothing}
       ${checkField(host, t("outdoor_cut"), !!area.cut, (on) => set({ cut: on || undefined }), { title: t("outdoor_cut_hint") })}
     </div>
+    ${host.admin
+      ? html`<div class="nf-actions">
+            ${area.points.map((_, i) => html`<button class="nf-chip" title=${t("delete_point")} ?disabled=${area.points.length <= 3} @click=${() => actions.removeCorner(i)}>${i + 1} ×</button>`)}
+          </div>
+          ${hint(t("outdoor_corners_hint"))}`
+      : nothing}
     ${area.slope ? hint(t("outdoor_slope_hint")) : nothing} ${hint(t("outdoor_hint"))}
     ${host.admin
       ? html`<div class="nf-actions"><button class="nf-btn" @click=${() => actions.duplicate()}>${t("duplicate")}</button><button class="nf-btn nf-danger" @click=${() => actions.remove()}>${t("delete")}</button></div>`

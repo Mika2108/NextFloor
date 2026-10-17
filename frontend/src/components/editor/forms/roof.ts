@@ -65,6 +65,9 @@ function sectionForm(deps: RoofPanelDeps, section: RoofSection): TemplateResult 
             html`<button class="nf-btn" title=${t("roof_outline_hint")} @click=${() => roof.takeOutline()}>${t("roof_outline")}</button>`,
             section.points ? html`<button class="nf-btn" @click=${() => set({ points: null })}>${t("roof_rect")}</button>` : nothing,
           )}
+          ${section.points
+            ? actions(...section.points.map((_, i) => html`<button class="nf-chip" title=${t("delete_point")} ?disabled=${(section.points?.length ?? 0) <= 3} @click=${() => roof.removeCorner(i)}>${i + 1} ×</button>`))
+            : nothing}
           ${hint(t(section.points ? "roof_points_hint" : "roof_outline_hint"))}`
         : nothing}
       ${hint(`${t("roof_ridge_height")}: ${formatNumber(host.hass, ridgeHeight(section), 2)} m · ${t("roof_section_hint")}`)}

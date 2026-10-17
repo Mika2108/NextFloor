@@ -6,8 +6,12 @@ import { SECTORS } from "./look.ts";
 import { unit } from "./outline.ts";
 import type { OpeningInfo, Span } from "./types.ts";
 
-/** How tall a wall stands: its own height (a low wall, a counter), never above the floor height. */
-export const wallHeight = (wall: Wall, floorHeight: number): number => Math.min(floorHeight, wall.height ?? floorHeight);
+/**
+ * How tall a wall stands: its own height (a low wall, a counter), never above the floor height. A sloping wall may rise above
+ * the floor height; this is its highest point.
+ */
+export const wallHeight = (wall: Wall, floorHeight: number): number =>
+  wall.heightEnd === undefined ? Math.min(floorHeight, wall.height ?? floorHeight) : Math.max(wall.height ?? floorHeight, wall.heightEnd);
 
 /**
  * Sorts the walls into buckets by the direction they face: all interior walls are one bucket, exterior walls fall into
@@ -59,8 +63,33 @@ export function roofLimits(roofUnder?: (x: number, z: number) => number | null) 
   return { topAt, lowestTop };
 }
 
+/** The tops of one wall: its highest point, the top at a point, and the lowest top along a stretch, with a sloping wall's slope and the roof above both counted. */
+export function wallTops(wall: Wall, floorHeight: number, limits: ReturnType<typeof roofLimits>) {
+  const H = wallHeight(wall, floorHeight);
+  const length = Math.hypot(wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]);
+  const axis = unit([wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]]);
+  if (wall.heightEnd === undefined) return { H, varies: false, topAt: (x: number, z: number) => limits.topAt(x, z, H), lowestTop: (s0: number, s1: number) => limits.lowestTop(wall.a, axis, s0, s1, H) };
+  const [h0, h1] = [wall.height ?? floorHeight, wall.heightEnd];
+  /** The height of the sloping top above a point: straight from h0 at a to h1 at b. */
+  const slopeAt = (x: number, z: number): number => {
+    const t = length > 1e-9 ? ((x - wall.a[0]) * axis[0] + (z - wall.a[1]) * axis[1]) / length : 0;
+    return h0 + (h1 - h0) * Math.max(0, Math.min(1, t));
+  };
+  const topAt = (x: number, z: number) => limits.topAt(x, z, slopeAt(x, z));
+  const lowestTop = (s0: number, s1: number): number => {
+    const samples = Math.max(2, Math.ceil((s1 - s0) / 0.25) + 1);
+    let lowest = Infinity;
+    for (let i = 0; i < samples; i++) {
+      const s = s0 + ((s1 - s0) * i) / (samples - 1);
+      lowest = Math.min(lowest, topAt(wall.a[0] + axis[0] * s, wall.a[1] + axis[1] * s));
+    }
+    return lowest;
+  };
+  return { H, varies: true, topAt, lowestTop };
+}
+
 /** Puts every opening onto its wall: its span along the wall, the side the room is on, its sill and top. */
-export function placeOpenings(floor: Floor, walls: Wall[], wallBucket: Map<Wall, number>, lowestTop: ReturnType<typeof roofLimits>["lowestTop"]): { openings: OpeningInfo[]; spans: Map<Wall, Span[]> } {
+export function placeOpenings(floor: Floor, walls: Wall[], wallBucket: Map<Wall, number>, limits: ReturnType<typeof roofLimits>): { openings: OpeningInfo[]; spans: Map<Wall, Span[]> } {
   const spans = new Map<Wall, Span[]>();
   const openings: OpeningInfo[] = [];
   for (const o of floor.openings) {
@@ -77,7 +106,7 @@ export function placeOpenings(floor: Floor, walls: Wall[], wallBucket: Map<Wall,
     const roomOnLeft = wall.free ? axis[0] * (hp[1][0] - hp[0][0]) + axis[1] * (hp[1][1] - hp[0][1]) > 0 : wall.roomLeft === o.room_id;
     const leftNormal: Vec2 = [-axis[1], axis[0]];
     const toRoom: Vec2 = roomOnLeft ? leftNormal : [-leftNormal[0], -leftNormal[1]];
-    const top = Math.min(lowestTop(wall.a, axis, s0, s0 + width, wallHeight(wall, floor.height)) - 0.02, o.sill + o.height);
+    const top = Math.min(wallTops(wall, floor.height, limits).lowestTop(s0, s0 + width) - 0.02, o.sill + o.height);
     const sill = Math.max(0, Math.min(o.sill, top - 0.1));
     // looking at the wall from the room, "right" is (toRoom.z, -toRoom.x)
     const right: Vec2 = [toRoom[1], -toRoom[0]];

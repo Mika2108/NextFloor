@@ -38,6 +38,11 @@ export interface Room {
    */
   wall_heights?: WallHeight[];
   /**
+   * A sloping wall: the height at the END of each edge (index = edge). The edge's `wall_heights` entry is then its height at the START; the
+   * top runs straight between the two (a lean-to, a clerestory), and both may be above the floor height. null = a level wall. Whole edges only.
+   */
+  wall_slopes?: (number | null)[];
+  /**
    * Thickness of the wall on each edge in m (index = edge); null = the building's exterior or interior
    * thickness. A wall two rooms share takes the thicker of their settings (D149).
    */

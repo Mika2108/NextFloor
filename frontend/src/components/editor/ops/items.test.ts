@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { box, floorWith, opening } from "../../../entities/fixtures.ts";
 import type { Building, Furniture, Placement } from "../../../model.ts";
-import { copyOfFurniture, copyOfOutdoorArea, deviceForFurniture, edgeOf, furnitureForDevice, newFloorOpening, newFreeWall, newFurniture, newOpening, newOutdoorArea, offsetOnEdge, openingKindPatch, parkingSpotFor, placeInRoom, removeDevice, roomCentre, wallEndForLength, wallHeightPatch } from "./items.ts";
+import { copyOfFurniture, copyOfOutdoorArea, deviceForFurniture, insertOutdoorCorner, removeOutdoorCorner, edgeOf, furnitureForDevice, newFloorOpening, newFreeWall, newFurniture, newOpening, newOutdoorArea, offsetOnEdge, openingKindPatch, parkingSpotFor, placeInRoom, removeDevice, roomCentre, wallEndForLength, wallHeightPatch } from "./items.ts";
 import { NO_CHANGE, NOTHING_TO_MOVE, nudge, type Nudge } from "./nudge.ts";
 
 const sofa = (extra: Partial<Furniture> = {}): Furniture => ({ id: "s", type: "sofa", x: 1, z: 1, rotation: 0, w: 2, d: 0.9, h: 0.8, variant: null, ...extra });
@@ -160,4 +160,18 @@ test("an outdoor area's rectangle follows typed values and never gets thinner th
   assert.deepEqual(outdoorRectangleAfter(area, "x", 1), [[1, 0], [5, 0], [5, 2], [1, 2]]);
   assert.deepEqual(outdoorRectangleAfter(area, "w", 6), [[0, 0], [6, 0], [6, 2], [0, 2]]);
   assert.deepEqual(outdoorRectangleAfter(area, "d", 0), [[0, 0], [4, 0], [4, 0.1], [0, 0.1]]);
+});
+
+test("an outdoor area gets a corner in the middle of an edge and gives one back, but never drops below three", () => {
+  const pool = newOutdoorArea([[0, 0], [4, 0], [4, 3], [0, 3]]);
+  insertOutdoorCorner(pool, 1, [4.0004, 1.5]);
+  assert.deepEqual(pool.points, [[0, 0], [4, 0], [4, 1.5], [4, 3], [0, 3]]);
+  insertOutdoorCorner(pool, 4, [0, 1.5]);
+  assert.equal(pool.points.length, 6, "the closing edge (last corner back to the first) can be split too");
+  assert.deepEqual(pool.points[5], [0, 1.5]);
+  assert.equal(removeOutdoorCorner(pool, 2), true);
+  assert.equal(removeOutdoorCorner(pool, 2), true);
+  assert.equal(removeOutdoorCorner(pool, 2), true);
+  assert.equal(pool.points.length, 3);
+  assert.equal(removeOutdoorCorner(pool, 0), false);
 });

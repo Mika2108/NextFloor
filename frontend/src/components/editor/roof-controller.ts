@@ -5,7 +5,7 @@ import { clampField, bestFace, fieldFace, proposeField, proposeGroundField, prop
 import { floorOutline, polygonBox, proposeDormer, roofSectionsFromRooms } from "../../roof-sections.ts";
 import { uid, type Building, type Floor, type RoofSection, type RoofWindow, type SolarField, type SolarString, type Vec2 } from "../../model.ts";
 import type { EditorHost } from "./host.ts";
-import { copyOfSection, sectionFromRectangle } from "./ops/roof.ts";
+import { copyOfSection, removeRoofCorner, sectionFromRectangle } from "./ops/roof.ts";
 import { assignString, pruneStrings, toggledSkip } from "./ops/solar.ts";
 
 export interface RoofContext {
@@ -143,6 +143,16 @@ export class RoofController {
     this.ctx.host.change((doc) => {
       const section = doc.settings.roof.sections?.find((s) => s.id === id);
       if (section) Object.assign(section, patch);
+    });
+  }
+
+  /** Takes a corner of the selected free flat roof away. */
+  removeCorner(index: number): void {
+    const id = this.sectionSel;
+    if (!id || !this.admin) return;
+    this.ctx.host.change((doc) => {
+      const section = doc.settings.roof.sections?.find((s) => s.id === id);
+      if (section) removeRoofCorner(section, index);
     });
   }
 

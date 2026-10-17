@@ -1,7 +1,7 @@
 // Roof sections as the editor makes them: a section drawn on the plan, a copy, and the sections' list helpers.
 
 import { uid, type Building, type RoofSection, type Vec2 } from "../../../model.ts";
-import { wallTopUnder } from "../../../roof-sections.ts";
+import { polygonBox, wallTopUnder } from "../../../roof-sections.ts";
 
 const thousandths = (v: number) => Math.round(v * 1000) / 1000;
 
@@ -44,3 +44,25 @@ export function copyOfSection(section: RoofSection): RoofSection {
 
 /** A section, or the list's 1-based number of it (0 when it is not in the list). */
 export const sectionNumber = (sections: readonly RoofSection[], id: string): number => sections.findIndex((s) => s.id === id) + 1;
+
+/** The outline of a flat roof section: its own free shape, or the corners of its rectangle. */
+export function roofOutline(s: RoofSection): Vec2[] {
+  if (s.points && s.points.length >= 3) return s.points.map(([x, z]): Vec2 => [x, z]);
+  return [[s.x0, s.z0], [s.x1, s.z0], [s.x1, s.z1], [s.x0, s.z1]];
+}
+
+/** A new corner in the middle of an edge of a flat roof: a rectangle becomes a free shape, and the section's box follows its points. */
+export function insertRoofCorner(s: RoofSection, edge: number, at: Vec2): void {
+  const points = roofOutline(s);
+  points.splice(edge + 1, 0, [thousandths(at[0]), thousandths(at[1])]);
+  s.points = points;
+  Object.assign(s, polygonBox(points));
+}
+
+/** Takes a corner of a free flat roof away; a free shape keeps at least three. */
+export function removeRoofCorner(s: RoofSection, index: number): boolean {
+  if (!s.points || s.points.length <= 3 || index < 0 || index >= s.points.length) return false;
+  s.points.splice(index, 1);
+  Object.assign(s, polygonBox(s.points));
+  return true;
+}

@@ -5,7 +5,7 @@ import { generateWalls } from "../../geometry/walls.ts";
 import { newFloor, type Floor, type Furniture, type Opening, type Room, type Vec2 } from "../../model.ts";
 import { ALWAYS, CUT_OFFSET, LOWER_OFFSET } from "../geo.ts";
 import { buildFloorGeometry, stairHoles } from "./build.ts";
-import { bucketWalls, placeOpenings, roofLimits, wallHeight } from "./placement.ts";
+import { bucketWalls, placeOpenings, roofLimits, wallHeight, wallTops } from "./placement.ts";
 import { clipAlong, counterClockwise, outlineOf, subtractSpans } from "./outline.ts";
 
 const OUTER = 0.3;
@@ -61,7 +61,7 @@ test("an opening is placed on its wall: width, side of the room, sill and top", 
   const f = floorOf([room("a", 0, 0, 6, 4)], [opening("window", "a", 0, 3, 1.2), opening("door", "a", 3, 2, 0.9)]);
   const { walls } = generateWalls(f.rooms, { exterior: OUTER, interior: INNER });
   const { wallBucket } = bucketWalls(walls);
-  const { openings, spans } = placeOpenings(f, walls, wallBucket, roofLimits(undefined).lowestTop);
+  const { openings, spans } = placeOpenings(f, walls, wallBucket, roofLimits(undefined));
   assert.equal(openings.length, 2);
   const win = openings.find((o) => o.opening.type === "window")!;
   near(win.width, 1.2);
@@ -78,7 +78,7 @@ test("an opening is placed on its wall: width, side of the room, sill and top", 
 test("an opening wider than its wall is shortened, one with no wall is dropped", () => {
   const f = floorOf([room("a", 0, 0, 2, 2)], [opening("window", "a", 0, 1, 5), opening("window", "ghost", 0, 1)]);
   const { walls } = generateWalls(f.rooms, { exterior: OUTER, interior: INNER });
-  const { openings } = placeOpenings(f, walls, bucketWalls(walls).wallBucket, roofLimits(undefined).lowestTop);
+  const { openings } = placeOpenings(f, walls, bucketWalls(walls).wallBucket, roofLimits(undefined));
   assert.equal(openings.length, 1);
   assert.ok(openings[0].width <= 2 + 1e-9);
 });
@@ -86,7 +86,7 @@ test("an opening wider than its wall is shortened, one with no wall is dropped",
 test("under a roof an opening's top stays below the roof", () => {
   const f = floorOf([room("a", 0, 0, 6, 4)], [opening("window", "a", 0, 3, 1.2)]);
   const { walls } = generateWalls(f.rooms, { exterior: OUTER, interior: INNER });
-  const { openings } = placeOpenings(f, walls, bucketWalls(walls).wallBucket, roofLimits(() => 1.6).lowestTop);
+  const { openings } = placeOpenings(f, walls, bucketWalls(walls).wallBucket, roofLimits(() => 1.6));
   assert.ok(openings[0].top <= 1.6 - 0.02 + 1e-9);
   assert.ok(openings[0].sill <= openings[0].top - 0.1 + 1e-9);
 });
@@ -217,4 +217,30 @@ test("subtracting spans from an edge leaves the free parts, in the edge's direct
   const total = parts.reduce((sum, [a, b]) => sum + Math.hypot(b[0] - a[0], b[1] - a[1]), 0);
   near(total, Math.hypot(edge.b[0] - edge.a[0], edge.b[1] - edge.a[1]) - 1, 1e-6);
   assert.equal(subtractSpans(edge, [fake(-10, 100)]).length, 0, "everything covered");
+});
+
+test("a sloping wall: its top follows the slope, above the floor height too; openings stay under it", () => {
+  const sloped: Room = { ...room("a", 0, 0, 4, 3), wall_heights: [null, 2.5, null, null], wall_slopes: [null, 4.7, null, null] };
+  const f = floorOf([sloped]);
+  const { walls } = generateWalls(f.rooms, { exterior: OUTER, interior: INNER });
+  const wall = walls.find((w) => Math.abs(w.a[0] - 4) < 1e-6 && Math.abs(w.b[0] - 4) < 1e-6)!;
+  assert.equal(wallHeight(wall, 2.6), 4.7, "the highest point counts, even above the floor height");
+  const [lowEnd, highEnd] = wall.a[1] < wall.b[1] ? [wall.a, wall.b] : [wall.b, wall.a];
+  const tops = wallTops(wall, 2.6, roofLimits(undefined));
+  near(tops.topAt(lowEnd[0], lowEnd[1]), 2.5);
+  near(tops.topAt(highEnd[0], highEnd[1]), 4.7);
+  near(tops.topAt((lowEnd[0] + highEnd[0]) / 2, (lowEnd[1] + highEnd[1]) / 2), 3.6);
+  near(tops.lowestTop(0, 3), 2.5);
+  // a roof lower than the slope still wins
+  near(wallTops(wall, 2.6, roofLimits(() => 3)).topAt(highEnd[0], highEnd[1]), 3);
+  // a window near the high end may be taller than one near the low end
+  const windowOf = (offset: number) => ({ ...opening("window", "a", 1, offset, 0.8), sill: 1, height: 2.5 }) as Opening;
+  const { openings } = placeOpenings({ ...f, openings: [windowOf(0.5), windowOf(2.5)] }, walls, bucketWalls(walls).wallBucket, roofLimits(undefined));
+  const [first, second] = openings;
+  assert.ok(first.top < second.top, "the one at the high end reaches higher");
+  assert.ok(first.top <= 2.6 + 1e-6 && second.top <= 4.7);
+  // and the walls build without error
+  const geo = buildFloorGeometry(f, OUTER, INNER);
+  const ys = Array.from(geo.walls.getAttribute("position").array).filter((_, i) => i % 3 === 1);
+  assert.ok(Math.max(...ys) > 4.6, "the wall is drawn up to its high end");
 });

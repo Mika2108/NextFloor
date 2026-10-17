@@ -14,6 +14,10 @@ export interface EdgeActions {
   /** Whether the wall is an outer wall (it then has the outer default thickness). */
   isOuter(room: Room, edge: number): boolean;
   setHeight(room: Room, edge: number, part: number | undefined, height: number | null): void;
+  /** Makes the whole wall slope: its height at the start and at the end of the edge (either may be above the floor height). */
+  setSlope(room: Room, edge: number, start: number, end: number): void;
+  /** Makes a sloping wall level again. */
+  clearSlope(room: Room, edge: number): void;
   setThickness(room: Room, edge: number, thickness: number | null): void;
   cut(room: Room, edge: number, part: number | undefined): void;
   moveCut(room: Room, edge: number, from: number, to: number): void;
@@ -41,12 +45,26 @@ export function renderEdgeHeights(host: EditorHost, room: Room, actions: EdgeAct
       const standard = actions.isOuter(room, edge) ? wall_exterior : wall_interior;
       const title = `${t("wall_n", { a: edge + 1, b: ((edge + 1) % count) + 1 })}${part === undefined ? "" : ` · ${t("wall_part", { n: part + 1 })}`}`;
       const cutHere = part !== undefined && part > 0 && (room.wall_splits?.[edge] ?? []).some((d) => Math.abs(d - starts[part]) < 1e-3);
+      const slopeEnd = room.wall_slopes?.[edge];
+      const sloping = part === undefined && typeof slopeEnd === "number" && typeof entry === "number";
+      const start = height ?? floorHeight;
       const light = () => actions.light(edge);
       const dark = () => actions.light(null);
       return html`<div class="nf-edge-height${edge === actions.lit ? " nf-edge-on" : ""}${height !== null ? " nf-edge-low" : ""}" @mouseenter=${light} @mouseleave=${dark} @focusin=${light} @focusout=${dark}>
         <span><b>${title}</b><br /><span class="nf-muted">${formatNumber(host.hass, length, 2)} m</span></span>
-        ${height === 0 ? html`<span class="nf-muted">${t("wall_none")}</span>` : numberField(host, t("wall_height"), height ?? floorHeight, (v) => set(v >= floorHeight - FULL_STEP ? null : Math.max(0.05, v)), 0.05, 0.05)}
-        ${host.admin && height !== null ? html`<button class="nf-btn" title=${t("wall_height_full")} @click=${() => set(null)}>↥</button>` : nothing}
+        ${height === 0
+          ? html`<span class="nf-muted">${t("wall_none")}</span>`
+          : sloping
+            ? html`<span class="nf-wide nf-split-row" title=${t("wall_slope_hint")}
+                >${numberField(host, t("wall_slope_start"), entry as number, (v) => actions.setSlope(room, edge, v, slopeEnd as number), 0.05, 0.05)}
+                ${numberField(host, t("wall_slope_end"), slopeEnd as number, (v) => actions.setSlope(room, edge, entry as number, v), 0.05, 0.05)}</span
+              >`
+            : numberField(host, t("wall_height"), start, (v) => set(v >= floorHeight - FULL_STEP ? null : Math.max(0.05, v)), 0.05, 0.05)}
+        ${host.admin && sloping ? html`<button class="nf-btn" title=${t("wall_slope_off")} @click=${() => actions.clearSlope(room, edge)}>▭</button>` : nothing}
+        ${host.admin && height !== null && !sloping ? html`<button class="nf-btn" title=${t("wall_height_full")} @click=${() => set(null)}>↥</button>` : nothing}
+        ${host.admin && part === undefined && height !== 0 && !sloping
+          ? html`<button class="nf-btn" title=${t("wall_slope_hint")} @click=${() => actions.setSlope(room, edge, start, start >= floorHeight - FULL_STEP ? start + 1 : floorHeight)}>∠ ${t("wall_slope")}</button>`
+          : nothing}
         ${host.admin && height !== 0 ? html`<button class="nf-btn" title=${t("wall_none_hint")} @click=${() => set(0)}>${t("wall_none")}</button>` : nothing}
         ${host.admin && length >= 0.4 ? html`<button class="nf-btn" title=${t("wall_split_hint")} @click=${() => actions.cut(room, edge, part)}>✂</button>` : nothing}
         ${(part === undefined || part === 0) && height !== 0

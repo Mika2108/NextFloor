@@ -6,7 +6,7 @@ import type { Floor, Vec2 } from "../../model.ts";
 import { ALWAYS, CUT_OFFSET, EDGE_BASE, EDGE_CUT, EDGE_SOFT, EDGE_TOP, LOWER_OFFSET, type LineBuffer } from "../geo.ts";
 import type { Outline } from "./outline.ts";
 import { subtractSpans } from "./outline.ts";
-import { wallHeight, type roofLimits } from "./placement.ts";
+import { wallTops, type roofLimits } from "./placement.ts";
 import type { Span } from "./types.ts";
 
 /** Jambs, sill and lintel edges of an opening on both wall faces, split at the cut height. */
@@ -38,7 +38,6 @@ export function pushEdgeLines(
   limits: ReturnType<typeof roofLimits>,
   hasRoof: boolean,
 ): void {
-  const { topAt } = limits;
   const cut = Math.min(floor.cut_height, floor.height);
   const spansOf = (wall: Wall, keep: (sp: Span) => boolean) => (spans.get(wall) ?? []).filter(keep);
   for (const edge of outline.edges) {
@@ -48,9 +47,10 @@ export function pushEdgeLines(
     // the cut line: not where an opening crosses the cut height
     for (const [p, q] of subtractSpans(edge, spansOf(edge.wall, (sp) => sp.sill < cut && sp.top > cut))) lines.seg([p[0], cut, p[1]], [q[0], cut, q[1]], EDGE_CUT, CUT_OFFSET + bucket);
     // the top line: not where an opening reaches the top; a wall below the cut height keeps its top line; under a roof it follows the slope in short steps
-    const H = wallHeight(edge.wall, floor.height);
+    const tops = wallTops(edge.wall, floor.height, limits);
+    const { H, topAt } = tops;
     for (const [p, q] of subtractSpans(edge, spansOf(edge.wall, (sp) => sp.top >= H - 0.021))) {
-      if (!hasRoof) {
+      if (!hasRoof && !tops.varies) {
         lines.seg([p[0], H, p[1]], [q[0], H, q[1]], EDGE_TOP, H <= cut + 1e-6 ? LOWER_OFFSET + bucket : bucket);
         continue;
       }
@@ -58,13 +58,13 @@ export function pushEdgeLines(
       const at = (i: number): Vec2 => [p[0] + ((q[0] - p[0]) * i) / steps, p[1] + ((q[1] - p[1]) * i) / steps];
       for (let i = 0; i < steps; i++) {
         const [a, c] = [at(i), at(i + 1)];
-        const [ya, yc] = [topAt(a[0], a[1], H), topAt(c[0], c[1], H)];
+        const [ya, yc] = [topAt(a[0], a[1]), topAt(c[0], c[1])];
         lines.seg([a[0], ya, a[1]], [c[0], yc, c[1]], EDGE_TOP, Math.max(ya, yc) <= cut + 1e-6 ? LOWER_OFFSET + bucket : bucket);
       }
     }
   }
   for (const corner of outline.corners) {
-    const height = topAt(corner.p[0], corner.p[1], wallHeight(corner.wall, floor.height));
+    const height = wallTops(corner.wall, floor.height, limits).topAt(corner.p[0], corner.p[1]);
     lines.segSplit([corner.p[0], 0.004, corner.p[1]], [corner.p[0], height, corner.p[1]], EDGE_SOFT, Math.min(cut, height), wallBucket.get(corner.wall)!);
   }
   for (const list of spans.values()) for (const sp of list) pushOpeningLines(lines, sp, cut);

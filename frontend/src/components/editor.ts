@@ -58,7 +58,8 @@ import { BackgroundTool, readPictureInBrowser } from "./editor/background-tool.t
 import { renderBackgroundForm } from "./editor/forms/background.ts";
 import { dragRotation, pictureCentre, pictureLocal } from "./editor/ops/background.ts";
 import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWallActions, type MeasureActions, type MeasureState, type OutdoorActions } from "./editor/forms/outdoor.ts";
-import { outdoorRectangleAfter } from "./editor/ops/items.ts";
+import { insertRoofCorner, roofOutline } from "./editor/ops/roof.ts";
+import { insertOutdoorCorner, outdoorRectangleAfter, removeOutdoorCorner } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
 import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
 import { insertCorner } from "./editor/ops/rooms.ts";
@@ -69,7 +70,7 @@ import { devicesLayer, furnitureLayer } from "./editor/canvas/items.ts";
 import { openingsLayer } from "./editor/canvas/openings.ts";
 import { cutMarksLayer, floorBelowLayer, freeWallsLayer, gridLayer, meterLayer, outdoorHandlesLayer, outdoorLayer, roomHandlesLayer, roomsLayer, wallsLayer } from "./editor/canvas/plan.ts";
 import { renderEdgeHeights, type EdgeActions } from "./editor/forms/edges.ts";
-import { cutEdge, joinAtCut, moveCut, setPartHeight, setWallHeight, setWallThickness } from "./editor/ops/edges.ts";
+import { clearWallSlope, cutEdge, joinAtCut, moveCut, setPartHeight, setWallHeight, setWallSlope, setWallThickness } from "./editor/ops/edges.ts";
 import { renderDeviceForm, type DeviceActions } from "./editor/forms/device.ts";
 import { renderFurnitureForm, type FurnitureActions } from "./editor/forms/furniture.ts";
 import { renderOpeningForm, type OpeningActions } from "./editor/forms/opening.ts";
@@ -333,6 +334,10 @@ export class NfEditor extends LitElement {
       },
       duplicate: () => this.duplicateOutdoor(),
       remove: () => this.deleteOutdoor(),
+      removeCorner: (index) => {
+        const id = this.sel.outdoor;
+        if (id) this.change((_, floor) => void removeOutdoorCorner(floor.outdoor.find((o) => o.id === id)!, index));
+      },
       lockButton: this.fixButton("outdoor", this.sel.outdoor ?? ""),
     };
   }
@@ -1071,6 +1076,8 @@ export class NfEditor extends LitElement {
       this.roof.solarId = null;
       return this.pan(press);
     }
+    const plus = attribute("[data-plus]", "data-plus");
+    if (plus?.startsWith("roof:") && this.isAdmin) return this.splitRoofEdgeGesture(...(plus.split(":").slice(1) as [string, string]));
     const vertex = attribute("[data-roof-vertex]", "data-roof-vertex");
     const corner = attribute("[data-roof-corner]", "data-roof-corner");
     const body = attribute("[data-roof]", "data-roof");
@@ -1185,6 +1192,8 @@ export class NfEditor extends LitElement {
       this.selectItem("wall", freeWall);
       return this.moves(press, { kind: "wallmove", id: freeWall, end: null, start: world, startScreen: local, base, moved: false });
     }
+    const plus = find("[data-plus]", "data-plus");
+    if (plus?.startsWith("out:") && this.isAdmin) return this.splitOutdoorEdgeGesture(...(plus.split(":").slice(1) as [string, string]));
     const outVertex = find("[data-out-vertex]", "data-out-vertex");
     if (outVertex && this.isAdmin) {
       const [id, index] = outVertex.split(":");
@@ -1207,6 +1216,31 @@ export class NfEditor extends LitElement {
     this.change((_, floor) => insertCorner(floor, room.id, edge, middle), base, false);
     this.sel.corner = edge + 1;
     return { kind: "vertex", roomId: room.id, index: edge + 1, base, moved: true };
+  }
+
+  /** The "+" on an edge of an outdoor area: a corner appears there and is dragged on. */
+  private splitOutdoorEdgeGesture(id: string, edgeText: string): Drag | undefined {
+    const edge = Number(edgeText);
+    const base = this._doc;
+    const area = this.floorOf({ base })?.outdoor.find((o) => o.id === id);
+    if (!area) return undefined;
+    const [a, b] = [area.points[edge], area.points[(edge + 1) % area.points.length]];
+    this.change((_, floor) => insertOutdoorCorner(floor.outdoor.find((o) => o.id === id)!, edge, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]), base, false);
+    return { kind: "outvertex", id, index: edge + 1, base, moved: true };
+  }
+
+  /** The "+" on an edge of a flat roof: a corner appears there (a rectangle becomes a free shape) and is dragged on. */
+  private splitRoofEdgeGesture(id: string, edgeText: string): Drag {
+    const edge = Number(edgeText);
+    const base = this._doc;
+    this.change((doc) => {
+      const section = doc.settings.roof.sections?.find((s) => s.id === id);
+      if (!section) return;
+      const ring = roofOutline(section);
+      const [a, b] = [ring[edge], ring[(edge + 1) % ring.length]];
+      insertRoofCorner(section, edge, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]);
+    }, base, false);
+    return { kind: "roofvertex", id, index: edge + 1, base, moved: true };
   }
 
   /** What is left: a room (selected, and moved unless furnishing), or nothing, which pans. */
@@ -1895,6 +1929,8 @@ export class NfEditor extends LitElement {
           }
         });
       },
+      setSlope: (room, edge, start, end) => this.changeRoom(room, (r) => setWallSlope(r, edge, start, end)),
+      clearSlope: (room, edge) => this.changeRoom(room, (r) => clearWallSlope(r, edge, this.floor?.height ?? 2.5)),
       setThickness: (room, edge, thickness) => this.changeRoom(room, (r) => setWallThickness(r, edge, thickness)),
       cut: (room, edge, part) => {
         const starts = this.edgeParts(room, edge);

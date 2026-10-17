@@ -49,6 +49,18 @@ export function newFloorOpening(lo: Vec2, hi: Vec2): Furniture {
 
 export const newOutdoorArea = (points: readonly Vec2[]): OutdoorArea => ({ id: uid("outdoor"), type: "lawn", points: points.map(([x, z]) => [thousandths(x), thousandths(z)]) });
 
+/** A new corner in the middle of an outdoor area's edge (edge i runs from corner i to the next), so that a rectangle can become any shape. */
+export function insertOutdoorCorner(area: OutdoorArea, edge: number, at: Vec2): void {
+  area.points.splice(edge + 1, 0, [thousandths(at[0]), thousandths(at[1])]);
+}
+
+/** Takes a corner away; an area keeps at least three. */
+export function removeOutdoorCorner(area: OutdoorArea, index: number): boolean {
+  if (area.points.length <= 3 || index < 0 || index >= area.points.length) return false;
+  area.points.splice(index, 1);
+  return true;
+}
+
 export const copyOfOutdoorArea = (area: OutdoorArea): OutdoorArea => ({ ...area, id: uid("outdoor"), points: area.points.map(([x, z]) => [thousandths(x + 0.5), thousandths(z + 0.5)]) });
 
 // furniture

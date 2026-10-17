@@ -7,7 +7,7 @@ import { ENERGY_DEVICES, type Floor, type RoofSection, type Vec2 } from "../../.
 import { dormerParent, effectiveDormer, headroomLines, ridgeHeight, sectionCutsBelow, sectionFrame, sectionGeometry } from "../../../roof-sections.ts";
 import { fieldCenter, fieldFace, fieldModules, roofFaces, windowCorners } from "../../../solar.ts";
 import type { RoofController } from "../roof-controller.ts";
-import { pointsAttribute, type CanvasContext } from "./context.ts";
+import { edgePlus, pointsAttribute, type CanvasContext } from "./context.ts";
 
 type Layer = TemplateResult | typeof nothing;
 
@@ -35,7 +35,7 @@ export function roofSectionsLayer(ctx: CanvasContext, roof: RoofController): Lay
   const one = (section: RoofSection, index: number) => {
     const selected = section.id === roof.sectionId;
     const frame = sectionFrame(section);
-    const custom = section.shape === "flat" && section.points && section.points.length >= 3 ? section.points : null;
+    const custom = (section.shape === "flat" || section.shape === "parapet") && section.points && section.points.length >= 3 ? section.points : null;
     // a dormer or cross gable is drawn as deep as it really reaches: its ridge meets the slope there
     const parent = dormerParent(sections, section);
     const shown = parent ? sectionFrame(effectiveDormer(parent, section)) : frame;
@@ -49,15 +49,16 @@ export function roofSectionsLayer(ctx: CanvasContext, roof: RoofController): Lay
     const [lx, ly] = ctx.toScreen(frame.at((frame.u0 + frame.u1) / 2, frame.w / 2));
     const movable = selected && editable && !roof.isFixed(section);
     const corners = [[0, 0], [1, 0], [1, 1], [0, 1]] as const;
+    const flatRoof = section.shape === "flat" || section.shape === "parapet";
+    const [x0, x1, z0, z1] = [Math.min(section.x0, section.x1), Math.max(section.x0, section.x1), Math.min(section.z0, section.z1), Math.max(section.z0, section.z1)];
+    // a flat roof can be reshaped: a "+" on every edge adds a corner (a rectangle becomes a free shape)
+    const ring: Vec2[] = custom ?? [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
+    const plusses = movable && flatRoof ? ring.map((p, i) => edgePlus(ctx, p, ring[(i + 1) % ring.length], "roof", section.id, i)) : nothing;
     const handles = !movable
       ? nothing
-      : custom
-        ? custom.map((p, k) => vertexHandle(ctx, p, `${section.id}:${k}`))
-        : corners.map(([kx, kz]) => {
-            const x = kx ? Math.max(section.x0, section.x1) : Math.min(section.x0, section.x1);
-            const z = kz ? Math.max(section.z0, section.z1) : Math.min(section.z0, section.z1);
-            return cornerHandle(ctx, [x, z], `${section.id}:${kx}:${kz}`);
-          });
+      : svg`${plusses}${custom
+          ? custom.map((p, k) => vertexHandle(ctx, p, `${section.id}:${k}`))
+          : corners.map(([kx, kz]) => cornerHandle(ctx, [kx ? x1 : x0, kz ? z1 : z0], `${section.id}:${kx}:${kz}`))}`;
     return svg`<g data-roof=${section.id} class=${`nf-roof-sec${selected ? " nf-roof-sel" : ""}`}>
         <polygon points=${pointsAttribute(ctx, outline)} />
         <g class="nf-roof-ridge">${ridges}</g>

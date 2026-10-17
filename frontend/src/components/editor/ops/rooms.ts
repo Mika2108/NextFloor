@@ -35,6 +35,7 @@ export function removeCorner(floor: Floor, roomId: string, index: number): boole
   room.points.splice(index, 1);
   // per-edge lists lose the edge that started at the removed corner
   room.wall_heights?.splice(index, 1);
+  room.wall_slopes?.splice(index, 1);
   room.wall_thickness?.splice(index, 1);
   const onRoom = (o: { room_id: string; wall?: string | null }) => o.room_id === roomId && !o.wall;
   floor.openings = floor.openings
@@ -104,8 +105,19 @@ export function insertCorner(floor: Floor, roomId: string, edge: number, at: Vec
   const room = floor.rooms.find((r) => r.id === roomId);
   if (!room) return;
   const start = room.points[edge];
+  const end = room.points[(edge + 1) % room.points.length];
   room.points.splice(edge + 1, 0, at);
-  room.wall_heights?.splice(edge + 1, 0, room.wall_heights[edge] ?? null);
+  const [from, to] = [room.wall_heights?.[edge], room.wall_slopes?.[edge]];
+  if (typeof from === "number" && typeof to === "number" && room.wall_slopes) {
+    // a sloping wall stays one slope: the new corner stands at the height the slope has there
+    const whole = Math.hypot(end[0] - start[0], end[1] - start[1]);
+    const middle = thousandths(from + ((to - from) * Math.min(1, Math.hypot(at[0] - start[0], at[1] - start[1]) / (whole || 1))));
+    room.wall_slopes.splice(edge, 1, middle, to);
+    room.wall_heights!.splice(edge + 1, 0, middle);
+  } else {
+    room.wall_heights?.splice(edge + 1, 0, room.wall_heights[edge] ?? null);
+    room.wall_slopes?.splice(edge + 1, 0, null);
+  }
   room.wall_thickness?.splice(edge + 1, 0, room.wall_thickness[edge] ?? null);
   const firstHalf = Math.hypot(at[0] - start[0], at[1] - start[1]);
   for (const o of floor.openings) {

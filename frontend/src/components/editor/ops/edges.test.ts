@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { box } from "../../../entities/fixtures.ts";
 import type { Room } from "../../../model.ts";
-import { cutEdge, edgeLength, joinAtCut, moveCut, setPartHeight, setWallHeight, setWallThickness, thicknessFromTyped } from "./edges.ts";
+import { clearWallSlope, cutEdge, edgeLength, setWallSlope, joinAtCut, moveCut, setPartHeight, setWallHeight, setWallThickness, thicknessFromTyped } from "./edges.ts";
 
 const room = (extra: Partial<Room> = {}): Room => ({ ...box("r", 0, 0, 6, 4), ...extra });
 
@@ -84,4 +84,31 @@ test("a wall thickness is stored per edge and reset with null", () => {
   assert.equal(thicknessFromTyped(0.3, 0.12), 0.3);
   assert.equal(thicknessFromTyped(9, 0.12), 1.5);
   assert.equal(thicknessFromTyped(0, 0.12), 0.02);
+});
+
+test("a wall slopes from its start to its end height; a level height, parts or clearing end the slope", () => {
+  const r = room();
+  setWallSlope(r, 1, 2.5, 4.7);
+  assert.deepEqual([r.wall_heights, r.wall_slopes], [[null, 2.5, null, null], [null, 4.7, null, null]]);
+  // heights are kept in sane limits
+  setWallSlope(r, 1, 0, 99);
+  assert.deepEqual([r.wall_heights?.[1], r.wall_slopes?.[1]], [0.05, 30]);
+  // a level height ends the slope, and with nothing else set the lists disappear
+  setWallHeight(r, 1, null);
+  assert.deepEqual([r.wall_heights, r.wall_slopes], [undefined, undefined]);
+  // heights per part and a slope exclude each other
+  setWallSlope(r, 0, 2, 3);
+  setPartHeight(r, 0, 1, 1.5, 2);
+  assert.equal(r.wall_slopes, undefined);
+  assert.deepEqual(r.wall_heights?.[0], [2, 1.5]);
+});
+
+test("levelling a slope keeps its start height, and the full floor height when that is not lower", () => {
+  const r = room();
+  setWallSlope(r, 2, 1.2, 3);
+  clearWallSlope(r, 2, 2.5);
+  assert.deepEqual([r.wall_heights?.[2], r.wall_slopes], [1.2, undefined]);
+  setWallSlope(r, 2, 4.7, 2.5);
+  clearWallSlope(r, 2, 2.5);
+  assert.equal(r.wall_heights, undefined, "from the floor height up it is a full wall again");
 });

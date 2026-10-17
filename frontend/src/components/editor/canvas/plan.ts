@@ -5,7 +5,7 @@ import { nothing, svg, type TemplateResult } from "lit";
 import { formatNumber, type I18nKey } from "../../../i18n.ts";
 import { bounds, centroid, isFixed, polygonArea, type Floor, type FreeWall, type OutdoorArea, type Room, type Vec2 } from "../../../model.ts";
 import type { Wall } from "../../../geometry/walls.ts";
-import { pointsAttribute, type CanvasContext } from "./context.ts";
+import { edgePlus, pointsAttribute, type CanvasContext } from "./context.ts";
 
 type Layer = TemplateResult | typeof nothing;
 
@@ -69,11 +69,12 @@ export function outdoorLayer(ctx: CanvasContext, floor: Floor, selectedId: strin
   return svg`<g>${floor.outdoor.map(one)}</g>`;
 }
 
-/** Corner handles of the selected outdoor area, so that a rectangle stays one while it is dragged. */
+/** Corner handles of the selected outdoor area (a rectangle stays one while it is dragged) and a "+" on every edge that adds a corner. */
 export function outdoorHandlesLayer(ctx: CanvasContext, area: OutdoorArea | undefined, tool: string): Layer {
   const { host } = ctx;
   if (!area || !host.admin || tool !== "select" || host.doc.settings.lock_plan) return nothing;
-  return svg`${area.points.map((p, i) => svg`<g class="nf-vertex" data-out-vertex=${`${area.id}:${i}`}>${gripAt(...ctx.toScreen(p))}</g>`)}`;
+  const pts = area.points;
+  return svg`${pts.map((p, i) => edgePlus(ctx, p, pts[(i + 1) % pts.length], "out", area.id, i))}${pts.map((p, i) => svg`<g class="nf-vertex" data-out-vertex=${`${area.id}:${i}`}>${gripAt(...ctx.toScreen(p))}</g>`)}`;
 }
 
 /** Rooms with their names and areas, and the wall of the selected room that its list row points at. */

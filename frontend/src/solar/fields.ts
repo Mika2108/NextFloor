@@ -59,6 +59,17 @@ export function fieldSize(face: RoofFace, f: SolarField): [number, number] {
   return [longest * width + (longest - 1) * MODULE_GAP, (counts.length - 1) * rowPitch(face, f) + height * Math.cos(tiltOf(face, f))];
 }
 
+/** Whether a field on this face may be turned about its middle: flat roofs only (garden fields turn their whole face instead). */
+const turnable = (face: RoofFace): boolean => face.flat && !face.unbounded && !face.wall;
+
+/** A field's turn in radians (clockwise in the plan, like the garden fields) and the point it turns about, in face coordinates; null when it stands straight. */
+function turnOf(face: RoofFace, f: SolarField): { cos: number; sin: number; u: number; s: number } | null {
+  if (!turnable(face) || !f.rotation) return null;
+  const r = f.rotation * DEG;
+  const [width, depth] = fieldSize(face, f);
+  return { cos: Math.cos(r), sin: Math.sin(r), u: f.u + width / 2, s: f.v + depth / 2 };
+}
+
 /**
  * The modules of a field on its face. Modules that would leave the face (a hip, the ridge) are left out, and so are the
  * ones switched off, unless `withSkipped` asks for them (the editor shows them).
@@ -71,8 +82,15 @@ export function fieldModules(face: RoofFace, f: SolarField, withSkipped = false)
   const counts = rowCounts(f);
   const longest = Math.max(1, ...counts);
   const switchedOff = new Set(f.skip ?? []);
-  const at = (u: number, s: number, up: number): V3 => [0, 1, 2].map((i) => face.o[i] + face.eu[i] * u + face.es[i] * s + face.n[i] * up) as V3;
-  const onFace = (u: number, s: number) => {
+  const turn = turnOf(face, f);
+  // a turned field: every point of it swings about the field's middle
+  const turned = (u: number, s: number): [number, number] => (turn ? [turn.u + (u - turn.u) * turn.cos - (s - turn.s) * turn.sin, turn.s + (u - turn.u) * turn.sin + (s - turn.s) * turn.cos] : [u, s]);
+  const at = (u0: number, s0: number, up: number): V3 => {
+    const [u, s] = turned(u0, s0);
+    return [0, 1, 2].map((i) => face.o[i] + face.eu[i] * u + face.es[i] * s + face.n[i] * up) as V3;
+  };
+  const onFace = (u0: number, s0: number) => {
+    const [u, s] = turned(u0, s0);
     if (face.unbounded) return true;
     if (s < -1e-6 || s > face.ls + 1e-6) return false;
     const [from, to] = face.span(s);
@@ -123,6 +141,14 @@ export const fieldPlan = (face: RoofFace, f: SolarField): Vec2[][] => fieldModul
 export function clampField(face: RoofFace, f: SolarField): { u: number; v: number } {
   if (face.unbounded) return { u: f.u, v: f.v };
   const [width, depth] = fieldSize(face, f);
+  const turn = turnOf(face, f);
+  if (turn) {
+    // a turned field: its middle stays where the turned outline still fits on the face
+    const [halfU, halfS] = [(width * Math.abs(turn.cos) + depth * Math.abs(turn.sin)) / 2, (width * Math.abs(turn.sin) + depth * Math.abs(turn.cos)) / 2];
+    const inside = (centre: number, half: number, size: number) => Math.floor(Math.max(half, Math.min(centre, size - half)) * 100 + 1e-6) / 100;
+    const [cu, cs] = [f.u + width / 2, f.v + depth / 2];
+    return { u: Math.round((inside(cu, halfU, face.lu) - width / 2) * 100) / 100, v: Math.round((inside(cs, halfS, face.ls) - depth / 2) * 100) / 100 };
+  }
   // rounded down to centimetres, so a field pushed to the far edge still fits completely
   const down = (x: number) => Math.floor(x * 100 + 1e-6) / 100;
   return { u: down(Math.min(Math.max(0, f.u), Math.max(0, face.lu - width))), v: down(Math.min(Math.max(0, f.v), Math.max(0, face.ls - depth))) };

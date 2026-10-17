@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { box, floorWith } from "../../../entities/fixtures.ts";
 import type { Building, RoofSection, RoofSettings, SolarField } from "../../../model.ts";
-import { copyOfSection, sectionFromRectangle, sectionNumber } from "./roof.ts";
+import { copyOfSection, insertRoofCorner, removeRoofCorner, roofOutline, sectionFromRectangle, sectionNumber } from "./roof.ts";
 import { assignString, columnsPatch, columnsText, keptOnMove, pruneStrings, rowsPatch, toggledSkip } from "./solar.ts";
 
 const field = (id: string, extra: Partial<SolarField> = {}): SolarField => ({ id, face: "main:a", u: 0, v: 0, rows: 2, cols: 3, portrait: true, ...extra });
@@ -90,4 +90,25 @@ test("moving to another face keeps the modules and links but not the place", () 
   assert.equal(kept.look, "blue");
   assert.equal("u" in kept, false);
   assert.equal("rows" in kept, false);
+});
+
+test("a flat roof becomes a free shape with the first corner, and its box follows the points", () => {
+  const flat = { ...sectionFromRectangle(house(), [0, 0], [6, 4]), shape: "flat" as const };
+  assert.deepEqual(roofOutline(flat), [[0, 0], [6, 0], [6, 4], [0, 4]]);
+  insertRoofCorner(flat, 1, [6, 2]);
+  assert.deepEqual(flat.points, [[0, 0], [6, 0], [6, 2], [6, 4], [0, 4]]);
+  // pulling the new corner out widens the box
+  flat.points![2] = [8, 2];
+  insertRoofCorner(flat, 2, [7, 3]);
+  assert.equal(flat.x1, 8);
+  assert.equal(flat.z1, 4);
+  assert.equal(removeRoofCorner(flat, 2), true);
+  assert.equal(flat.points!.length, 5);
+});
+
+test("a free flat roof keeps three corners; a plain rectangle has no points to take away", () => {
+  const flat = { ...sectionFromRectangle(house(), [0, 0], [6, 4]), shape: "flat" as const };
+  assert.equal(removeRoofCorner(flat, 0), false);
+  flat.points = [[0, 0], [4, 0], [4, 3]];
+  assert.equal(removeRoofCorner(flat, 1), false);
 });

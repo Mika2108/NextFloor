@@ -1,7 +1,7 @@
 // Room panel: controls for the devices of the room's area (lights, covers, heating, media, switches,
 // scenes and scripts). Shown next to the 3D view when a room is selected.
 
-import { css, html, LitElement, nothing, type TemplateResult } from "lit";
+import { css, html, LitElement, nothing, svg, type TemplateResult } from "lit";
 import { areaEntities, entityName, groupByDevice, isUnavailable, kindOf, roomClimateSensors, roomClimateValue, roomPanelEntities, fromCelsius, tempUnit, type DeviceKind } from "../devices.ts";
 import { formatNumber, translate, type I18nKey } from "../i18n.ts";
 import { iconPath } from "../icons.ts";
@@ -45,6 +45,7 @@ export class NfRoomPanel extends LitElement {
     floor: { attribute: false },
     confirmEntities: { attribute: false },
     _showAll: { state: true },
+    _folded: { state: true },
   };
 
   declare hass: HomeAssistant;
@@ -55,6 +56,8 @@ export class NfRoomPanel extends LitElement {
   declare confirmEntities: Set<string> | null;
   /** Show the other devices of the area as well (their main entities). */
   private declare _showAll: boolean;
+  /** Only the header shows (a small screen: the room stays in view, the devices are out of the way). Starts open for every room. */
+  private declare _folded: boolean;
   private memo: { entities: HomeAssistant["entities"]; floor: Floor | null; room: Room; shown: string[]; more: string[] } | null = null;
 
   constructor() {
@@ -62,6 +65,12 @@ export class NfRoomPanel extends LitElement {
     this.room = null;
     this.floor = null;
     this._showAll = false;
+    this._folded = false;
+  }
+
+  protected willUpdate(changed: Map<string, unknown>): void {
+    const before = changed.get("room") as Room | null | undefined;
+    if (changed.has("room") && before?.id !== this.room?.id) this._folded = false;
   }
 
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
@@ -134,11 +143,14 @@ export class NfRoomPanel extends LitElement {
           <h2>${room.name}</h2>
           ${facts.length ? html`<p class="nf-rp-facts">${facts.join(" · ")}</p>` : nothing}
         </div>
+        <button class="nf-rp-close" aria-label=${this.t(this._folded ? "panel_unfold" : "panel_fold")} title=${this.t(this._folded ? "panel_unfold" : "panel_fold")} aria-expanded=${this._folded ? "false" : "true"} @click=${() => (this._folded = !this._folded)}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${this._folded ? svg`<path d="M6 14l6-6 6 6" />` : svg`<path d="M6 12h12" />`}</svg>
+        </button>
         <button class="nf-rp-close" aria-label=${this.t("close")} @click=${() => this.fire("close")}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
       </header>
-      <div class="nf-rp-body">
+      <div class="nf-rp-body" ?hidden=${this._folded}>
         ${!room.area_id
           ? html`<p class="nf-rp-note">${this.t("panel_no_area")}</p>`
           : !ids.length
@@ -513,6 +525,12 @@ export class NfRoomPanel extends LitElement {
         background: color-mix(in srgb, var(--nf-text) 6%, transparent);
         color: var(--nf-text);
         cursor: pointer;
+      }
+      .nf-rp-body[hidden] {
+        display: none;
+      }
+      .nf-rp-head:has(+ .nf-rp-body[hidden]) {
+        border-bottom: none;
       }
       .nf-rp-body {
         overflow-y: auto;

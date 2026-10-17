@@ -193,7 +193,8 @@ export function wallFaces(b: Building, floorId?: string): RoofFace[] {
       if (l < 1.2) continue;
       // outer walls have their room on the left, so the outer face is on the right
       const [nx, nz] = [dz / l, -dx / l];
-      const height = Math.min(floor.height, wall.height ?? floor.height);
+      // a sloping wall offers its lower end
+      const height = Math.min(floor.height, wall.height ?? floor.height, wall.heightEnd ?? Infinity);
       const addFace = (key: string, o: V3, eu: V3, n: V3) =>
         faces.push({ key, section: null, side: "top", flat: false, o, eu, es: [0, 1, 0], n, lu: l, ls: height, pitch: 90, span: () => [0, l], facing: [n[0], n[2]], wall: { floorId: floor.id } });
       addFace(`wall:${floor.id}:${wall.id}`, [wall.a[0] + nx * wall.right, floor.elevation, wall.a[1] + nz * wall.right], [dx / l, 0, dz / l], [nx, 0, nz]);

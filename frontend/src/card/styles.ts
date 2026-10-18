@@ -109,6 +109,10 @@ export const cardStyles = css`
     flex-direction: column;
     pointer-events: none;
   }
+  /* folded, only the title bar is left: it drops to the bottom edge instead of hanging in the picture */
+  .nf-card-panel[folded] {
+    justify-content: flex-end;
+  }
   /* phones and portrait tablets: the room panel becomes a sheet at the bottom */
   @container nf ((max-width: 700px) or ((orientation: portrait) and (max-width: 1000px))) {
     .nf-card-panel {

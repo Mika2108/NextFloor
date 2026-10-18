@@ -91,14 +91,25 @@ test("a pergola has corner posts and beams, rafters across a rectangle, and opti
   assert.ok(triangle.buf.count < plain.buf.count, "no rafters across a triangle");
 });
 
-test("areas marked cut inside another become holes in it; standing areas and pools have none", () => {
+test("areas marked cut inside another become holes in it, in either drawing order; standing areas and pools have none", () => {
   const areas = [area("lawn", square(0, 0, 10, 10)), area("bed", square(2, 2, 3, 3), { cut: true }), area("bed", square(20, 20, 21, 21), { cut: true }), area("path", square(4, 4, 5, 5))];
   assert.equal(outdoorHoles(areas, 0).length, 1);
   assert.deepEqual(outdoorHoles([area("hedge", square(0, 0, 10, 10)), area("bed", square(2, 2, 3, 3), { cut: true })], 0), []);
   assert.deepEqual(outdoorHoles([area("pool", square(0, 0, 10, 10)), area("bed", square(2, 2, 3, 3), { cut: true })], 0), []);
+  // a bed drawn before the lawn that contains it still leaves its hole
+  assert.equal(outdoorHoles([area("bed", square(2, 2, 3, 3), { cut: true }), area("lawn", square(0, 0, 10, 10))], 1).length, 1);
+  // a pool cuts itself out of a terrace, drawn before or after, unless cut is switched off
+  const terrace = area("terrace", square(0, 0, 10, 10));
+  assert.equal(outdoorHoles([terrace, area("pool", square(2, 2, 5, 5))], 0).length, 1);
+  assert.equal(outdoorHoles([area("pool", square(2, 2, 5, 5)), terrace], 1).length, 1);
+  assert.equal(outdoorHoles([terrace, area("pool", square(2, 2, 5, 5), { cut: false })], 0).length, 0);
   const withHole = build(areas[0], areas[1]);
   const without = build(areas[0]);
   assert.ok(withHole.buf.count > without.buf.count);
+  // the terrace around a pool gets walls round the hole (more geometry) unless the pool does not cut itself out
+  const cutPool = build(terrace, area("pool", square(2, 2, 5, 5)));
+  const keptPool = build(terrace, area("pool", square(2, 2, 5, 5), { cut: false }));
+  assert.ok(cutPool.buf.count > keptPool.buf.count);
 });
 
 test("the surface height of an area follows its offset and type", () => {

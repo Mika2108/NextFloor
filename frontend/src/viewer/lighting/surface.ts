@@ -6,7 +6,7 @@ import type { Wall } from "../../geometry/walls.ts";
 import { outdoorStanding, pointInPolygon, type Floor, type Vec2 } from "../../model.ts";
 import type { OpeningInfo } from "../build.ts";
 import { LOWER_OFFSET } from "../geo.ts";
-import { outdoorSurface } from "../outdoor.ts";
+import { outdoorHoles, outdoorSurface } from "../outdoor.ts";
 
 export interface LightSurface {
   /** Vertex positions (x, y, z), six vertices per quad. */
@@ -117,11 +117,14 @@ export function buildLightSurface(
 
   // outside is one zone (index rooms.length) for all outdoor areas and the outer faces of the walls
   const outside = floor.rooms.length;
-  for (const area of floor.outdoor ?? []) {
-    if (area.points.length < 3 || outdoorStanding(area.type)) continue;
+  const areas = floor.outdoor ?? [];
+  areas.forEach((area, ai) => {
+    if (area.points.length < 3 || outdoorStanding(area.type)) return;
     const y = outdoorSurface(floor, area) + FLOOR_LIFT;
-    for (const { a, b } of gridCells(area.points, cell)) flatQuad(a, b, y, outside);
-  }
+    // the patches cut out of an area (a pool in a terrace) carry no light of this area
+    const holes = outdoorHoles(areas, ai);
+    for (const { a, b } of gridCells(area.points, cell, (cx, cz) => holes.some((h) => pointInPolygon([cx, cz], h)))) flatQuad(a, b, y, outside);
+  });
 
   const cut = Math.min(floor.cut_height, floor.height);
   walls.forEach((wall, wi) => {

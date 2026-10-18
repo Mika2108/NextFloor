@@ -5,7 +5,7 @@
 // patches cut out of it.
 
 import { Color } from "three";
-import { bounds, groundLevel, isAxisRect, OUTDOOR_TOP, outdoorDrop, outdoorStanding, pointInPolygon, type Floor, type OutdoorArea, type Vec2 } from "../../model.ts";
+import { bounds, cutsOut, groundLevel, isAxisRect, OUTDOOR_TOP, outdoorDrop, outdoorStanding, pointInPolygon, type Floor, type OutdoorArea, type Vec2 } from "../../model.ts";
 import { ALWAYS, pushPrism, shade, triangulate, type GeoBuffer, type LineBuffer } from "../geo.ts";
 import { counterClockwise, pushBeam, pushPost } from "./beams.ts";
 import { LOOKS } from "./looks.ts";
@@ -15,13 +15,12 @@ export function outdoorSurface(floor: Floor, area: OutdoorArea): number {
   return groundLevel(floor) + (area.offset ?? 0) + (outdoorStanding(area.type) ? 0.01 : OUTDOOR_TOP[area.type]);
 }
 
-/** The holes of an area: later areas marked "cut" that lie entirely inside it. */
+/** The holes of an area: the other areas that cut themselves out (marked "cut", and pools) and lie entirely inside it, whatever order they were drawn in. */
 export function outdoorHoles(areas: OutdoorArea[], index: number): Vec2[][] {
   const area = areas[index];
   if (outdoorStanding(area.type) || area.type === "pool") return [];
   return areas
-    .slice(index + 1)
-    .filter((other) => other.cut && other.points.length >= 3 && other.points.every((p) => pointInPolygon(p, area.points)))
+    .filter((other, i) => i !== index && cutsOut(other) && other.points.length >= 3 && other.points.every((p) => pointInPolygon(p, area.points)))
     .map((other) => counterClockwise(other.points));
 }
 

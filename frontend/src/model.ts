@@ -613,9 +613,12 @@ export interface OutdoorArea {
   open?: boolean;
   /** Pergola: diagonal X-bracing on every side. */
   bracing?: boolean;
-  /** This area is cut out of every area beneath it that contains it (a wild patch or pond inside a lawn). */
+  /** This area is cut out of every other area that contains it whole (a wild patch or pond inside a lawn). A pool does this by itself unless this is false. */
   cut?: boolean;
 }
+
+/** Whether an area leaves a hole in the areas around it: set by hand, and on by default for a pool. */
+export const cutsOut = (a: OutdoorArea): boolean => a.cut ?? a.type === "pool";
 
 /** Energy flow: meter position and power sensors (W). Grid positive = import, battery positive = discharging. */
 export interface EnergySettings {

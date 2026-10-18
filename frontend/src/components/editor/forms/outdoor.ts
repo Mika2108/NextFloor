@@ -2,7 +2,7 @@
 
 import { html, nothing, type TemplateResult } from "lit";
 import { formatNumber, type I18nKey } from "../../../i18n.ts";
-import { bounds, isAxisRect, type FreeWall, OUTDOOR_TOP, OUTDOOR_TYPES, outdoorStanding, SLOPE_DIRS, type Direction, type OutdoorArea, type OutdoorType, type SlopeDir, type Vec2 } from "../../../model.ts";
+import { bounds, cutsOut, isAxisRect, type FreeWall, OUTDOOR_TOP, OUTDOOR_TYPES, outdoorStanding, SLOPE_DIRS, type Direction, type OutdoorArea, type OutdoorType, type SlopeDir, type Vec2 } from "../../../model.ts";
 import { checkField, hint, numberField, selectField, toThousandths } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { wallEndForLength, wallHeightPatch } from "../ops/items.ts";
@@ -41,7 +41,7 @@ export function renderOutdoorForm(host: EditorHost, area: OutdoorArea, actions: 
       ${checkField(host, t("outdoor_outline"), area.outline !== false, (on) => set({ outline: on ? undefined : false }), { title: t("outdoor_outline_hint") })}
       ${area.type === "fence" || area.type === "pergola" ? checkField(host, t("outdoor_open"), !!area.open, (on) => set({ open: on || undefined }), { title: t("outdoor_open_hint") }) : nothing}
       ${area.type === "pergola" ? checkField(host, t("outdoor_bracing"), !!area.bracing, (on) => set({ bracing: on || undefined })) : nothing}
-      ${checkField(host, t("outdoor_cut"), !!area.cut, (on) => set({ cut: on || undefined }), { title: t("outdoor_cut_hint") })}
+      ${checkField(host, t("outdoor_cut"), cutsOut(area), (on) => set({ cut: on === (area.type === "pool") ? undefined : on }), { title: t("outdoor_cut_hint") })}
     </div>
     ${host.admin
       ? html`<div class="nf-actions">

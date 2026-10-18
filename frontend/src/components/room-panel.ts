@@ -73,6 +73,11 @@ export class NfRoomPanel extends LitElement {
     if (changed.has("room") && before?.id !== this.room?.id) this._folded = false;
   }
 
+  /** The host carries `folded`, so the stage it sits in can move a folded panel out of the way (see panel/styles.ts, card/styles.ts). */
+  protected updated(changed: Map<string, unknown>): void {
+    if (changed.has("_folded")) this.toggleAttribute("folded", this._folded);
+  }
+
   private t(key: I18nKey, vars?: Record<string, string | number>): string {
     return translate(this.hass, key, vars);
   }

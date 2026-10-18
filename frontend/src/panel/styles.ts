@@ -296,6 +296,14 @@ export const panelStyles = css`
     justify-content: flex-start;
     pointer-events: none;
   }
+  /* folded, the panel is only its title bar: on a wide stage it drops to the bottom edge, above the switches, instead of hanging in the picture */
+  .nf-room-panel[folded] {
+    justify-content: flex-end;
+    bottom: 62px;
+  }
+  .nf-clean .nf-room-panel[folded] {
+    bottom: 14px;
+  }
   /* the switches sit at the bottom (as in the card), where they never meet the energy values or warnings */
   nf-view3d {
     --nf-bottom-inset: 52px;

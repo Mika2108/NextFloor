@@ -35,6 +35,19 @@ const executablePath = candidates.find((p) => existsSync(p));
 const browser = await puppeteer.launch({ executablePath, headless: true, args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", ...(process.getuid?.() === 0 ? ["--no-sandbox"] : [])] });
 
 // Furniture from the built-in packs in the living room, kitchen and garden.
+// a pool drawn before the terrace that contains it: it cuts itself out of the terrace
+const POOL_SCRIPT = `
+  const f = e._doc.floors[0];
+  e._floorId = f.id;
+  const xs = f.rooms.flatMap((r) => r.points.map((p) => p[0]));
+  const zs = f.rooms.flatMap((r) => r.points.map((p) => p[1]));
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), z1 = Math.max(...zs);
+  const set = (type) => Object.assign(e._doc.floors[0].outdoor.at(-1), { type });
+  e.addOutdoor([[x0 + 1.5, z1 + 1.5], [x0 + 5, z1 + 1.5], [x0 + 5, z1 + 3.5], [x0 + 1.5, z1 + 3.5]]);
+  set("pool");
+  e.addOutdoor([[x0, z1 + 0.5], [x1, z1 + 0.5], [x1, z1 + 5], [x0, z1 + 5]]);
+  set("terrace");
+`;
 const PACK_SCRIPT = `
   const f = e._doc.floors[0];
   e._floorId = f.id;
@@ -74,6 +87,9 @@ const shots = [
   { name: "dev-solar-turn", dev: true, query: "?pv=5400&flows", width: 1500, height: 950, editor: true, click: "Energie", editorScript: "const d = structuredClone(e._doc); d.settings.roof.type = 'flat'; const f = d.settings.roof.solar[0]; Object.assign(f, { face: 'main:top', rows: 1, cols: 5, tilt: 15, u: 3, v: 3, rotation: 90, flip: false }); d.settings.roof.solar = [f]; e.setDoc(d); e.roof.selectField(f.id); e.fit();" },
   { name: "dev-out-plus", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; const a = e._doc.floors[0].outdoor[0]; e.selectItem('outdoor', a.id); e.fit();" },
   { name: "dev-panel-fold", dev: true, query: "", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer", viewScript: "const f = (r) => { for (const el of r.querySelectorAll('*')) { if (el.tagName === 'NF-ROOM-PANEL') return el; if (el.shadowRoot) { const h = f(el.shadowRoot); if (h) return h; } } return null; }; f(document).shadowRoot.querySelector('.nf-rp-close').click();" },
+  { name: "dev-panel-fold-wide", dev: true, query: "", width: 1600, height: 900, click: "Erdgeschoss", then: "Wohnzimmer", viewScript: "const f = (r) => { for (const el of r.querySelectorAll('*')) { if (el.tagName === 'NF-ROOM-PANEL') return el; if (el.shadowRoot) { const h = f(el.shadowRoot); if (h) return h; } } return null; }; f(document).shadowRoot.querySelector('.nf-rp-close').click();" },
+  { name: "dev-card-fold", dev: true, query: "?card&roombuttons", width: 1400, height: 820, click: "Wohnzimmer", viewScript: "const f = (r) => { for (const el of r.querySelectorAll('*')) { if (el.tagName === 'NF-ROOM-PANEL') return el; if (el.shadowRoot) { const h = f(el.shadowRoot); if (h) return h; } } return null; }; f(document).shadowRoot.querySelector('.nf-rp-close').click();" },
+  { name: "dev-pool-cut", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: POOL_SCRIPT, then3d: "Erdgeschoss" },
   { name: "view-room-light", query: "", ha: "light", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
   { name: "card-light", query: "?card", ha: "light", width: 1400, height: 820 },
   { name: "view-day", query: "", width: 1280, height: 800, click: "Tag" },
@@ -216,7 +232,7 @@ for (const shot of shots.filter((s) => (only ? only.includes(s.name) : !s.dev)))
   if (shot.viewScript) {
     // runs with v = the 3D view of the panel (search, quick menu, swipe)
     await page.evaluate((code) => {
-      const v = document.querySelector("nextfloor-panel").shadowRoot.querySelector("nf-view3d");
+      const v = document.querySelector("nextfloor-panel")?.shadowRoot.querySelector("nf-view3d") ?? null;
       new Function("v", code)(v);
     }, shot.viewScript);
     await new Promise((r) => setTimeout(r, 1500));
@@ -261,7 +277,7 @@ for (const shot of shots.filter((s) => (only ? only.includes(s.name) : !s.dev)))
       if (shot.camera) {
         // turn the camera (radius, theta, phi around the house) for a view from another side
         await page.evaluate((cam) => {
-          const v = document.querySelector("nextfloor-panel").shadowRoot.querySelector("nf-view3d");
+          const v = document.querySelector("nextfloor-panel")?.shadowRoot.querySelector("nf-view3d") ?? null;
           const viewer = Object.values(v).find((x) => x && x.floors && x.floorMap);
           const { target, ...rest } = cam;
           if (target) viewer.controls.view.target.set(target.x, target.y ?? 1, target.z);
@@ -273,7 +289,7 @@ for (const shot of shots.filter((s) => (only ? only.includes(s.name) : !s.dev)))
       // DEBUG_VIEW="<code using v>" prints what the panel's 3D view says after the switch
       if (process.env.DEBUG_VIEW) {
         const out = await page.evaluate((code) => {
-          const v = document.querySelector("nextfloor-panel").shadowRoot.querySelector("nf-view3d");
+          const v = document.querySelector("nextfloor-panel")?.shadowRoot.querySelector("nf-view3d") ?? null;
           try {
             return String(new Function("v", "return " + code)(v));
           } catch (err) {

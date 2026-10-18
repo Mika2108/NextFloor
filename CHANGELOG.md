@@ -2,6 +2,16 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## 0.9.1
+
+### Changed
+
+- **A pool cuts itself out of the areas around it:** a pool drawn inside a terrace (or a lawn) now leaves a hole there on its own, so the terrace runs around the pool and not over it. Any other area can still do the same with **Cut out of surrounding areas**. The order the areas were drawn in no longer matters: before, only areas drawn *before* the cutting one got the hole. The hole carries no light of the area around it either. Asked for in discussion #6.
+
+### Fixed
+
+- **A folded room panel no longer hangs in the picture:** on a wide window or in landscape the folded panel stayed at the top right and covered the view. It now drops to the bottom edge, above the switches (and to the bottom of the card), so it is out of the way. Reported in discussion #3.
+
 ## 0.9.0
 
 ### Added

@@ -160,6 +160,12 @@ export interface Furniture {
   charge?: EntityRef;
   /** Meter: a separate sensor with the export power (W) when the power sensor only reports import. */
   export?: EntityRef;
+  /** Meter in the advanced energy mode: the meter it hangs off (a sub-meter; null = a main meter). */
+  parent_meter?: string | null;
+  /** Sub-meter: its power sensor counts the other way round (+ has to mean drawn). */
+  meter_invert?: boolean;
+  /** Sub-meter: the floors it feeds; consumers placed there draw from it instead of the house. */
+  meter_floors?: string[];
   status?: EntityRef;
   /** Robot vacuum: sensor naming the room it cleans right now (null = automatic, "none" = the dock's room). */
   room_sensor?: EntityRef;
@@ -632,6 +638,10 @@ export interface EnergySettings {
   /** House consumption (W); null = from the balance of grid, solar and battery. */
   consumption: string | null;
   tariff: string | null;
+  /** Advanced energy mode: meters can hang off another meter (sub-meters of flats). Off = the first meter is the grid, others are consumers. */
+  advanced?: boolean;
+  /** Advanced energy mode: a sub-meter's label also shows how much of its use no placed device measures. */
+  show_unmetered?: boolean;
 }
 
 /** A person and the sensor whose state names the room they are in (ESPresense, Bermuda, …). */

@@ -17,6 +17,10 @@ export interface EnergySummary {
   tariff: { value: number; unit: string } | null;
   /** What the house uses in W: the consumption sensor, else the balance, else the sum of the consumers. */
   consumption: number | null;
+  /** Advanced energy mode only: each sub-meter's reading, the solar and battery power behind it, and what its own floors use (see subMeterBalance). */
+  subMeters?: SubMeterBalance[];
+  /** Advanced energy mode only: what the main meter's own branch uses (the consumption minus the sub-meters' own use, at least 0). */
+  rest?: number | null;
 }
 
 export interface Consumer {
@@ -42,6 +46,33 @@ export interface DeviceSensors {
   /** Each battery with its sensors: one signed power sensor, or discharge plus a separate charge sensor. */
   batteries: { power: string | null; charge: string | null }[];
   soc: string[];
+  /** Advanced energy mode only: the meters that hang off another meter, with their sensor and the floors they feed. */
+  subMeters?: SubMeterSensors[];
+}
+
+export interface SubMeterSensors {
+  id: string;
+  parent: string;
+  power: string | null;
+  invert: boolean;
+  floors: string[];
+  /** The inverters and home batteries hanging off this meter (a balcony plant behind a flat's meter). */
+  solar: string[];
+  batteries: { power: string | null; charge: string | null }[];
+}
+
+export interface SubMeterBalance {
+  id: string;
+  parent: string;
+  /** The meter's reading in W: + = the branch draws from its parent, − = it feeds back; null without a number. */
+  power: number | null;
+  /** Solar production and battery power (+ = discharging) of the devices hanging off this meter. */
+  solar: number;
+  battery: number;
+  /** What the floors of this meter use themselves, without the meters below it (at least 0). */
+  use: number | null;
+  /** Of that, what no placed consumer on its floors measures (at least 0); shown only, never added to a total. */
+  unmetered: number | null;
 }
 
 const usable = (id: string | null | undefined): string | null => (id && id !== "none" ? id : null);
@@ -49,6 +80,60 @@ const usable = (id: string | null | undefined): string | null => (id && id !== "
 const addOnce = (list: string[], id: string | null) => {
   if (id && !list.includes(id)) list.push(id);
 };
+
+const metersOf = (building: Building): Map<string, Furniture> =>
+  new Map(building.floors.flatMap((floor) => floor.furniture.filter((f) => f.type === "meter").map((f) => [f.id, f] as const)));
+
+/**
+ * Advanced energy mode: the meter a meter hangs off, null for a main meter (and always null with the mode off).
+ * A parent that is gone, the meter itself, or a loop of meters counts as none, so a broken chain never hides the grid.
+ */
+export function meterParent(building: Building, meter: Furniture): string | null {
+  if (!building.energy.advanced || meter.type !== "meter" || !meter.parent_meter) return null;
+  const meters = metersOf(building);
+  const seen = new Set([meter.id]);
+  for (let at = meters.get(meter.parent_meter); at; at = meters.get(at.parent_meter ?? "")) {
+    if (seen.has(at.id)) return null;
+    seen.add(at.id);
+  }
+  return meters.has(meter.parent_meter) ? meter.parent_meter : null;
+}
+
+/** The ids of the meters that hang off another meter (empty with the advanced energy mode off). */
+export function subMeterIds(building: Building): Set<string> {
+  return new Set([...metersOf(building).values()].filter((m) => meterParent(building, m)).map((m) => m.id));
+}
+
+/**
+ * Advanced energy mode: the sub-meter an inverter or home battery hangs off, null for the main meter (also when the
+ * chosen meter is gone or is no sub-meter).
+ */
+export function deviceMeter(building: Building, device: Furniture): string | null {
+  if (!building.energy.advanced || !device.parent_meter) return null;
+  return subMeterIds(building).has(device.parent_meter) ? device.parent_meter : null;
+}
+
+/**
+ * A sub-meter's label with "show unmetered" on: what its floors use, and the part no placed device measures (null
+ * when that is all of it). Null with the option off; the label then shows the meter's reading.
+ */
+export function subMeterLabel(building: Building, summary: EnergySummary, meterId: string): { use: number; unmetered: number | null } | null {
+  const m = building.energy.show_unmetered ? summary.subMeters?.find((s) => s.id === meterId) : undefined;
+  if (!m || m.use === null) return null;
+  return { use: m.use, unmetered: m.unmetered !== null && m.unmetered < m.use ? m.unmetered : null };
+}
+
+/** Whether `meter` may hang off `candidate`: another meter that does not itself hang (directly or further down) off `meter`. */
+export function canHangOff(building: Building, meter: Furniture, candidate: Furniture): boolean {
+  if (candidate.type !== "meter" || candidate.id === meter.id) return false;
+  const meters = metersOf(building);
+  const seen = new Set<string>();
+  for (let at: Furniture | undefined = candidate; at && !seen.has(at.id); at = meters.get(at.parent_meter ?? "")) {
+    if (at.id === meter.id) return false;
+    seen.add(at.id);
+  }
+  return true;
+}
 
 /**
  * The sensors of the energy devices placed in the plan (meter, inverters, home batteries). `powerOf` says which
@@ -58,7 +143,11 @@ export function deviceSensors(building: Building, powerOf: (f: Furniture) => str
   const found: DeviceSensors = { grid: null, gridExport: null, solar: [], battery: [], charge: [], batteries: [], soc: [] };
   for (const piece of building.floors.flatMap((floor) => floor.furniture)) {
     const power = powerOf(piece);
-    if (piece.type === "meter") {
+    const parent = piece.type === "meter" ? meterParent(building, piece) : null;
+    if (parent) {
+      // advanced energy mode: a sub-meter measures its branch, not the grid
+      (found.subMeters ??= []).push({ id: piece.id, parent, power, invert: !!piece.meter_invert, floors: piece.meter_floors ?? [], solar: [], batteries: [] });
+    } else if (piece.type === "meter") {
       found.grid ??= power;
       found.gridExport ??= usable(piece.export);
     } else if (piece.type === "inverter") {
@@ -71,13 +160,21 @@ export function deviceSensors(building: Building, powerOf: (f: Furniture) => str
       if (power || charge) found.batteries.push({ power, charge });
     }
   }
+  // advanced energy mode: inverters and batteries behind a sub-meter (they still count in the totals above)
+  for (const piece of found.subMeters ? building.floors.flatMap((floor) => floor.furniture) : []) {
+    const meter = piece.type === "inverter" || piece.type === "home_battery" ? found.subMeters?.find((m) => m.id === deviceMeter(building, piece)) : undefined;
+    const power = meter ? powerOf(piece) : null;
+    if (meter && piece.type === "inverter") addOnce(meter.solar, power);
+    const charge = usable(piece.charge);
+    if (meter && piece.type === "home_battery" && (power || charge)) meter.batteries.push({ power, charge });
+  }
   return found;
 }
 
-/** Where the cables meet: the meter cabinet in the plan, else the spot from the energy settings. */
+/** Where the cables meet: the (main) meter cabinet in the plan, else the spot from the energy settings. */
 export function meterPosition(building: Building): { floor_id: string; x: number; z: number } | null {
   for (const floor of building.floors) {
-    const cabinet = floor.furniture.find((f) => f.type === "meter");
+    const cabinet = floor.furniture.find((f) => f.type === "meter" && !meterParent(building, f));
     if (cabinet) return { floor_id: floor.id, x: cabinet.x, z: cabinet.z };
   }
   return building.energy.meter;
@@ -194,16 +291,16 @@ function solarPower(hass: HomeAssistant, e: EnergySettings, devices: DeviceSenso
   return devices.solar.length ? total(devices.solar.map((id) => readPower(hass.states[id]))) : null;
 }
 
+/** One battery: a signed sensor (+ discharging, flipped on request), or discharge minus a separate charge sensor. */
+export function oneBattery(hass: HomeAssistant, b: { power: string | null; charge: string | null }, invert: boolean): number | null {
+  if (!b.charge) return b.power ? readPower(hass.states[b.power], invert) : null;
+  const discharging = b.power ? Math.max(0, readPower(hass.states[b.power]) ?? 0) : 0;
+  return discharging - Math.max(0, readPower(hass.states[b.charge]) ?? 0);
+}
+
 function batteryPower(hass: HomeAssistant, e: EnergySettings, devices: DeviceSensors): number | null {
   if (e.battery) return readPower(hass.states[e.battery], e.battery_invert);
-  // each battery on its own: a signed sensor (+ discharging, flipped on request), or discharge minus a separate charge sensor
-  return total(
-    devices.batteries.map((b) => {
-      if (!b.charge) return b.power ? readPower(hass.states[b.power], e.battery_invert) : null;
-      const discharging = b.power ? Math.max(0, readPower(hass.states[b.power]) ?? 0) : 0;
-      return discharging - Math.max(0, readPower(hass.states[b.charge]) ?? 0);
-    }),
-  );
+  return total(devices.batteries.map((b) => oneBattery(hass, b, e.battery_invert)));
 }
 
 /** Everything the energy view shows. Sensors set in the energy settings win over those of placed devices. */
@@ -224,7 +321,7 @@ export function energySummary(hass: HomeAssistant, building: Building, consumers
   if (consumption === null && (grid !== null || solar !== null || battery !== null)) consumption = (grid ?? 0) + Math.max(0, solar ?? 0) + (battery ?? 0);
   if (consumption === null && consumers.length > 0) consumption = consumers.reduce((sum, c) => sum + c.power, 0);
 
-  return {
+  const summary: EnergySummary = {
     grid,
     solar: solar === null ? null : Math.max(0, solar),
     battery,
@@ -232,6 +329,42 @@ export function energySummary(hass: HomeAssistant, building: Building, consumers
     tariff: tariffState && Number.isFinite(tariffValue) ? { value: tariffValue, unit: String(tariffState.attributes.unit_of_measurement ?? "") } : null,
     consumption: consumption === null ? null : Math.max(0, consumption),
   };
+  return devices.subMeters ? { ...summary, ...subMeterBalance(hass, devices, summary.consumption, e.battery_invert, consumers) } : summary;
+}
+
+/**
+ * Advanced energy mode: the balance of each sub-meter, and the rest of the house (stairs, heating, the owner's flat).
+ *
+ *   use(M) = reading(M) + solar(M) + battery(M) − Σ reading(C)     (C = the meters hanging directly off M)
+ *   rest   = consumption − Σ use(M)                                (over all sub-meters)
+ *
+ * The reading is signed (+ = M draws from its parent, − = it feeds back), so a child's own solar is already inside
+ * its reading; summed over a branch the use telescopes to the readings below the main meter plus the solar and
+ * batteries behind them, nothing is counted twice. Both are kept at 0 or above: with a meter that only reports
+ * import (it never goes negative) a branch's surplus is unknown and its use comes out too high, rather than guessed.
+ *
+ *   unmetered(M) = use(M) − Σ power of the consumers placed on M's floors     (at least 0)
+ *
+ * The consumers on a floor belong to the first sub-meter naming it (as in the 3D flow); the energy devices' own
+ * sensors (meters, inverters, batteries) are no consumers here. This is display only and goes into no total.
+ */
+function subMeterBalance(hass: HomeAssistant, devices: DeviceSensors, consumption: number | null, batteryInvert: boolean, consumers: Consumer[]): Pick<EnergySummary, "subMeters" | "rest"> {
+  const meters = devices.subMeters ?? [];
+  const owner = new Map<string, string>();
+  for (const m of meters) for (const floorId of m.floors) if (!owner.has(floorId)) owner.set(floorId, m.id);
+  const ownSensors = new Set([devices.grid, devices.gridExport, ...devices.solar, ...devices.battery, ...devices.charge, ...meters.flatMap((m) => [m.power, ...m.solar, ...m.batteries.flatMap((b) => [b.power, b.charge])])]);
+  const measured = (id: string) => consumers.filter((c) => owner.get(c.floorId) === id && !ownSensors.has(c.powerEntity)).reduce((sum, c) => sum + c.power, 0);
+  const readings = new Map(meters.map((m) => [m.id, m.power ? readPower(hass.states[m.power], m.invert) : null]));
+  const subMeters = meters.map((m): SubMeterBalance => {
+    const power = readings.get(m.id) ?? null;
+    const solar = m.solar.reduce((sum, id) => sum + Math.max(0, readPower(hass.states[id]) ?? 0), 0);
+    const battery = m.batteries.reduce((sum, b) => sum + (oneBattery(hass, b, batteryInvert) ?? 0), 0);
+    const children = meters.filter((c) => c.parent === m.id).reduce((sum, c) => sum + (readings.get(c.id) ?? 0), 0);
+    const use = power === null ? null : Math.max(0, power + solar + battery - children);
+    return { id: m.id, parent: m.parent, power, solar, battery, use, unmetered: use === null ? null : Math.max(0, use - measured(m.id)) };
+  });
+  const used = subMeters.reduce((sum, m) => sum + (m.use ?? 0), 0);
+  return { subMeters, rest: consumption === null ? null : Math.max(0, consumption - used) };
 }
 
 /** Closest point on a wall segment to a position, with the segment's unit normal pointing away from `awayFrom`. */

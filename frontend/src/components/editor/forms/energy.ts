@@ -103,6 +103,15 @@ export function renderEnergyBalance(host: EditorHost, actions: EnergyActions): T
     </div>
     <div class="nf-actions"><button class="nf-btn" ?disabled=${!host.admin || !host.hass} @click=${() => actions.importPrefs()}>${host.t("energy_import_prefs")}</button></div>
     ${actions.note ? hint(actions.note) : nothing} ${hint(host.t("energy_hint"))}
+  </section>
+  <section>
+    <h3>⚙ ${host.t("energy_advanced")}</h3>
+    ${hint(host.t("energy_advanced_hint"))}
+    <div class="nf-form">
+      ${checkField(host, host.t("energy_advanced_on"), !!energy.advanced, (on) => store({ advanced: on }))}
+      ${energy.advanced ? checkField(host, host.t("energy_show_unmetered"), !!energy.show_unmetered, (on) => store({ show_unmetered: on })) : nothing}
+    </div>
+    ${energy.advanced ? hint(host.t("energy_show_unmetered_hint")) : nothing}
   </section>`;
 }
 

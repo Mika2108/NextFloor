@@ -6,11 +6,13 @@
  *  - the battery charges from the house or discharges into it
  *  - the grid connection delivers to the house or takes the export
  *  - the house feeds every consumer that reports its power (a wallbox in its own colour)
+ *  - advanced energy mode: each sub-meter draws from the meter it hangs off (or feeds back into it) and feeds the
+ *    consumers on its floors; an inverter or battery behind a sub-meter works into that sub-meter
  *
  * "The house" is where the cables meet: the meter cabinet, else the inverter, else the middle of the ground floor.
  */
-import { energySummary, findConsumers, readPower, type Consumer, type EnergySummary } from "../energy.ts";
-import type { Building, Floor, SolarField } from "../model.ts";
+import { deviceMeter, deviceSensors, energySummary, findConsumers, oneBattery, readPower, subMeterIds, type Consumer, type EnergySummary } from "../energy.ts";
+import type { Building, Floor, Furniture, SolarField } from "../model.ts";
 import { fieldFace, fieldModules, roofFaces, topFloor, wallFaces, GROUND, groundFloor } from "../solar.ts";
 import type { HomeAssistant } from "../types.ts";
 import type { EnergyArc, PlanPoint, SparkField } from "../viewer/live-energy.ts";
@@ -43,9 +45,10 @@ function centre(floor: Floor | null): PlanPoint | null {
   return n ? { floorId: floor.id, x: x / n, z: z / n, y: 1 } : null;
 }
 
-/** The point where the house's cables meet. */
+/** The point where the house's cables meet (a sub-meter of the advanced energy mode is not it). */
 export function houseHub(b: Building): PlanPoint | null {
-  return spotsOf(b, "meter")[0] ?? spotsOf(b, "inverter")[0] ?? centre(groundFloor(b));
+  const subs = subMeterIds(b);
+  return spotsOf(b, "meter").find((m) => !subs.has(m.id)) ?? spotsOf(b, "inverter")[0] ?? centre(groundFloor(b));
 }
 
 /** Where the grid comes in: the grid connection point, else the meter, else the hub (then no grid arc is drawn). */
@@ -97,15 +100,21 @@ export interface EnergyPicture {
   autarky: number | null;
 }
 
-export function energyPicture(hass: HomeAssistant, b: Building, consumers: Consumer[] = findConsumers(hass, b)): EnergyPicture {
-  const summary = energySummary(hass, b, consumers);
+/** `powerOf` says which power sensor a placed device uses (as in deviceSensors); by default its own field. */
+export function energyPicture(hass: HomeAssistant, b: Building, consumers: Consumer[] = findConsumers(hass, b), powerOf?: (f: Furniture) => string | null): EnergyPicture {
+  const devices = powerOf ? deviceSensors(b, powerOf) : deviceSensors(b);
+  const summary = energySummary(hass, b, consumers, devices);
   const arcs: EnergyArc[] = [];
   const sparks: SparkField[] = [];
   const hub = houseHub(b);
   const consumption = summary.consumption ?? 0;
   const autarky = summary.grid === null || consumption <= 0 ? null : Math.max(0, Math.min(1, 1 - Math.max(0, summary.grid) / consumption));
   if (!hub) return { arcs, sparks, summary, autarky };
-  const inverter = spotsOf(b, "inverter")[0] ?? hub;
+  // advanced energy mode: inverters and batteries behind a sub-meter work into it, not into the house
+  const behind = new Map(b.floors.flatMap((f) => f.furniture).flatMap((m) => (deviceMeter(b, m) ? [[m.id, deviceMeter(b, m)!] as const] : [])));
+  const inverter = spotsOf(b, "inverter").find((s) => !behind.has(s.id)) ?? hub;
+  const inverters = new Map(spotsOf(b, "inverter").map((s) => [s.id, s]));
+  const strings = new Map((b.settings.roof.strings ?? []).map((s) => [s.id, s.inverter ?? null]));
 
   // the sun: each field to the inverter, and its modules sparkle with what it makes
   const faces = [...roofFaces(b), ...wallFaces(b)];
@@ -126,18 +135,22 @@ export function energyPicture(hass: HomeAssistant, b: Building, consumers: Consu
     for (const m of modules) for (const c of m.corners) (x += c[0]), (y += c[1]), (z += c[2]);
     const n = modules.length * 4;
     const base = b.floors.find((fl) => fl.id === floorId)?.elevation ?? 0;
-    arcs.push({ key: `solar:${f.id}`, from: { floorId, x: x / n, y: y / n - base + 0.1, z: z / n }, to: inverter, power: p, color: ENERGY_COLORS.solar });
+    // advanced energy mode: a field goes to the inverter of its string (the balcony field to the balcony inverter)
+    const own = b.energy.advanced ? inverters.get(strings.get(f.string ?? "") ?? "") : undefined;
+    arcs.push({ key: `solar:${f.id}`, from: { floorId, x: x / n, y: y / n - base + 0.1, z: z / n }, to: own ?? inverter, power: p, color: ENERGY_COLORS.solar });
   }
 
-  // the battery
-  const battery = spotsOf(b, "home_battery")[0];
-  if (battery && summary.battery !== null && Math.abs(summary.battery) > MIN_W) {
-    const discharging = summary.battery > 0;
-    arcs.push({ key: "battery", from: discharging ? battery : hub, to: discharging ? hub : battery, power: Math.abs(summary.battery), color: ENERGY_COLORS.battery });
+  // the battery (without those behind a sub-meter)
+  const battery = spotsOf(b, "home_battery").find((s) => !behind.has(s.id));
+  const houseBattery = summary.battery === null ? null : summary.battery - (summary.subMeters ?? []).reduce((sum, m) => sum + m.battery, 0);
+  if (battery && houseBattery !== null && Math.abs(houseBattery) > MIN_W) {
+    const discharging = houseBattery > 0;
+    arcs.push({ key: "battery", from: discharging ? battery : hub, to: discharging ? hub : battery, power: Math.abs(houseBattery), color: ENERGY_COLORS.battery });
   }
   // the inverter feeds the house (when it is not the hub itself)
-  if (inverter !== hub && (summary.solar ?? 0) > MIN_W) {
-    arcs.push({ key: "inverter", from: inverter, to: hub, power: summary.solar ?? 0, color: ENERGY_COLORS.solar });
+  const houseSolar = (summary.solar ?? 0) - (summary.subMeters ?? []).reduce((sum, m) => sum + m.solar, 0);
+  if (inverter !== hub && houseSolar > MIN_W) {
+    arcs.push({ key: "inverter", from: inverter, to: hub, power: houseSolar, color: ENERGY_COLORS.solar });
   }
   // the grid
   const grid = gridSpot(b, hub);
@@ -145,12 +158,44 @@ export function energyPicture(hass: HomeAssistant, b: Building, consumers: Consu
     const importing = summary.grid > 0;
     arcs.push({ key: "grid", from: importing ? grid : hub, to: importing ? hub : grid, power: Math.abs(summary.grid), color: importing ? ENERGY_COLORS.import : ENERGY_COLORS.export });
   }
+  // advanced energy mode: each sub-meter draws from the meter it hangs off (or feeds back, with solar behind it),
+  // and the consumers on its floors draw from it; the first sub-meter naming a floor wins. Its inverters and
+  // batteries work into it, so its solar reaches its own consumers first and only the surplus flows back.
+  const meters = new Map(spotsOf(b, "meter").map((m) => [m.id, m]));
+  const sensorOf = powerOf ?? ((f: Furniture) => (f.power && f.power !== "none" ? f.power : null));
+  for (const floor of b.floors) {
+    for (const f of floor.furniture) {
+      const at = meters.get(behind.get(f.id) ?? "");
+      const spot = spotsOf(b, f.type).find((s) => s.id === f.id);
+      if (!at || !spot) continue;
+      const sensor = sensorOf(f);
+      if (f.type === "inverter") {
+        const w = Math.max(0, (sensor ? readPower(hass.states[sensor]) : null) ?? 0);
+        if (w > MIN_W) arcs.push({ key: `inverter:${f.id}`, from: spot, to: at, power: w, color: ENERGY_COLORS.solar });
+      } else if (f.type === "home_battery") {
+        const charge = f.charge && f.charge !== "none" ? f.charge : null;
+        const w = oneBattery(hass, { power: sensor, charge }, b.energy.battery_invert) ?? 0;
+        if (Math.abs(w) > MIN_W) arcs.push({ key: `battery:${f.id}`, from: w > 0 ? spot : at, to: w > 0 ? at : spot, power: Math.abs(w), color: ENERGY_COLORS.battery });
+      }
+    }
+  }
+  const feeders = new Map<string, Spot>();
+  const subSensors = new Set<string>();
+  for (const m of devices.subMeters ?? []) {
+    const at = meters.get(m.id);
+    const parent = meters.get(m.parent);
+    if (m.power) subSensors.add(m.power);
+    for (const floorId of m.floors) if (at && !feeders.has(floorId)) feeders.set(floorId, at);
+    const w = summary.subMeters?.find((s) => s.id === m.id)?.power ?? null;
+    if (!at || !parent || w === null || Math.abs(w) <= MIN_W) continue;
+    arcs.push({ key: `meter:${m.id}`, from: w > 0 ? parent : at, to: w > 0 ? at : parent, power: Math.abs(w), color: w > 0 ? ENERGY_COLORS.house : ENERGY_COLORS.solar });
+  }
   // the house feeds its consumers
   const wallboxes = new Set(spotsOf(b, "wallbox").map((w) => `${w.floorId}:${w.x.toFixed(1)}:${w.z.toFixed(1)}`));
   for (const c of consumers) {
-    if (c.power <= MIN_W) continue;
+    if (c.power <= MIN_W || subSensors.has(c.powerEntity)) continue;
     const wallbox = c.wallbox || wallboxes.has(`${c.floorId}:${c.x.toFixed(1)}:${c.z.toFixed(1)}`);
-    arcs.push({ key: `use:${c.id}`, from: hub, to: { floorId: c.floorId, x: c.x, z: c.z, y: 0.9 }, power: c.power, color: wallbox ? ENERGY_COLORS.wallbox : ENERGY_COLORS.house });
+    arcs.push({ key: `use:${c.id}`, from: feeders.get(c.floorId) ?? hub, to: { floorId: c.floorId, x: c.x, z: c.z, y: 0.9 }, power: c.power, color: wallbox ? ENERGY_COLORS.wallbox : ENERGY_COLORS.house });
   }
   return { arcs, sparks, summary, autarky };
 }

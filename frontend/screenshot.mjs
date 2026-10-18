@@ -48,6 +48,19 @@ const POOL_SCRIPT = `
   e.addOutdoor([[x0, z1 + 0.5], [x1, z1 + 0.5], [x1, z1 + 5], [x0, z1 + 5]]);
   set("terrace");
 `;
+// advanced energy mode: a sub-meter for the upper floor (its sensor reads 520 W) with the balcony plant behind it
+const SUB_METER = (unmetered) => `
+  window.nfDemoSet("sensor.og_zaehler", "520", { friendly_name: "OG Zähler", device_class: "power", unit_of_measurement: "W" });
+  b.energy.advanced = true;
+  b.energy.show_unmetered = ${unmetered};
+  const main = b.floors[0].furniture.find((f) => f.type === "meter");
+  b.floors[1].furniture.push({ ...main, id: "og_meter", name: "OG", show_name: true, x: 7.5, z: 0.15, power: "sensor.og_zaehler", parent_meter: main.id, meter_floors: [b.floors[1].id], marker: "always" });
+  b.floors[0].furniture.find((f) => f.id === "inv_balkon").parent_meter = "og_meter";
+`;
+const SUB_METER_VIEW = (unmetered) => `const panel = document.querySelector("nextfloor-panel"); const b = structuredClone(panel.data.building); ${SUB_METER(unmetered)} panel.data.edit(b); v.toggleLhCards();`;
+// selects an item in the editor and scrolls the side bar to a text of its form
+const SUB_METER_FORM = (select, text) => `const b = structuredClone(e._doc); ${SUB_METER(true)} e.setDoc(b); ${select}
+  setTimeout(() => [...e.renderRoot.querySelectorAll("label, h3")].find((x) => x.textContent.includes("${text}"))?.scrollIntoView({ block: "center" }), 600);`;
 const PACK_SCRIPT = `
   const f = e._doc.floors[0];
   e._floorId = f.id;
@@ -108,6 +121,11 @@ const shots = [
   { name: "editor-energy", query: "?pv=5400&flows", width: 1500, height: 950, editor: true, click: "Energie" },
   { name: "editor-sections", query: "", width: 1500, height: 950, editor: true, openDetails: true, scrollSide: true },
   { name: "editor-roof-sections", query: "", width: 1500, height: 950, editor: true, click: "Dach", editorScript: "e._floorId = e._doc.floors[0].id; e.roof.useSections(); e.roof.sectionId = e._doc.settings.roof.sections[0].id;" },
+  { name: "dev-sub-meter-section", dev: true, query: "?pv=5400&flows", width: 1500, height: 950, editor: true, click: "Energie", editorScript: SUB_METER_FORM("", "Energiemodus") },
+  { name: "dev-sub-meter-form", dev: true, query: "?pv=5400&flows", width: 1500, height: 950, editor: true, click: "Energie", editorScript: SUB_METER_FORM('e._floorId = b.floors[1].id; e.selectItem("furniture", "og_meter");', "Hängt an Zähler") },
+  { name: "dev-sub-meter-inverter", dev: true, query: "?pv=5400&flows", width: 1500, height: 950, editor: true, click: "Energie", editorScript: SUB_METER_FORM('e._floorId = b.floors[0].id; e.selectItem("furniture", "inv_balkon");', "Hängt an Zähler") },
+  { name: "dev-sub-meter-label", dev: true, query: "?pv=5400&flows", width: 1280, height: 800, click: "Obergeschoss", viewScript: SUB_METER_VIEW(false), afterWait: 1500 },
+  { name: "dev-sub-meter-unmetered", dev: true, query: "?pv=5400&flows", width: 1280, height: 800, click: "Obergeschoss", viewScript: SUB_METER_VIEW(true), afterWait: 1500 },
   { name: "editor-solar-form", query: "?pv=5400&flows", width: 1500, height: 950, editor: true, click: "Energie", editorScript: "e.roof.selectField(e._doc.settings.roof.solar[0].id);" },
   { name: "editor-smoke", query: "", width: 1500, height: 950, editor: true, editorScript: `const f = e._doc.floors[0]; e._floorId = f.id;
 const out = {}; const snap = () => JSON.stringify(e._doc); const start = snap();

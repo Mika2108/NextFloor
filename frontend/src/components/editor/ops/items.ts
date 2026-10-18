@@ -101,11 +101,11 @@ export function parkingSpotFor(vehicle: Furniture): Furniture {
 /** A piece of furniture of this type standing for a placed device, where its pin was. */
 export function furnitureForDevice(placed: Placement, type: string): Furniture {
   const [w, d, h] = furnitureSize(type);
-  return { id: uid("furniture"), type, x: placed.x, z: placed.z, rotation: placed.rotation ?? 0, w, d, h, variant: null, entity: placed.entity_id, name: placed.name ?? null, ...(placed.locked ? { locked: true } : {}) };
+  return { id: uid("furniture"), type, x: placed.x, z: placed.z, rotation: placed.rotation ?? 0, w, d, h, variant: null, entity: placed.entity_id, name: placed.name ?? null, animations_enabled: placed.animations_enabled, effect_animations: structuredClone(placed.effect_animations), ...(placed.locked ? { locked: true } : {}) };
 }
 
 /** A plain device pin where a piece of furniture linked by hand stood. */
-export const deviceForFurniture = (item: Furniture, entityId: string): Placement => ({ entity_id: entityId, x: item.x, z: item.z, y: null, rotation: item.rotation, ...(item.name ? { name: item.name } : {}) });
+export const deviceForFurniture = (item: Furniture, entityId: string): Placement => ({ entity_id: entityId, x: item.x, z: item.z, y: null, rotation: item.rotation, animations_enabled: item.animations_enabled, effect_animations: structuredClone(item.effect_animations), ...(item.name ? { name: item.name } : {}) });
 
 /** Takes a device off every floor, with the ceiling lamp that stands for it. */
 export function removeDevice(doc: Building, entityId: string): void {

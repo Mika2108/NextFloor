@@ -8,6 +8,7 @@ import { FURNITURE_TYPES, isLamp, type LampMount, type Placement } from "../../.
 import { isElectric, isPackType, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
 import { checkField, glowField, iconField, markerField, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
+import { lightEffectFields } from "../light-effect-fields.ts";
 
 export interface DeviceActions {
   update(patch: Partial<Placement>): void;
@@ -70,6 +71,7 @@ export function renderDeviceForm(host: EditorHost, placed: Placement, actions: D
     </p>
     <div class="nf-form">
       ${light ? html`${selectField(host, t("lamp_mount"), mount, lampMounts, mountChange, { wide: true })}${glowField(host, placed.glow_scale, (v) => set({ glow_scale: v }))}` : nothing}
+      ${light ? lightEffectFields(host, placed, host.hass?.states[placed.entity_id]?.attributes.effect_list, set) : nothing}
       ${numberField(host, t("x"), placed.x, (v) => set({ x: v }))} ${numberField(host, t("z"), placed.z, (v) => set({ z: v }))}
       ${numberField(host, t("marker_height"), placed.y ?? automatic, (v) => set({ y: Math.max(0, v) }), 0.05, 0)}
       ${numberField(host, t("rotation"), placed.rotation ?? 0, (v) => set({ rotation: ((v % 360) + 360) % 360 }), 1)}

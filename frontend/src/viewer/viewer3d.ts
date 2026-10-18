@@ -65,6 +65,7 @@ import { accentOnUniform, accentUniform, parseAccent, lineBlending, themed, them
 export type { Theme } from "./theme.ts";
 import { ALWAYS, DEG, GeoBuffer, LineBuffer, pushPrism } from "./geo.ts";
 import { buildLightSurface, lightColors, type LightSurface } from "./lighting.ts";
+import { animateGlow } from "../light-effects.ts";
 import { buildOpeningParts, CLOSED, type OpeningState } from "./openings.ts";
 import { WeatherLayer, type SkyView } from "./live-weather.ts";
 import { EnergyLayer, type EnergyArc, type PlanPoint, type SparkField } from "./live-energy.ts";
@@ -168,7 +169,7 @@ export interface DeviceMarker {
   /** Height its light comes from (pack lamps). */
   lightY?: number;
   /** A colour effect runs (colour loop …): the colour is animated in 3D. */
-  effect?: boolean;
+  effect?: "rainbow" | "pulse" | "flicker";
   /** Pendant shape: shade (default), globe, cone or drum. */
   variant?: string | null;
   /** Formatted power, e.g. "85 W". */
@@ -255,8 +256,7 @@ const LAMP_SHADE = 0x1d2946;
 /** Lamps that hang from the ceiling (hidden in the cut view). */
 const FLASH_MS = 450;
 const EFFECT_MS = 125;
-/** Turns of the colour wheel per second while a colour effect runs. */
-const EFFECT_SPEED = 0.08;
+
 
 interface FloorView {
   floor: Floor;
@@ -522,6 +522,10 @@ export class NextFloorViewer {
         const on = entries.some((e) => e.isIntersecting);
         if (on === this.onScreen) return;
         this.onScreen = on;
+        if (!on) {
+          clearTimeout(this.effectTimer);
+          this.effectTimer = undefined;
+        }
         if (on) this.invalidate();
       });
       this.intersection.observe(host);
@@ -1120,8 +1124,39 @@ export class NextFloorViewer {
   }
 
   private readonly onVisibility = () => {
+    if (document.hidden) {
+      clearTimeout(this.effectTimer);
+      this.effectTimer = undefined;
+    }
     if (!document.hidden) this.invalidate();
   };
+
+  /** One shared timer, independent of the number of animated lamps. */
+  private scheduleEffects(): void {
+    if (!this.hasVisibleEffects(document.hidden)) {
+      clearTimeout(this.effectTimer);
+      this.effectTimer = undefined;
+      return;
+    }
+    if (this.effectTimer !== undefined) return;
+    const ms = this.lowQuality ? 2 * EFFECT_MS : EFFECT_MS;
+    this.effectTimer = setTimeout(() => {
+      this.effectTimer = undefined;
+      if (!this.hasVisibleEffects(document.hidden)) return;
+      this.effectTime = performance.now() / 1000;
+      this.effectTick = true;
+      for (const fv of this.floors) {
+        if (fv.o < 0.02 || !this.effectFloors.has(fv.floor.id)) continue;
+        this.buildLamps(fv);
+        this.buildGlow(fv);
+      }
+      this.invalidate();
+    }, ms);
+  }
+
+  private hasVisibleEffects(hidden: boolean): boolean {
+    return !hidden && !this.disposed && this.onScreen && this.floors.some((fv) => fv.o >= 0.02 && this.effectFloors.has(fv.floor.id));
+  }
 
   private resize(): void {
     const w = this.host.clientWidth || 1;
@@ -1613,16 +1648,9 @@ export class NextFloorViewer {
     return moving;
   }
 
-  /** Glow of a device, with the hue turning while a colour effect runs. */
+  /** One sampler for lamp shades, halos, cones and room light surfaces. */
   private glowOf(d: DeviceMarker): DeviceMarker["glow"] {
-    if (!d.glow || !d.effect) return d.glow;
-    const c = new Color(...d.glow.color);
-    const hsl = { h: 0, s: 0, l: 0 };
-    c.getHSL(hsl);
-    // lamps start at different points of the colour wheel, so a room does not blink in sync
-    const offset = (d.x * 0.37 + d.z * 0.61) % 1;
-    c.setHSL((hsl.h + this.effectTime * EFFECT_SPEED + offset) % 1, Math.max(0.6, hsl.s), Math.max(0.45, hsl.l));
-    return { color: [c.r, c.g, c.b], level: d.glow.level };
+    return animateGlow(d.glow, d.effect, this.effectTime);
   }
 
   /**
@@ -2529,21 +2557,7 @@ export class NextFloorViewer {
     // everything that keeps drawing (also the energy flow, effects, robots) shows in the frame rate
     this.reportStats(now, busy);
     if (moving) this.invalidate();
-    if (this.effectFloors.size && !this.effectTimer && !document.hidden) {
-      // colour effects: a few steps per second are enough and keep the tablet idle in between
-      const ms = this.lowQuality ? 2 * EFFECT_MS : EFFECT_MS;
-      this.effectTimer = setTimeout(() => {
-        this.effectTimer = undefined;
-        this.effectTime += ms / 1000;
-        this.effectTick = true;
-        for (const fv of this.floors) {
-          if (fv.o < 0.02 || !this.effectFloors.has(fv.floor.id)) continue;
-          this.buildLamps(fv);
-          this.buildGlow(fv);
-        }
-        this.invalidate();
-      }, ms);
-    }
+    this.scheduleEffects();
     if (!moving && orbiting && !this.orbitTimer) {
       // the screensaver turn: about 30 frames per second, 15 on the tablet level
       this.orbitTimer = setTimeout(() => {

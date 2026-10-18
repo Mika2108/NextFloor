@@ -2,6 +2,7 @@
 // Units are metres; x grows to the right, z grows downwards (as in the 2D editor).
 
 import { packItem } from "./packs.ts";
+import type { LightEffectConfig } from "./light-effects.ts";
 import type { LampModel } from "./viewer/viewer3d.ts";
 
 export type Vec2 = [number, number];
@@ -125,7 +126,7 @@ export interface ScreenPicture {
   image: string;
 }
 
-export interface Furniture {
+export interface Furniture extends LightEffectConfig {
   /** Fixed against moving by accident. */
   locked?: boolean | null;
   id: string;
@@ -203,7 +204,7 @@ export type LampMount = "ceiling" | "floor" | "table" | "wall";
 export const MARKER_SHOWS = ["always", "no_power", "never"] as const;
 export type MarkerShow = (typeof MARKER_SHOWS)[number];
 
-export interface Placement {
+export interface Placement extends LightEffectConfig {
   /** Fixed against moving by accident. */
   locked?: boolean | null;
   entity_id: string;
@@ -1125,7 +1126,11 @@ export function normalizeBuilding(b: Building): Building {
       for (const p of lights) {
         const t = type[p.mount ?? "ceiling"];
         const [w, d, h] = FURNITURE_SIZE[t];
-        f.furniture.push({ id: `lamp_${p.entity_id.slice(6).replace(/[^A-Za-z0-9_\-.]/g, "_")}`.slice(0, 64), type: t, x: p.x, z: p.z, rotation: 0, w, d, h, variant: null, entity: p.entity_id, power: null });
+        const baseId = `lamp_${p.entity_id.slice(6).replace(/[^A-Za-z0-9_\-.]/g, "_")}`.slice(0, 54);
+        let id = baseId;
+        let suffix = 1;
+        while (f.furniture.some((item) => item.id === id)) id = `${baseId}_${suffix++}`;
+        f.furniture.push({ id, type: t, x: p.x, z: p.z, rotation: 0, w, d, h, variant: null, entity: p.entity_id, power: null, animations_enabled: p.animations_enabled, effect_animations: structuredClone(p.effect_animations) });
       }
       f.placements = f.placements.filter((p) => !p.entity_id.startsWith("light."));
     }

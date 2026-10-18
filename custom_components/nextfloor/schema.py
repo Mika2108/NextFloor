@@ -199,6 +199,15 @@ FURNITURE_SCHEMA = vol.Schema(
         # its own name (e.g. "Wechselrichter Nord"); None = the type's name; show_name puts it under the marker
         vol.Optional("name", default=None): vol.Any(None, vol.All(str, vol.Length(max=60))),
         vol.Optional("show_name", default=False): bool,
+        # Local visualization only; unknown future identifiers remain inert and round-trip intact.
+        vol.Optional("animations_enabled"): bool,
+        vol.Optional("effect_animations"): vol.All(
+            vol.Schema(
+                {vol.All(str, vol.Length(min=1, max=255)): vol.All(str, vol.Length(min=1, max=64))},
+                extra=vol.PREVENT_EXTRA,
+            ),
+            vol.Length(max=100),
+        ),
         # lamps / lights: how strongly they glow in 3D (None = as reported)
         vol.Optional("glow_scale", default=None): vol.Any(
             None, vol.All(vol.Coerce(float), vol.Range(min=0.1, max=1.5))
@@ -280,6 +289,15 @@ PLACEMENT_SCHEMA = vol.Schema(
         # an own name in the plan, without renaming the entity; show_name puts it under the marker
         vol.Optional("name", default=None): vol.Any(None, vol.All(str, vol.Length(max=60))),
         vol.Optional("show_name", default=False): bool,
+        # Local visualization only; unknown future identifiers remain inert and round-trip intact.
+        vol.Optional("animations_enabled"): bool,
+        vol.Optional("effect_animations"): vol.All(
+            vol.Schema(
+                {vol.All(str, vol.Length(min=1, max=255)): vol.All(str, vol.Length(min=1, max=64))},
+                extra=vol.PREVENT_EXTRA,
+            ),
+            vol.Length(max=100),
+        ),
         # lamps / lights: how strongly they glow in 3D (None = as reported)
         vol.Optional("glow_scale", default=None): vol.Any(
             None, vol.All(vol.Coerce(float), vol.Range(min=0.1, max=1.5))

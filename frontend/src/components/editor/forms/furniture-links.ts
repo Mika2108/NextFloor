@@ -8,6 +8,8 @@ import { isPackType, packDisplay } from "../../../packs.ts";
 import { entityOptions, isBinary, isNumeric, isPowerSensor } from "../entities.ts";
 import { checkField, entityField, glowField, hint, iconField, markerField, selectField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
+import { lightEffectFields } from "../light-effect-fields.ts";
+import { lightEffectSource } from "../../../light-effects.ts";
 
 /** What the forms of a piece of furniture make the editor do. */
 export interface FurnitureLinkActions {
@@ -75,6 +77,7 @@ export function furnitureLinks(host: EditorHost, item: Furniture, actions: Furni
         ? html`${entityField(host, t("furn_color_entity"), item.color_entity ?? null, undefined, kindOptions((id) => id.startsWith("light.") && id !== item.entity), set("color_entity"))}${hint(t("furn_color_entity_hint"), "nf-wide")}`
         : nothing,
       lamp ? glowField(host, item.glow_scale, (v) => actions.update({ glow_scale: v })) : nothing,
+      lamp ? lightEffectFields(host, item, lightEffectSource(hass, item, item.entity && item.entity !== "none" ? item.entity : automaticLink(host, item, "entity"))?.attributes.effect_list, actions.update) : nothing,
       hasScreen(item.type) ? glowField(host, item.ambilight, (v) => actions.update({ ambilight: v }), { label: "ambilight", hint: "ambilight_hint", lowest: 0 }) : nothing,
       lamp || item.type === "grid_point" ? nothing : entityField(host, t(powerLabel(item.type)), item.power ?? null, automaticLink(host, item, "power"), power, (v) => actions.update({ power: v })),
     )}

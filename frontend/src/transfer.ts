@@ -21,7 +21,10 @@ export function withoutEntities(source: Building): Building {
     floor.background = null;
     floor.placements = [];
     floor.rooms.forEach((room) => (room.area_id = null));
-    floor.furniture.forEach((piece) => Object.assign(piece, { entity: null, power: null }));
+    floor.furniture.forEach((piece) => {
+      Object.assign(piece, { entity: null, power: null });
+      delete piece.effect_animations; // HA program names are private, like entity links.
+    });
     floor.openings.forEach((opening) => Object.assign(opening, { cover: null, contact: null, tilt: null }));
   }
   return copy;

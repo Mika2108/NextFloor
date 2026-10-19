@@ -2,6 +2,16 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## Unreleased
+
+### Added
+
+- **Effektanimationen je Leuchte konfigurieren:** exakte HA-Programmnamen lassen sich im Leuchteneditor auf statisch, Regenbogen, Pulsieren oder Flackern abbilden. Ein eigener Schalter pausiert alle Animationen der Platzierung, ohne Home Assistant zu verändern.
+
+### Fixed
+
+- **Lichtprogramme werden nicht mehr pauschal zu Regenbogen:** bestehende Pläne ohne Zuordnung und unbekannte Programme bleiben bei HA-Farbe und -Helligkeit. Pulsieren und Flackern erhalten die Grundfarbe; ausgeschaltete oder nicht verfügbare Leuchten animieren nicht. Unsichtbare Ansichten und Etagen halten keinen Effekttakt am Laufen.
+
 ## 0.9.1
 
 ### Changed

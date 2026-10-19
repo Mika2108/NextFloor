@@ -33,7 +33,7 @@ import { watchedEntities } from "./view3d/watch-list.ts";
 import { lightAnimation, lightEffectSource } from "../light-effects.ts";
 import { alertColor, alertSources, alertText, findAlerts, type Alert, type AlertSources } from "../alerts.ts";
 import { iconPath, iconSvg, mdiIcon } from "../icons.ts";
-import { deviceSensors, energySummary, findConsumers, readPower, type Consumer, type EnergySummary } from "../energy.ts";
+import { deviceSensors, energySummary, findConsumers, readPower, subMeterIds, subMeterLabel, type Consumer, type EnergySummary } from "../energy.ts";
 import { mapCredit, mapShown } from "../map-geo.ts";
 import { type CustomButton, type EntityRef } from "../model.ts";
 
@@ -553,7 +553,7 @@ export class NfView3d extends LitElement {
         // "without watts" drops the power badge (a plug shows only on / off)
         const power = m.show === "no_power" || ("energyDevice" in m && m.energyDevice) ? null : (byDevice.get(m.id) ?? null);
         // at night (kiosk) colour effects rest
-        const marker = { ...m, power, powerText: power === null ? undefined : formatPower(hass, power), effect: this.dimmed ? undefined : m.effect };
+        const marker = { ...m, power, powerText: power === null ? undefined : formatPower(hass, power), effect: this.dimmed ? undefined : m.effect, text: this.subMeterText(hass, b, summary, m.furnitureId) ?? m.text };
         // the own name under the pin: per device, or for every named device (card option marker_names)
         const caption = m.ownName && (m.showName || this.markerNames) ? m.ownName : "";
         const under = carded.has(m.id) || (!!m.furnitureId && carded.has(m.furnitureId));
@@ -579,7 +579,8 @@ export class NfView3d extends LitElement {
       if (!first) this.scheduleThumbs(1500);
     }
     // NextFloor: power flowing between the devices, sparkling modules, the house balance card
-    const livePic = energyPicture(hass, b, consumers);
+    // the advanced energy mode also needs the automatically found sensors of the sub-meters
+    const livePic = energyPicture(hass, b, consumers, b.energy.advanced ? (f) => this.furnitureLinks?.get(f.id)?.power ?? null : undefined);
     const liveCars = this.liveCars(hass, b);
     // a charging car draws its power from the nearest wallbox (or the house) into the car
     for (const c of liveCars) {
@@ -756,6 +757,7 @@ export class NfView3d extends LitElement {
     const consumers: Consumer[] = [];
     const screens = new Map<string, ScreenState>();
     const targets = new Map<string, string>();
+    const subMeters = subMeterIds(b);
     for (const floor of b.floors) {
       for (const f of floor.furniture) {
         const linked = this.furnitureLinks.get(f.id);
@@ -776,11 +778,13 @@ export class NfView3d extends LitElement {
         const id = (f.type === "home_battery" ? (extra ?? link.entity ?? link.power) : (link.entity ?? link.power ?? extra))!;
         targets.set(f.id, id);
         const st = link.entity ? hass.states[link.entity] : undefined;
-        // the meter's sensor is the grid (+ = import), the battery's can point the other way as well
-        const invert = f.type === "meter" ? b.energy.grid_invert && !f.export : f.type === "home_battery" ? b.energy.battery_invert && !f.charge : false;
+        // the meter's sensor is the grid (+ = import), the battery's can point the other way as well;
+        // a sub-meter (advanced energy mode) measures its branch (+ = drawn) with its own sign
+        const sub = subMeters.has(f.id);
+        const invert = sub ? !!f.meter_invert : f.type === "meter" ? b.energy.grid_invert && !f.export : f.type === "home_battery" ? b.energy.battery_invert && !f.charge : false;
         let power = link.power ? readPower(hass.states[link.power], invert) : null;
         // separate second sensors: a battery's charging, a meter's export (then the first one is unsigned)
-        const second = (f.type === "home_battery" && f.charge && f.charge !== "none" ? f.charge : f.type === "meter" && f.export && f.export !== "none" ? f.export : null) as string | null;
+        const second = (f.type === "home_battery" && f.charge && f.charge !== "none" ? f.charge : f.type === "meter" && !sub && f.export && f.export !== "none" ? f.export : null) as string | null;
         const secondW = second ? readPower(hass.states[second]) : null;
         if (secondW !== null) power = Math.max(0, power ?? 0) - Math.max(0, secondW);
         if (link.power && power !== null && !consumerSensors.has(link.power)) {
@@ -828,7 +832,9 @@ export class NfView3d extends LitElement {
               : f.type === "wallbox"
                 ? this.wallboxText(hass, extra, power)
                 : f.type === "meter"
-                  ? this.meterText(hass, power)
+                  ? sub
+                    ? (power === null ? "" : formatPower(hass, power))
+                    : this.meterText(hass, power)
                   : st
                     ? stateText(hass, st)
                     : power !== null
@@ -899,6 +905,13 @@ export class NfView3d extends LitElement {
     if (Number.isFinite(v)) parts.push(`${formatNumber(hass, v, 0)} %`);
     if (power !== null && Math.abs(power) >= 10) parts.push(`${power < 0 ? "▲" : "▼"} ${formatPower(hass, Math.abs(power))}`);
     return parts.join(" · ");
+  }
+
+  /** A sub-meter with "show unmetered" on: what its floors use, and how much of it no placed device measures. */
+  private subMeterText(hass: HomeAssistant, b: Building, summary: EnergySummary, furnitureId: string | undefined): string | null {
+    const label = furnitureId ? subMeterLabel(b, summary, furnitureId) : null;
+    if (!label) return null;
+    return formatPower(hass, label.use) + (label.unmetered === null ? "" : ` · ${translate(hass, "meter_unmetered", { w: formatPower(hass, label.unmetered) })}`);
   }
 
   /** Wallbox: "lädt · 11 kW", "angesteckt" or its power, from a status sensor (on/off or a state such as charging). */
@@ -1512,6 +1525,7 @@ export class NfView3d extends LitElement {
     const items: { cls: string; label: string; value: string }[] = [];
     if (e.solar !== null) items.push({ cls: "solar", label: t("energy_solar"), value: formatPower(this.hass, e.solar) });
     if (e.consumption !== null) items.push({ cls: "total", label: t("energy_consumption"), value: formatPower(this.hass, e.consumption) });
+    if (e.rest !== undefined && e.rest !== null) items.push({ cls: "total", label: t("energy_rest"), value: formatPower(this.hass, e.rest) });
     if (e.battery !== null || e.soc !== null) {
       const parts = [e.battery !== null ? formatPower(this.hass, Math.abs(e.battery)) : null, e.soc !== null ? `${Math.round(e.soc)} %` : null].filter(Boolean);
       items.push({ cls: "battery", label: t("energy_battery"), value: parts.join(" · ") });

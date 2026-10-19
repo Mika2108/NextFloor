@@ -63,6 +63,7 @@ function houseCard(hass: HomeAssistant | undefined, c: HouseCard, i: number): Te
   const rows: TemplateResult[] = [];
   if (s.solar !== null) rows.push(html`<div class="live-row live-solar"><span>☀ ${t("energy_solar")}</span><b>${watts(hass, s.solar)}</b></div>`);
   if (s.consumption !== null) rows.push(html`<div class="live-row live-house"><span>⌂ ${t("energy_consumption")}</span><b>${watts(hass, s.consumption)}</b></div>`);
+  if (s.rest !== undefined && s.rest !== null) rows.push(html`<div class="live-row live-house"><span>⌂ ${t("energy_rest")}</span><b>${watts(hass, s.rest)}</b></div>`);
   if (s.battery !== null || s.soc !== null) {
     const dir = s.battery === null || Math.abs(s.battery) < 15 ? "" : s.battery > 0 ? " ↓" : " ↑";
     rows.push(

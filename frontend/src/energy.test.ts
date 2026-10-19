@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { deviceSensors, energySummary, findConsumers, meterPosition, powerSensorFor, proposeEnergySensors, readPower, suggestGridSpot } from "./energy.ts";
+import { canHangOff, deviceMeter, deviceSensors, subMeterLabel, energySummary, findConsumers, meterParent, meterPosition, powerSensorFor, proposeEnergySensors, readPower, subMeterIds, suggestGridSpot } from "./energy.ts";
 import { emptyBuilding, newFloor, type Building, type Furniture } from "./model.ts";
 import type { HassEntity, HomeAssistant } from "./types.ts";
 
@@ -137,4 +137,158 @@ test("the grid connection is suggested outside the wall nearest to the meter", (
   assert.ok(spot.x > 6, "outside the east wall");
   assert.ok(Math.abs(spot.z - 2) < 0.5);
   assert.equal(suggestGridSpot(house()), null);
+});
+
+// a house with one main meter and a sub-meter for each flat (upper floor, attic)
+const flats = (advanced: boolean) => {
+  const b = house(
+    piece("meter", { id: "main", x: 1, z: 1, power: "sensor.main" }),
+    piece("meter", { id: "og", x: 2, z: 1, power: "sensor.og", parent_meter: "main", meter_floors: ["og"] }),
+    piece("meter", { id: "dg", x: 3, z: 1, power: "sensor.dg", parent_meter: "main", meter_floors: ["dg"], meter_invert: true }),
+  );
+  b.energy.advanced = advanced;
+  return b;
+};
+
+test("with the advanced energy mode off, sub-meter fields change nothing", () => {
+  const plain = house(piece("meter", { id: "main", x: 1, z: 1, power: "sensor.main" }), piece("meter", { id: "og", x: 2, z: 1, power: "sensor.og" }), piece("meter", { id: "dg", x: 3, z: 1, power: "sensor.dg" }));
+  const hass = hassOf([sensor("sensor.main", "3000"), sensor("sensor.og", "800"), sensor("sensor.dg", "-600")]);
+  assert.deepEqual(deviceSensors(flats(false)), deviceSensors(plain));
+  assert.deepEqual(energySummary(hass, flats(false), []), energySummary(hass, plain, []));
+  assert.deepEqual(meterPosition(flats(false)), meterPosition(plain));
+  assert.equal(subMeterIds(flats(false)).size, 0);
+  assert.equal(deviceSensors(plain).subMeters, undefined);
+});
+
+test("sub-meters hang off the main meter, which stays the grid", () => {
+  const b = flats(true);
+  const d = deviceSensors(b);
+  assert.equal(d.grid, "sensor.main");
+  assert.deepEqual(d.subMeters, [
+    { id: "og", parent: "main", power: "sensor.og", invert: false, floors: ["og"], solar: [], batteries: [] },
+    { id: "dg", parent: "main", power: "sensor.dg", invert: true, floors: ["dg"], solar: [], batteries: [] },
+  ]);
+  // the first meter in the plan may be a sub-meter: the main meter is the first one without a parent
+  b.floors[0].furniture.reverse();
+  assert.equal(deviceSensors(b).grid, "sensor.main");
+  assert.deepEqual(meterPosition(b), { floor_id: "g", x: 1, z: 1 });
+});
+
+test("a meter cannot hang off itself or a meter below it; a loop counts as no parent", () => {
+  const b = flats(true);
+  const [main, og, dg] = b.floors[0].furniture;
+  dg.parent_meter = "og"; // a cascade: main → og → dg
+  assert.equal(canHangOff(b, main, og), false, "og hangs off main");
+  assert.equal(canHangOff(b, main, dg), false, "dg hangs off og, which hangs off main");
+  assert.equal(canHangOff(b, og, og), false);
+  assert.equal(canHangOff(b, dg, main), true);
+  assert.equal(meterParent(b, dg), "og");
+  og.parent_meter = "dg"; // stored by hand: og ↔ dg
+  assert.equal(meterParent(b, og), null);
+  assert.equal(meterParent(b, dg), null);
+  main.parent_meter = "main";
+  assert.equal(meterParent(b, main), null);
+  og.parent_meter = "gone";
+  assert.equal(meterParent(b, og), null);
+});
+
+test("the rest is the consumption minus the meters directly below the main meter, never below 0", () => {
+  const b = flats(true);
+  const s = energySummary(hassOf([sensor("sensor.main", "2000"), sensor("sensor.og", "800"), sensor("sensor.dg", "-600")]), b, []);
+  assert.deepEqual(s.subMeters, [
+    { id: "og", parent: "main", power: 800, solar: 0, battery: 0, use: 800, unmetered: 800 },
+    { id: "dg", parent: "main", power: 600, solar: 0, battery: 0, use: 600, unmetered: 600 },
+  ]);
+  assert.equal(s.rest, 600);
+  // a meter below a sub-meter is already inside that sub-meter's reading
+  b.floors[0].furniture[2].parent_meter = "og";
+  assert.equal(energySummary(hassOf([sensor("sensor.main", "2000"), sensor("sensor.og", "800"), sensor("sensor.dg", "-600")]), b, []).rest, 1200);
+  // solar behind a sub-meter: the main meter counts less than the flats draw
+  b.floors[0].furniture[2].parent_meter = "main";
+  assert.equal(energySummary(hassOf([sensor("sensor.main", "500"), sensor("sensor.og", "800"), sensor("sensor.dg", "-600")]), b, []).rest, 0);
+  assert.equal(energySummary(hassOf([]), b, []).rest, null);
+});
+
+// A multi-family house: main meter in the basement with the roof plant, the upper flat (OG) with a balcony plant and a
+// battery behind its own meter, the attic flat (DG) without. OG uses 500 W, DG 200 W, the common parts 100 W.
+const withPlants = (advanced: boolean) => {
+  const b = house(
+    piece("meter", { id: "main", power: "sensor.main" }),
+    piece("inverter", { id: "roof", power: "sensor.roof" }),
+    piece("meter", { id: "og", power: "sensor.og", parent_meter: "main", meter_floors: ["og"] }),
+    piece("meter", { id: "dg", power: "sensor.dg", parent_meter: "main", meter_floors: ["dg"] }),
+    piece("inverter", { id: "balcony", power: "sensor.balcony", parent_meter: "og" }),
+    piece("home_battery", { id: "box", power: "sensor.box", parent_meter: "og" }),
+  );
+  b.energy.advanced = advanced;
+  return b;
+};
+// 1800 W of sun for 800 W of use: 1000 W go to the grid; the OG meter runs backwards by 300 W
+const plantHass = (battery = "0") => hassOf([sensor("sensor.main", "-1000"), sensor("sensor.roof", "1000"), sensor("sensor.og", "-300"), sensor("sensor.dg", "200"), sensor("sensor.balcony", "800"), sensor("sensor.box", battery)]);
+
+test("a balcony plant behind a flat's meter counts towards that flat", () => {
+  const s = energySummary(plantHass(), withPlants(true), []);
+  assert.deepEqual([s.grid, s.solar, s.consumption], [-1000, 1800, 800]);
+  assert.deepEqual(s.subMeters, [
+    { id: "og", parent: "main", power: -300, solar: 800, battery: 0, use: 500, unmetered: 500 },
+    { id: "dg", parent: "main", power: 200, solar: 0, battery: 0, use: 200, unmetered: 200 },
+  ]);
+  assert.equal(s.rest, 100);
+  // the flat's battery charges with 200 W of the surplus: the meter feeds back only 100 W, the use stays 500 W
+  const charging = energySummary(hassOf([...Object.values(plantHass("-200").states)].map((st) => (st.entity_id === "sensor.og" ? sensor("sensor.og", "-100") : st.entity_id === "sensor.main" ? sensor("sensor.main", "-800") : st))), withPlants(true), []);
+  assert.equal(charging.subMeters?.[0].use, 500);
+  assert.equal(charging.rest, 100);
+});
+
+test("an inverter whose meter is gone, or is the main meter, works into the house", () => {
+  const b = withPlants(true);
+  const balcony = b.floors[0].furniture[4];
+  assert.equal(deviceMeter(b, balcony), "og");
+  for (const parent of ["gone", "main", null]) {
+    balcony.parent_meter = parent;
+    assert.equal(deviceMeter(b, balcony), null);
+    const s = energySummary(plantHass(), b, []);
+    assert.deepEqual([s.subMeters?.[0].solar, s.subMeters?.[0].use, s.rest], [0, 0, 600]);
+  }
+});
+
+test("with the advanced energy mode off, a meter chosen at an inverter or battery changes nothing", () => {
+  const plain = withPlants(false);
+  for (const f of plain.floors[0].furniture) delete f.parent_meter;
+  assert.deepEqual(deviceSensors(withPlants(false)), deviceSensors(plain));
+  assert.deepEqual(energySummary(plantHass("300"), withPlants(false), []), energySummary(plantHass("300"), plain, []));
+  assert.equal(deviceMeter(withPlants(false), withPlants(false).floors[0].furniture[4]), null);
+});
+
+test("what a flat uses beyond its placed devices is shown, and placed devices go into no total", () => {
+  const b = withPlants(true);
+  const pc = [{ id: "switch.pc", powerEntity: "sensor.pc", floorId: "og", x: 1, z: 1, power: 50 }];
+  // the balcony inverter's own sensor on the same floor is no consumer
+  const inverter = [{ id: "sensor.balcony", powerEntity: "sensor.balcony", floorId: "og", x: 2, z: 2, power: 800 }];
+  const before = energySummary(plantHass(), b, []);
+  const after = energySummary(plantHass(), b, [...pc, ...inverter]);
+  assert.deepEqual([after.subMeters?.[0].use, after.subMeters?.[0].unmetered], [500, 450]);
+  assert.deepEqual(after.subMeters?.[1].unmetered, 200, "nothing placed in the attic: all of it unmetered");
+  const totals = (s: typeof before) => [s.grid, s.solar, s.battery, s.consumption, s.rest, s.subMeters?.map((m) => m.use)];
+  assert.deepEqual(totals(after), totals(before));
+  // a flat using less than its devices report: 0, not below
+  pc[0].power = 900;
+  assert.equal(energySummary(plantHass(), b, pc).subMeters?.[0].unmetered, 0);
+  // mode off: consumers change nothing beyond what they did before
+  const off = withPlants(false);
+  assert.deepEqual(energySummary(plantHass(), off, pc), energySummary(plantHass(), off, []));
+});
+
+test("the unmetered part shows on a sub-meter's label only when asked for", () => {
+  const b = withPlants(true);
+  const pc = [{ id: "switch.pc", powerEntity: "sensor.pc", floorId: "og", x: 1, z: 1, power: 50 }];
+  const s = energySummary(plantHass(), b, pc);
+  assert.equal(subMeterLabel(b, s, "og"), null, "off by default: the label shows the meter's reading");
+  b.energy.show_unmetered = true;
+  assert.deepEqual(subMeterLabel(b, s, "og"), { use: 500, unmetered: 450 });
+  assert.deepEqual(subMeterLabel(b, s, "dg"), { use: 200, unmetered: null }, "nothing measured: only the use");
+  assert.equal(subMeterLabel(b, s, "main"), null);
+  const off = withPlants(false);
+  off.energy.show_unmetered = true;
+  assert.equal(subMeterLabel(off, energySummary(plantHass(), off, pc), "og"), null);
 });

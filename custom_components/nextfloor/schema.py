@@ -226,6 +226,11 @@ FURNITURE_SCHEMA = vol.Schema(
         vol.Optional("charge", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
         # meter: a separate export power sensor when the power sensor only reports import
         vol.Optional("export", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        # meter in the advanced energy mode: the meter it hangs off (a sub-meter), its own sign and the floors it
+        # feeds; no defaults, so plans without them are stored as they are
+        vol.Optional("parent_meter"): vol.Any(None, _ID),
+        vol.Optional("meter_invert"): bool,
+        vol.Optional("meter_floors"): vol.All([_ID], vol.Length(max=MAX_FLOORS)),
         vol.Optional("status", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
         # robot vacuum: sensor naming the room it cleans right now (None = automatic)
         vol.Optional("room_sensor", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
@@ -610,6 +615,10 @@ ENERGY_SCHEMA = vol.Schema(
         vol.Optional("battery_soc", default=None): _ENTITY,
         vol.Optional("consumption", default=None): _ENTITY,
         vol.Optional("tariff", default=None): _ENTITY,
+        # meters can hang off other meters (sub-meters); no default, so older plans stay as they are
+        vol.Optional("advanced"): bool,
+        # a sub-meter's label also shows what no placed device measures
+        vol.Optional("show_unmetered"): bool,
     },
     extra=vol.ALLOW_EXTRA,
 )

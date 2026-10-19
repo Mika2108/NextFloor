@@ -1,6 +1,7 @@
 // The entities a piece of furniture is linked to: what lights it, powers it, shows on its screen, or tells its state.
 
 import { html, nothing, type TemplateResult } from "lit";
+import { canHangOff, deviceMeter, meterParent, subMeterIds } from "../../../energy.ts";
 import { furnitureEntities, hasScreen, isMediaFurniture, isStatusSensor, robotRoomSensor } from "../../../devices.ts";
 import type { I18nKey } from "../../../i18n.ts";
 import { ENERGY_DEVICES, isLamp, type Furniture } from "../../../model.ts";
@@ -56,6 +57,36 @@ const powerLabel = (type: string): I18nKey => (type === "meter" ? "energy_grid" 
 
 const linkBlock = (...rows: (TemplateResult | typeof nothing)[]): TemplateResult => html`<div class="nf-form nf-links">${rows}</div>`;
 
+/** Advanced energy mode: the sub-meter an inverter or home battery sits behind (a balcony plant in a flat), else the main meter. */
+function deviceMeterLink(host: EditorHost, item: Furniture, actions: FurnitureLinkActions): TemplateResult | typeof nothing {
+  const t = host.t;
+  const doc = host.doc;
+  if (!doc.energy.advanced) return nothing;
+  const subs = subMeterIds(doc);
+  const meters = doc.floors.flatMap((floor) => floor.furniture.filter((m) => subs.has(m.id)).map((m) => [m.id, `${m.name || t("furn_meter")} · ${floor.name}`] as const));
+  return linkBlock(
+    selectField(host, t("meter_parent"), deviceMeter(doc, item) ?? "", [["", t("meter_main")], ...meters], (v) => actions.update({ parent_meter: v || null }), { wide: true }),
+    hint(t("meter_device_hint"), "nf-wide"),
+  );
+}
+
+/** Advanced energy mode: the meter a meter hangs off, and for a sub-meter its sign and the floors it feeds. */
+function subMeterLinks(host: EditorHost, item: Furniture, actions: FurnitureLinkActions): TemplateResult | typeof nothing {
+  const t = host.t;
+  const doc = host.doc;
+  if (!doc.energy.advanced) return nothing;
+  const parents = doc.floors.flatMap((floor) => floor.furniture.filter((m) => canHangOff(doc, item, m)).map((m) => [m.id, `${m.name || t("furn_meter")} · ${floor.name}`] as const));
+  const sub = !!meterParent(doc, item);
+  const fed = item.meter_floors ?? [];
+  const feed = (id: string, on: boolean) => actions.update({ meter_floors: on ? [...fed.filter((f) => f !== id), id] : fed.filter((f) => f !== id) });
+  return linkBlock(
+    selectField(host, t("meter_parent"), sub ? item.parent_meter! : "", [["", t("meter_parent_none")], ...parents], (v) => actions.update({ parent_meter: v || null }), { wide: true }),
+    sub ? checkField(host, t("energy_invert"), !!item.meter_invert, (on) => actions.update({ meter_invert: on })) : nothing,
+    sub ? html`<div class="nf-sub nf-wide">${t("meter_floors")}</div>${doc.floors.map((floor) => checkField(host, floor.name, fed.includes(floor.id), (on) => feed(floor.id, on)))}` : nothing,
+    hint(t("meter_sub_hint"), "nf-wide"),
+  );
+}
+
 /** The links of electric furniture: the main entity and the power sensor, and what is special to the kind of device. */
 export function furnitureLinks(host: EditorHost, item: Furniture, actions: FurnitureLinkActions): TemplateResult | typeof nothing {
   const { hass } = host;
@@ -79,9 +110,11 @@ export function furnitureLinks(host: EditorHost, item: Furniture, actions: Furni
       lamp ? glowField(host, item.glow_scale, (v) => actions.update({ glow_scale: v })) : nothing,
       lamp ? lightEffectFields(host, item, lightEffectSource(hass, item, item.entity && item.entity !== "none" ? item.entity : automaticLink(host, item, "entity"))?.attributes.effect_list, actions.update) : nothing,
       hasScreen(item.type) ? glowField(host, item.ambilight, (v) => actions.update({ ambilight: v }), { label: "ambilight", hint: "ambilight_hint", lowest: 0 }) : nothing,
-      lamp || item.type === "grid_point" ? nothing : entityField(host, t(powerLabel(item.type)), item.power ?? null, automaticLink(host, item, "power"), power, (v) => actions.update({ power: v })),
+      lamp || item.type === "grid_point" ? nothing : entityField(host, t(meterParent(host.doc, item) ? "meter_sub_power" : powerLabel(item.type)), item.power ?? null, automaticLink(host, item, "power"), power, (v) => actions.update({ power: v })),
     )}
-    ${item.type === "meter" ? linkBlock(entityField(host, t("furn_export"), item.export ?? null, undefined, power, set("export")), hint(t("furn_export_hint"), "nf-wide")) : nothing}
+    ${item.type === "meter" ? subMeterLinks(host, item, actions) : nothing}
+    ${item.type === "inverter" || item.type === "home_battery" ? deviceMeterLink(host, item, actions) : nothing}
+    ${item.type === "meter" && !meterParent(host.doc, item) ? linkBlock(entityField(host, t("furn_export"), item.export ?? null, undefined, power, set("export")), hint(t("furn_export_hint"), "nf-wide")) : nothing}
     ${item.type === "inverter" && (host.doc.settings.roof.solar ?? []).length > 0 ? hint(strings.length > 0 ? t("inverter_strings", { names: strings.join(", ") }) : t("inverter_strings_none"), "nf-wide") : nothing}
     ${item.type === "home_battery"
       ? linkBlock(

@@ -30,6 +30,7 @@ import {
 } from "../devices.ts";
 import { liveScreens, readSun, roofWindowStates, skyLightness } from "./view3d/live-inputs.ts";
 import { watchedEntities } from "./view3d/watch-list.ts";
+import { lightAnimation, lightEffectSource } from "../light-effects.ts";
 import { alertColor, alertSources, alertText, findAlerts, type Alert, type AlertSources } from "../alerts.ts";
 import { iconPath, iconSvg, mdiIcon } from "../icons.ts";
 import { deviceSensors, energySummary, findConsumers, readPower, subMeterIds, subMeterLabel, type Consumer, type EnergySummary } from "../energy.ts";
@@ -552,7 +553,7 @@ export class NfView3d extends LitElement {
         // "without watts" drops the power badge (a plug shows only on / off)
         const power = m.show === "no_power" || ("energyDevice" in m && m.energyDevice) ? null : (byDevice.get(m.id) ?? null);
         // at night (kiosk) colour effects rest
-        const marker = { ...m, power, powerText: power === null ? undefined : formatPower(hass, power), effect: this.dimmed ? false : m.effect, text: this.subMeterText(hass, b, summary, m.furnitureId) ?? m.text };
+        const marker = { ...m, power, powerText: power === null ? undefined : formatPower(hass, power), effect: this.dimmed ? undefined : m.effect, text: this.subMeterText(hass, b, summary, m.furnitureId) ?? m.text };
         // the own name under the pin: per device, or for every named device (card option marker_names)
         const caption = m.ownName && (m.showName || this.markerNames) ? m.ownName : "";
         const under = carded.has(m.id) || (!!m.furnitureId && carded.has(m.furnitureId));
@@ -1017,7 +1018,7 @@ export class NfView3d extends LitElement {
       furnitureId: f.id,
       pack: item ? f.type : null,
       lightY: item ? (item.mount === "ceiling" ? base : base + f.h * 0.85) : undefined,
-      effect: !!st && st.state === "on" && typeof st.attributes.effect === "string" && !/^(none|off|solid|static|normal)$/i.test(st.attributes.effect),
+      effect: st?.state === "on" ? lightAnimation(f, lightEffectSource(hass, f, entity)) : undefined,
       variant: f.variant,
       show: f.marker ?? undefined,
       fromFurniture: true,

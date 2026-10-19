@@ -50,6 +50,50 @@ Im Raum-Formular listet der Abschnitt **Geräte** die Home-Assistant-Geräte die
 - **Stellplatz** (Bibliothek *Parken*): *Fahrzeug* wählt das Modell, *Sensor „Auto da“* bestimmt, wann es erscheint, und über eine beliebige Entity des Autos findet NextFloor Ladestand, Reichweite, Stecker, Schloss und Klima am Gerät des Autos.
 - **Favoriten und eigene Knöpfe** (Einstellungen, *Favoriten*): Szenen, Skripte, Automationen, Schalter und Buttons fürs Zentralmenü; eigene Knöpfe öffnen einen Dashboard-Pfad, Entity-Details, einen Dienstaufruf oder ein browser_mod-Popup. *Sender oder Playlist* legt Lautsprecher-Voreinstellungen an.
 
+### Lichtprogramme in 3D zuordnen
+
+Im bestehenden Leuchteneditor öffnest du **Effektanimationen in 3D**. Wähle für jeden
+exakten HA-Effektnamen eine Darstellung: **Statisch**, **Regenbogen**, **Pulsieren**
+oder **Flackern**. Die Liste enthält die von HA gemeldeten Programme und bereits
+gespeicherte Zuordnungen. Fehlende Namen kannst du exakt hinzufügen (Groß-/Kleinschreibung
+und Leerzeichen zählen). „Nicht zugeordnet“ entfernt eine Zuordnung. Der Schalter
+**Animationen für diese Leuchte erlauben** schaltet alle Animationen dieser Platzierung
+aus, ohne die Zuordnungen zu löschen. Auch zwei Leuchten mit derselben Entity dürfen
+unterschiedliche Zuordnungen haben.
+
+**Nach dem Update bleiben bestehende Pläne ohne Zuordnung statisch.** Ein HA-Effekt
+ist nur ein Programmname und bedeutet nicht automatisch einen Regenbogen. Unbekannte
+Effekte oder Animationskennungen zeigen weiter die HA-Farbe und -Helligkeit. Bei einem
+Effektwechsel wird die Zuordnung neu ausgewertet. Ausgeschaltete, unbekannte oder nicht
+verfügbare Leuchten erzeugen keine Animation und kein Licht.
+
+In einer exportierten Plandatei stehen die Einstellungen direkt an der Leuchte
+(Möbel oder Geräteplatzierung), zum Beispiel:
+
+```json
+{
+  "animations_enabled": true,
+  "effect_animations": {
+    "Regenbogen": "rainbow",
+    "Kerzenlicht": "flicker",
+    "Atmen": "pulse",
+    "Weiß": "none"
+  }
+}
+```
+
+Pulsieren und Flackern verändern nur die Intensität bis höchstens zur bisherigen
+HA-Helligkeit; die Grundfarbe bleibt erhalten. Nur Regenbogen ersetzt die Farbe.
+Farb-/Weißmodi und die bestehende Einstellung der Leuchtstärke bleiben erhalten.
+Die Zuordnungen werden mit dem Plan gespeichert und privat exportiert/importiert;
+sie lösen keine HA-Schreibaufrufe aus. Die Darstellung nutzt den gemeinsamen sparsamen
+Animationstakt und pausiert bei verborgener Ansicht oder ohne sichtbare animierte Etage.
+
+Neue HA-Programmnamen lassen sich im Editor ohne Codeänderung zuordnen. Neue
+Animationsfunktionen werden ausschließlich in der festen Registry in
+`frontend/src/light-effects.ts` ergänzt; Plugins, Skripte oder ausführbarer Code aus
+dem Plan werden nicht geladen.
+
 ## Außen, Dach und Energie
 
 - **Außen:** Rasen, Terrasse, Weg, Einfahrt, Pool, Beet, Wildfläche, Hecke, Zaun oder Pergola aufziehen. *Höhenversatz* senkt oder hebt, *Gefälle* neigt, *Umriss zeigen* schaltet die leuchtende Kante, *Aus den Flächen darunter ausschneiden* macht ein Loch (Teich). Hecken und Zäune haben eine Höhe. Garten- und Wegeleuchten kommen aus der Bibliothek und beleuchten die Flächen.

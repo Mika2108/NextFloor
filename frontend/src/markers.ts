@@ -7,6 +7,7 @@ import { iconSvg, mdiIcon } from "./icons.ts";
 import { pointInPolygon, type Building, type Floor, type Placement, type Room } from "./model.ts";
 import type { HassEntity, HomeAssistant } from "./types.ts";
 import type { DeviceMarker } from "./viewer/viewer3d.ts";
+import { lightAnimation } from "./light-effects.ts";
 
 type Hass = HomeAssistant | undefined;
 
@@ -120,6 +121,7 @@ function markerFor(hass: HomeAssistant, floor: Floor, placed: Placement): Device
     active: isActive(st),
     unavailable: isUnavailable(st),
     glow: kind === "light" ? scaleGlow(lightGlow(st), placed.glow_scale) : null,
+    effect: kind === "light" ? lightAnimation(placed, st) : undefined,
     show: placed.marker ?? undefined,
     fixed: !!placed.locked,
   };

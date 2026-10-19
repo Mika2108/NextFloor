@@ -153,6 +153,10 @@ npm run screenshot  # renders preview/index.html (invented demo data) with a loc
 
 [Discussions](https://github.com/therealMRBK/NextFloor/discussions) for ideas and questions, [Issues](https://github.com/therealMRBK/NextFloor/issues/new/choose) for bugs.
 
+## 🙏 Credits
+
+NextFloor started as a fork of [NeonPlan 3D](https://github.com/Mastershort/neonplan3d) by Mastershort (Torsten). The idea of a live 3D home right inside Home Assistant, and the groundwork NextFloor grew from, are his. Thank you, Torsten!
+
 ## Licence
 
 MIT, see [LICENSE](https://github.com/therealMRBK/NextFloor/blob/main/LICENSE). NextFloor ships [three.js](https://threejs.org) (MIT), [Lit](https://lit.dev) (BSD-3-Clause); their notices are in [THIRD_PARTY_NOTICES.md](https://github.com/therealMRBK/NextFloor/blob/main/THIRD_PARTY_NOTICES.md).

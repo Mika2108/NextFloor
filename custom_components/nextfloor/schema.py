@@ -6,6 +6,8 @@ so saving keeps working after a frontend update until Home Assistant restarts wi
 
 from __future__ import annotations
 
+import re
+
 import voluptuous as vol
 
 MAX_FLOORS = 20
@@ -524,6 +526,19 @@ MAP_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+PLUGIN_SCHEMA = vol.Schema(
+    {
+        # Home Assistant's www folder, HACS or HTTPS; a JavaScript module
+        vol.Required("url"): vol.All(
+            str,
+            vol.Length(max=300),
+            vol.Match(re.compile(r"^(https://|/local/|/hacsfiles/)\S+\.m?js(\?\S*)?$", re.IGNORECASE)),
+        ),
+        vol.Required("enabled"): bool,
+    },
+    extra=vol.PREVENT_EXTRA,
+)
+
 SETTINGS_SCHEMA = vol.Schema(
     {
         vol.Required("wall_exterior"): vol.All(vol.Coerce(float), vol.Range(min=0.02, max=1)),
@@ -532,6 +547,8 @@ SETTINGS_SCHEMA = vol.Schema(
         # direction of north in the plan, degrees clockwise from "up"
         vol.Optional("north", default=0): vol.All(vol.Coerce(float), vol.Range(min=-360, max=360)),
         vol.Optional("map", default=None): vol.Any(None, MAP_SCHEMA),
+        # plugin modules the panel and the card import (docs/plugins.md); no default, so plans stay as stored
+        vol.Optional("plugins"): vol.All([PLUGIN_SCHEMA], vol.Length(max=20)),
         # plan lock: rooms, walls, doors, windows and outdoor areas cannot be moved by accident
         vol.Optional("lock_plan", default=False): bool,
         # stations and playlists for the speakers' quick menu (media_player.play_media type + content id)

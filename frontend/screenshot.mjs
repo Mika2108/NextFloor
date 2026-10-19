@@ -36,6 +36,8 @@ const browser = await puppeteer.launch({ executablePath, headless: true, args: [
 
 // Furniture from the built-in packs in the living room, kitchen and garden.
 // a pool drawn before the terrace that contains it: it cuts itself out of the terrace
+// registers a small plugin in the running page: a room card and its own icon and text on the heating marker
+const PLUGIN_SCRIPT = "window.NextFloor.register({ id: 'demo', name: 'Demo-Plugin', version: '1.0.0', apiVersion: 1, devices: [{ match: (id) => id.startsWith('climate.'), marker: ({ state }) => ({ icon: 'mdi:radiator', text: 'Plugin: ' + state.attributes.current_temperature + ' °' }) }], roomSections: [{ id: 'info', render: ({ room, entities }) => { const p = document.createElement('p'); p.textContent = '🔌 ' + room.name + ': ' + entities.length + ' Geräte (vom Plugin)'; return p; } }] }); setTimeout(() => { const f = (r) => { for (const el of r.querySelectorAll('*')) { if (el.tagName === 'NF-ROOM-PANEL') return el; if (el.shadowRoot) { const h = f(el.shadowRoot); if (h) return h; } } return null; }; f(document).shadowRoot.querySelector('.nf-rp-plugin')?.scrollIntoView({ block: 'end' }); }, 600);";
 const POOL_SCRIPT = `
   const f = e._doc.floors[0];
   e._floorId = f.id;
@@ -102,6 +104,7 @@ const shots = [
   { name: "dev-panel-fold", dev: true, query: "", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer", viewScript: "const f = (r) => { for (const el of r.querySelectorAll('*')) { if (el.tagName === 'NF-ROOM-PANEL') return el; if (el.shadowRoot) { const h = f(el.shadowRoot); if (h) return h; } } return null; }; f(document).shadowRoot.querySelector('.nf-rp-close').click();" },
   { name: "dev-panel-fold-wide", dev: true, query: "", width: 1600, height: 900, click: "Erdgeschoss", then: "Wohnzimmer", viewScript: "const f = (r) => { for (const el of r.querySelectorAll('*')) { if (el.tagName === 'NF-ROOM-PANEL') return el; if (el.shadowRoot) { const h = f(el.shadowRoot); if (h) return h; } } return null; }; f(document).shadowRoot.querySelector('.nf-rp-close').click();" },
   { name: "dev-card-fold", dev: true, query: "?card&roombuttons", width: 1400, height: 820, click: "Wohnzimmer", viewScript: "const f = (r) => { for (const el of r.querySelectorAll('*')) { if (el.tagName === 'NF-ROOM-PANEL') return el; if (el.shadowRoot) { const h = f(el.shadowRoot); if (h) return h; } } return null; }; f(document).shadowRoot.querySelector('.nf-rp-close').click();" },
+  { name: "dev-plugin-room", dev: true, query: "", width: 1600, height: 900, click: "Erdgeschoss", then: "Wohnzimmer", viewScript: PLUGIN_SCRIPT, afterWait: 1200 },
   { name: "dev-pool-cut", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: POOL_SCRIPT, then3d: "Erdgeschoss" },
   { name: "view-room-light", query: "", ha: "light", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
   { name: "card-light", query: "?card", ha: "light", width: 1400, height: 820 },

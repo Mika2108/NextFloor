@@ -6,6 +6,7 @@ import { areaEntities, entityName, groupByDevice, isUnavailable, kindOf, roomCli
 import { formatNumber, translate, type I18nKey } from "../i18n.ts";
 import { iconPath } from "../icons.ts";
 import { openMoreInfo, stateText } from "../markers.ts";
+import { pluginRoomSections } from "../plugins/registry.ts";
 import type { Floor, Room } from "../model.ts";
 import { controls, tokens } from "../styles.ts";
 import type { HassEntity, HomeAssistant } from "../types.ts";
@@ -211,6 +212,7 @@ export class NfRoomPanel extends LitElement {
               ],
             )
           : nothing}
+        ${this.pluginSections(room, ids)}
         ${hiddenCount
           ? html`<button class="nf-btn nf-rp-small nf-rp-more" @click=${() => (this._showAll = !this._showAll)}>
               ${this._showAll ? this.t("panel_less") : this.t("panel_more", { n: hiddenCount })}
@@ -239,6 +241,17 @@ export class NfRoomPanel extends LitElement {
     const hum = value("humidity", "%");
     if (hum) out.push(hum);
     return out;
+  }
+
+  /** Blocks plugins add for this room, titled with the plugin's name. */
+  private pluginSections(room: { id: string; name: string; area_id?: string | null }, ids: string[]) {
+    const sections = pluginRoomSections({ hass: this.hass, room: { id: room.id, name: room.name, area_id: room.area_id ?? null }, entities: ids });
+    return sections.map(
+      (sec) => html`<div class="nf-rp-sec nf-rp-plugin" data-plugin=${sec.key}>
+        <div class="nf-rp-sec-head"><h3>${sec.title}</h3></div>
+        ${typeof sec.content === "string" ? html`<p class="nf-rp-note">${sec.content}</p>` : sec.content}
+      </div>`,
+    );
   }
 
   private section(title: I18nKey, rows: TemplateResult[], action: TemplateResult | typeof nothing = nothing) {

@@ -31,6 +31,7 @@ import {
 import { liveScreens, readSun, roofWindowStates, skyLightness } from "./view3d/live-inputs.ts";
 import { watchedEntities } from "./view3d/watch-list.ts";
 import { lightAnimation, lightEffectSource } from "../light-effects.ts";
+import { onPluginsChanged } from "../plugins/registry.ts";
 import { alertColor, alertSources, alertText, findAlerts, type Alert, type AlertSources } from "../alerts.ts";
 import { iconPath, iconSvg, mdiIcon } from "../icons.ts";
 import { deviceSensors, energySummary, findConsumers, readPower, subMeterIds, subMeterLabel, type Consumer, type EnergySummary } from "../energy.ts";
@@ -54,7 +55,7 @@ import { searchIndex, searchItems, type SearchItem } from "../search.ts";
 import { coverPositionable, lightAbilities } from "./quick-menu.ts";
 import "./quick-menu.ts";
 import { load3d } from "../load3d.ts";
-import { scaleGlow, buildMarkers, openMoreInfo, stateText, toggleEntity } from "../markers.ts";
+import { scaleGlow, buildMarkers, openMoreInfo, stateText, toggleEntity, withPluginPatch } from "../markers.ts";
 import { furnitureFootprint, isLamp, LAMP_MODEL, outdoorGround, pointInPolygon, surfaceHeight, type Building, type Furniture, type StartView } from "../model.ts";
 import { floorCounts, floorInfoText, personsInRooms } from "../presence.ts";
 import { controls, tokens } from "../styles.ts";
@@ -211,6 +212,8 @@ export class NfView3d extends LitElement {
   declare panelOpen: boolean;
   /** The stage is narrower than 700 px (smaller floor pictures, phone layout). */
   private declare _narrowStage: boolean;
+  private stopPlugins: (() => void) | null = null;
+  private pluginsDirty = false;
   private resizeObs: ResizeObserver | null = null;
   /** Warnings (smoke, water, alarm, window in the rain): pulsing rooms and a banner; jump to new ones. */
   declare alerts: boolean;
@@ -347,6 +350,12 @@ export class NfView3d extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // a plugin that registers later changes markers: rebuild them in the next update (through updated(),
+    // like any other forced change), not only on the next state change
+    this.stopPlugins = onPluginsChanged(() => {
+      this.pluginsDirty = true;
+      this.requestUpdate();
+    });
     if (this.hasUpdated) {
       this.observeStage();
       if (!this.viewer) void this.start();
@@ -355,6 +364,8 @@ export class NfView3d extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.stopPlugins?.();
+    this.stopPlugins = null;
     this.resizeObs?.disconnect();
     this.resizeObs = null;
     clearInterval(this.alertTimer);
@@ -478,7 +489,8 @@ export class NfView3d extends LitElement {
       if (this.floorId === null) v.resetView();
     }
     if (changed.has("building") || changed.has("theme") || changed.has("floorThumbs") || changed.has("packs")) this.scheduleThumbs();
-    const forced = ["building", "markerMode", "heatMode", "flows", "alerts", "dimmed"].some((k) => changed.has(k));
+    const forced = this.pluginsDirty || ["building", "markerMode", "heatMode", "flows", "alerts", "dimmed"].some((k) => changed.has(k));
+    this.pluginsDirty = false;
     if (forced || changed.has("hass")) this.syncDevices(forced);
     if (changed.has("autoOrbit")) v.setAutoOrbit(this.autoOrbit ? 0.06 : 0);
     if (changed.has("_thumbs") || changed.has("_narrowStage")) v.setLabelInset(this._thumbs.length ? (this.narrowThumbs ? 136 : 184) : 0);
@@ -993,7 +1005,7 @@ export class NfView3d extends LitElement {
       bollard: base + f.h + 0.25,
       garden: base + f.h + 0.25,
     }[model];
-    return {
+    const marker: DeviceMarker & { fromFurniture: boolean } = {
       // a lamp without a light keeps a key of its own (it is drawn, but not tappable)
       id: entity ?? `lamp:${f.id}`,
       floorId: floor.id,
@@ -1023,6 +1035,7 @@ export class NfView3d extends LitElement {
       show: f.marker ?? undefined,
       fromFurniture: true,
     };
+    return st && entity ? withPluginPatch(hass, marker, st, false) : marker;
   }
 
   /**

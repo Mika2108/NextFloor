@@ -1,4 +1,4 @@
-"""Schema details: start views of the house, a floor and a room (#206, #282), the map, sub-meters."""
+"""Schema details: start views of the house, a floor and a room (#206, #282), the map, sub-meters, plugins."""
 
 import pytest
 import voluptuous as vol
@@ -7,7 +7,9 @@ from custom_components.nextfloor.schema import (
     ENERGY_SCHEMA,
     FURNITURE_SCHEMA,
     MAP_SCHEMA,
+    PLUGIN_SCHEMA,
     ROOM_SCHEMA,
+    SETTINGS_SCHEMA,
     START_VIEW_SCHEMA,
 )
 
@@ -55,3 +57,24 @@ def test_advanced_energy_mode_is_optional() -> None:
     assert ENERGY_SCHEMA({"show_unmetered": True})["show_unmetered"] is True
     with pytest.raises(vol.Invalid):
         ENERGY_SCHEMA({"advanced": "yes"})
+
+
+SETTINGS = {"wall_exterior": 0.3, "wall_interior": 0.1, "grid": 0.1, "roof": {}}
+
+
+def test_plugin_urls() -> None:
+    for url in ("/local/nf/glow.js", "/hacsfiles/nf-post/post.mjs", "https://example.org/p.js?v=2"):
+        assert PLUGIN_SCHEMA({"url": url, "enabled": True})["url"] == url
+    for url in ("http://example.org/p.js", "/config/secrets.js", "javascript:alert(1)", "/local/readme.txt"):
+        with pytest.raises(vol.Invalid):
+            PLUGIN_SCHEMA({"url": url, "enabled": True})
+    with pytest.raises(vol.Invalid):
+        PLUGIN_SCHEMA({"url": "/local/a.js", "enabled": True, "code": "alert(1)"})
+
+
+def test_plugins_are_optional_and_limited() -> None:
+    assert "plugins" not in SETTINGS_SCHEMA(SETTINGS)
+    many = [{"url": f"/local/p{i}.js", "enabled": True} for i in range(21)]
+    with pytest.raises(vol.Invalid):
+        SETTINGS_SCHEMA({**SETTINGS, "plugins": many})
+    assert len(SETTINGS_SCHEMA({**SETTINGS, "plugins": many[:20]})["plugins"]) == 20

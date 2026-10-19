@@ -3,6 +3,7 @@
 
 import type { Floor } from "../../model.ts";
 import type { LiveScreen } from "../live-screens.ts";
+import type { AnimationName } from "../../light-effects.ts";
 
 export type { Theme } from "../theme.ts";
 export type { RobotInfo } from "../robot.ts";
@@ -102,7 +103,7 @@ export interface DeviceMarker {
   /** The height its light comes from (pack lamps). */
   lightY?: number;
   /** A colour effect runs (colour loop and the like): the colour is animated in 3D. */
-  effect?: "rainbow" | "pulse" | "flicker";
+  effect?: AnimationName;
   /** The pendant shape: shade (default), globe, cone or drum. */
   variant?: string | null;
   /** The formatted power, for example "85 W". */

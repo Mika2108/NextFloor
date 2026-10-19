@@ -8,6 +8,7 @@ import { pointInPolygon, type Building, type Floor, type Placement, type Room } 
 import type { HassEntity, HomeAssistant } from "./types.ts";
 import type { DeviceMarker } from "./viewer/viewer3d.ts";
 import { lightAnimation } from "./light-effects.ts";
+import { pluginKind, pluginMarkerPatch } from "./plugins/registry.ts";
 
 type Hass = HomeAssistant | undefined;
 
@@ -99,12 +100,13 @@ export function scaleGlow<T extends { level: number }>(glow: T | null, factor: n
 }
 
 function markerFor(hass: HomeAssistant, floor: Floor, placed: Placement): DeviceMarker | null {
-  const kind = kindOf(placed.entity_id);
   const st = hass.states[placed.entity_id];
+  // a plugin may take on entities of domains NextFloor does not know
+  const kind = kindOf(placed.entity_id) ?? pluginKind(placed.entity_id, st);
   if (!kind || !st) return null;
   const room = roomAt(floor, placed.x, placed.z);
   const areaName = room?.area_id ? hass.areas?.[room.area_id]?.name : undefined;
-  return {
+  const marker: DeviceMarker = {
     id: placed.entity_id,
     floorId: floor.id,
     roomId: room?.id ?? null,
@@ -125,6 +127,15 @@ function markerFor(hass: HomeAssistant, floor: Floor, placed: Placement): Device
     show: placed.marker ?? undefined,
     fixed: !!placed.locked,
   };
+  return withPluginPatch(hass, marker, st, !!placed.icon);
+}
+
+/** Applies what plugins change on a marker; an icon the user picked in the plan stays. */
+export function withPluginPatch<M extends Pick<DeviceMarker, "id" | "icon" | "text" | "active">>(hass: HomeAssistant, marker: M, st: HassEntity, ownIcon: boolean): M {
+  const patch = pluginMarkerPatch({ hass, entityId: marker.id, state: st });
+  if (!patch) return marker;
+  const icon = patch.icon && !ownIcon ? (patch.icon.trimStart().startsWith("<svg") ? patch.icon : mdiIcon(patch.icon)) : marker.icon;
+  return { ...marker, icon, text: patch.text ?? marker.text, active: patch.active ?? marker.active };
 }
 
 /** One marker per placed entity that still exists in Home Assistant. */

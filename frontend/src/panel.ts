@@ -2,6 +2,7 @@
 
 import { html, LitElement, nothing, type PropertyValues, type TemplateResult } from "lit";
 import { BuildingController } from "./building-controller.ts";
+import type { PluginRef } from "./plugins/api.ts";
 import type { MarkerMode } from "./components/view3d.ts";
 import "./components/room-panel.ts";
 import "./components/view3d.ts";
@@ -277,7 +278,9 @@ export class NextFloorPanel extends LitElement {
   }
 
   private renderExtensions() {
-    return this.whenEditorLoaded(() => html`<nf-extensions class="nf-body" .hass=${this.hass} .packs=${this.data.packs} @packs-changed=${() => void this.data.reloadPacks()}></nf-extensions>`);
+    return this.whenEditorLoaded(() => html`<nf-extensions class="nf-body" .hass=${this.hass} .packs=${this.data.packs} .plugins=${this.data.building?.settings.plugins ?? []}
+      @packs-changed=${() => void this.data.reloadPacks()}
+      @plugins-changed=${(e: CustomEvent<PluginRef[]>) => this.applyEdit((b) => ({ ...b, settings: { ...b.settings, plugins: e.detail } }))}></nf-extensions>`);
   }
 
   private renderEditor(building: Building) {

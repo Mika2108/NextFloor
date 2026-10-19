@@ -1,4 +1,5 @@
 import type { HassEntity, HomeAssistant } from "./types.ts";
+import { animateWithPlugin, hasPluginAnimation } from "./plugins/registry.ts";
 
 /** The explicit colour entity also owns effects; the primary entity still controls on/off. */
 export function lightEffectSource(hass: Pick<HomeAssistant, "states">, config: { color_entity?: string | null }, primary: string | null): HassEntity | undefined {
@@ -14,12 +15,16 @@ export interface LightEffectConfig {
 }
 
 /** HA effect names are opaque, case-sensitive program names, never colour instructions. */
-export function lightAnimation(config: LightEffectConfig, state: HassEntity | undefined): Exclude<LightAnimation, "none"> | undefined {
+/** A built-in animation name or one a plugin registered. */
+export type AnimationName = Exclude<LightAnimation, "none"> | (string & {});
+
+export function lightAnimation(config: LightEffectConfig, state: HassEntity | undefined): AnimationName | undefined {
   if (config.animations_enabled === false || state?.state !== "on") return undefined;
   const effect = state.attributes.effect;
   if (typeof effect !== "string" || !config.effect_animations || !Object.prototype.hasOwnProperty.call(config.effect_animations, effect)) return undefined;
   const animation = config.effect_animations[effect];
-  return animation === "rainbow" || animation === "pulse" || animation === "flicker" ? animation : undefined;
+  if (animation === "rainbow" || animation === "pulse" || animation === "flicker") return animation;
+  return hasPluginAnimation(animation) ? animation : undefined;
 }
 
 type Glow = { color: [number, number, number]; level: number };
@@ -36,7 +41,8 @@ const registry: Partial<Record<LightAnimation, Animation>> = {
 
 /** Samples the existing glow; brightness has already been applied by lightGlow. */
 export function animateGlow(glow: Glow | null, animation: string | undefined, seconds: number): Glow | null {
-  if (!glow || !animation || !Object.prototype.hasOwnProperty.call(registry, animation)) return glow;
+  if (!glow || !animation) return glow;
+  if (!Object.prototype.hasOwnProperty.call(registry, animation)) return animateWithPlugin(glow, animation, seconds);
   return registry[animation as LightAnimation]?.(glow, seconds) ?? glow;
 }
 

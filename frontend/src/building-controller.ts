@@ -3,6 +3,8 @@
 
 import type { ReactiveController, ReactiveControllerHost } from "lit";
 import { fetchBuilding, listPacks, saveBuilding, subscribeBuilding } from "./api.ts";
+import { loadPlugins } from "./plugins/loader.ts";
+import { onPluginsChanged } from "./plugins/registry.ts";
 import { normalizeBuilding, type Building } from "./model.ts";
 import { setPacks, type FurniturePack } from "./packs.ts";
 import type { HomeAssistant } from "./types.ts";
@@ -68,6 +70,7 @@ export class BuildingController implements ReactiveController {
   packs: FurniturePack[] = [];
 
   private readonly host: ReactiveControllerHost;
+  private stopPlugins: (() => void) | null = null;
   private hass: HomeAssistant | null = null;
   private connected = false;
   private revision = -1;
@@ -92,11 +95,15 @@ export class BuildingController implements ReactiveController {
 
   hostConnected(): void {
     this.connected = true;
+    // a plugin that loads or registers later changes markers, animations and room panels
+    this.stopPlugins = onPluginsChanged(() => this.host.requestUpdate());
     if (this.hass) void this.start();
   }
 
   hostDisconnected(): void {
     this.connected = false;
+    this.stopPlugins?.();
+    this.stopPlugins = null;
     void this.flush();
     void this.stopListening?.();
     this.stopListening = null;
@@ -105,6 +112,7 @@ export class BuildingController implements ReactiveController {
   /** A local edit: visible at once, sent after a short pause. */
   edit(building: Building): void {
     this.building = building;
+    void loadPlugins(building.settings.plugins);
     this.waiting = building;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.flush(), SAVE_DELAY_MS);
@@ -209,6 +217,7 @@ export class BuildingController implements ReactiveController {
     try {
       const fetched = await fetchBuilding(this.hass);
       this.building = normalizeBuilding(fetched.building);
+      void loadPlugins(this.building.settings.plugins);
       this.backendVersion = fetched.version ?? null;
       this.revision = fetched.revision;
       this.error = null;

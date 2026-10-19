@@ -1,6 +1,7 @@
 // Data model shared by editor, 3D view and backend (see custom_components/nextfloor/schema.py).
 // Units are metres; x grows to the right, z grows downwards (as in the 2D editor).
 
+import type { PluginRef } from "./plugins/api.ts";
 import { packItem } from "./packs.ts";
 import type { LightEffectConfig } from "./light-effects.ts";
 import type { LampModel } from "./viewer/viewer3d.ts";
@@ -483,6 +484,8 @@ export interface BuildingSettings {
   start_view?: StartView | null;
   /** A real map under the plan (null = none). */
   map?: MapSettings | null;
+  /** Plugin modules to load (Extensions page); see docs/plugins.md. */
+  plugins?: PluginRef[];
 }
 
 /** A real map as the base of the plan: the plan point (x, z in metres) that lies at lat / lon, turned by the plan's north. */

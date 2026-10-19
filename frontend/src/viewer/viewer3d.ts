@@ -73,6 +73,7 @@ import { SoundLayer, type SoundSpot } from "./live-sound.ts";
 import { ScreenLayer, type LiveScreen } from "./live-screens.ts";
 import { addMeshLighting, applyEnvironment, disposeMeshInstance, instantiateMesh, loadMesh } from "./meshes.ts";
 import { circlePath, cleaningPath, stepRobot, type RobotInfo, type RobotMotion } from "./robot.ts";
+import type { AnimationName } from "../light-effects.ts";
 
 export type { RobotInfo } from "./robot.ts";
 export { inspectModel, ModelError, prepareModel, previewModel, type ModelInfo, type PrepareOptions } from "./models/prepare.ts";
@@ -169,7 +170,7 @@ export interface DeviceMarker {
   /** Height its light comes from (pack lamps). */
   lightY?: number;
   /** A colour effect runs (colour loop …): the colour is animated in 3D. */
-  effect?: "rainbow" | "pulse" | "flicker";
+  effect?: AnimationName;
   /** Pendant shape: shade (default), globe, cone or drum. */
   variant?: string | null;
   /** Formatted power, e.g. "85 W". */

@@ -1,10 +1,14 @@
 import { html, nothing, type TemplateResult } from "lit";
 import { LIGHT_ANIMATIONS, type LightEffectConfig } from "../../light-effects.ts";
+import { pluginLightAnimationNames } from "../../plugins/registry.ts";
 import type { EditorHost } from "./host.ts";
 
 /** A small local-only mapping editor. Unknown stored identifiers remain untouched until edited. */
 export function lightEffectFields(host: EditorHost, config: LightEffectConfig, effects: unknown, update: (patch: LightEffectConfig) => void): TemplateResult {
   const mapping = config.effect_animations ?? {};
+  // animations plugins add are offered after the built-in ones, by their own name
+  const extra = pluginLightAnimationNames();
+  const known = (value: string) => (LIGHT_ANIMATIONS as readonly string[]).includes(value) || extra.includes(value);
   const names = [...new Set([...Object.keys(mapping), ...(Array.isArray(effects) ? effects.filter((s): s is string => typeof s === "string") : [])])];
   const set = (name: string, animation: string, input: HTMLInputElement | HTMLSelectElement, adding = false): boolean => {
     const exists = Object.prototype.hasOwnProperty.call(mapping, name);
@@ -34,9 +38,10 @@ export function lightEffectFields(host: EditorHost, config: LightEffectConfig, e
     ${names.map((name) => html`<label class="nf-field nf-wide">${name}
       <select ?disabled=${!host.admin} @change=${(e: Event) => { const input = e.target as HTMLSelectElement; set(name, input.value, input); }}>
         <option value="" ?selected=${!Object.prototype.hasOwnProperty.call(mapping, name)}>${host.t("light_effect_unmapped")}</option>
-        ${Object.prototype.hasOwnProperty.call(mapping, name) && !LIGHT_ANIMATIONS.includes(mapping[name] as typeof LIGHT_ANIMATIONS[number])
+        ${Object.prototype.hasOwnProperty.call(mapping, name) && !known(mapping[name])
           ? html`<option selected value=${mapping[name]}>${mapping[name]} (${host.t("light_effect_unmapped")})</option>` : nothing}
         ${LIGHT_ANIMATIONS.map((animation) => html`<option value=${animation} ?selected=${Object.prototype.hasOwnProperty.call(mapping, name) && mapping[name] === animation}>${host.t(`light_animation_${animation}`)}</option>`)}
+        ${extra.map((animation) => html`<option value=${animation} ?selected=${Object.prototype.hasOwnProperty.call(mapping, name) && mapping[name] === animation}>${animation} (${host.t("plugin")})</option>`)}
       </select></label>`)}
     <label class="nf-field nf-wide">${host.t("light_effect_add")}<input type="text" ?disabled=${!host.admin} placeholder="Regenbogen"
       @input=${(e: Event) => (e.target as HTMLInputElement).setCustomValidity("")}

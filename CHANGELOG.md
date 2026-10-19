@@ -12,6 +12,18 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 - **Lichtprogramme werden nicht mehr pauschal zu Regenbogen:** bestehende Pläne ohne Zuordnung und unbekannte Programme bleiben bei HA-Farbe und -Helligkeit. Pulsieren und Flackern erhalten die Grundfarbe; ausgeschaltete oder nicht verfügbare Leuchten animieren nicht. Unsichtbare Ansichten und Etagen halten keinen Effekttakt am Laufen.
 
+## 0.10.0 (unreleased)
+
+### Added
+
+- **Plugins:** NextFloor can now be extended without changing its code. A plugin is a JavaScript file you add on the **Extensions** page (from `/config/www`, HACS or HTTPS). Plugins can add their own light animations (they show up in a light's effect settings), show entities NextFloor does not know (a robot vacuum, a lawn mower) with their own icon and text, and add small cards to a room's panel. A broken plugin never breaks the house view; its errors show next to it on the Extensions page. How to write one: [docs/plugins.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/plugins.md).
+- **Sub-meters (advanced energy mode)** by @TheRealSimon42 (#8): a meter can hang off another meter, e.g. one sub-meter per flat behind the house's main meter; solar plants and batteries can hang off a sub-meter, and the house card shows the common rest. Off by default.
+- **Configurable light effects** by @TazztheMonster (#9): map a light's effect names to rainbow, pulse, flicker or a static look, or turn animations off.
+
+### Changed
+
+- The README credits NeonPlan 3D by Mastershort, the project NextFloor started from.
+
 ## 0.9.1
 
 ### Changed

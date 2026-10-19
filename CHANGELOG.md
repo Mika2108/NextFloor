@@ -12,7 +12,7 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 - **Lichtprogramme werden nicht mehr pauschal zu Regenbogen:** bestehende Pläne ohne Zuordnung und unbekannte Programme bleiben bei HA-Farbe und -Helligkeit. Pulsieren und Flackern erhalten die Grundfarbe; ausgeschaltete oder nicht verfügbare Leuchten animieren nicht. Unsichtbare Ansichten und Etagen halten keinen Effekttakt am Laufen.
 
-## 0.10.0 (unreleased)
+## 0.10.0
 
 ### Added
 

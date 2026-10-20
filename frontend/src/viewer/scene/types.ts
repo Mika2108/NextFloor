@@ -17,7 +17,7 @@ export type WallMode = "auto" | "cut";
 /** How the floors above and below the chosen one are shown. */
 export type FloorStack = "dim" | "stacked" | "single";
 
-export type LampModel = "ceiling" | "downlight" | "spot" | "panel" | "pendant" | "floor" | "uplight" | "table" | "wall" | "strip" | "bollard" | "garden";
+export type LampModel = "ceiling" | "downlight" | "spot" | "panel" | "pendant" | "fan" | "floor" | "uplight" | "table" | "wall" | "strip" | "bollard" | "garden";
 
 export interface ViewerOptions {
   quality?: Quality;
@@ -102,6 +102,10 @@ export interface DeviceMarker {
   pack?: string | null;
   /** The height its light comes from (pack lamps). */
   lightY?: number;
+  /** Hanging lamps and fans: the ceiling they hang from (null = the floor height). */
+  ceiling?: number;
+  /** Ceiling fan: turns of its blades per second (0 or unset = standing still). */
+  spin?: number;
   /** A colour effect runs (colour loop and the like): the colour is animated in 3D. */
   effect?: AnimationName;
   /** The pendant shape: shade (default), globe, cone or drum. */

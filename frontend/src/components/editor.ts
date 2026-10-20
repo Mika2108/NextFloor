@@ -27,6 +27,7 @@ import {
   OPENING_PRESETS,
   type OpeningPreset,
   resizeFurniture,
+  ceilingAt,
   roomTiles,
   pointInPolygon,
   polygonArea,
@@ -643,7 +644,7 @@ export class NfEditor extends LitElement {
     if (d) {
       const kind = kindOf(d.entity_id);
       const light = kind === "light";
-      const auto = kind ? defaultHeight(kind, this.floor?.height ?? 2.5, light ? (d.mount ?? "ceiling") : null) : 1;
+      const auto = kind ? defaultHeight(kind, this.floor ? ceilingAt(this.floor, d.x, d.z) : 2.5, light ? (d.mount ?? "ceiling") : null) : 1;
       return html`<div class="nf-3d-bar">
         <span>${entityName(this.hass, d.entity_id)}</span>
         ${light

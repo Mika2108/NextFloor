@@ -50,6 +50,18 @@ const POOL_SCRIPT = `
   e.addOutdoor([[x0, z1 + 0.5], [x1, z1 + 0.5], [x1, z1 + 5], [x0, z1 + 5]]);
   set("terrace");
 `;
+// a high ground floor with a low bathroom (its own ceiling) and a ceiling fan with a light kit in the living room
+const CEILING_DOC = `
+  const g = b.floors[0];
+  g.height = 3.2;
+  g.rooms.find((r) => r.name === "Bad").ceiling = 2.2;
+  const lr = g.rooms.find((r) => r.name === "Wohnzimmer");
+  const xs = lr.points.map((p) => p[0]), zs = lr.points.map((p) => p[1]);
+  g.furniture.push({ id: "fan_demo", type: "ceiling_fan", x: (Math.min(...xs) + Math.max(...xs)) / 2, z: (Math.min(...zs) + Math.max(...zs)) / 2, rotation: 0, w: 1.32, d: 1.32, h: 0.6, variant: null, entity: "light.wohnzimmer_ventilator", power: null, fan_entity: "fan.wohnzimmer_ventilator" });
+`;
+const CEILING_SCRIPT = `window.nfDemoSet("fan.wohnzimmer_ventilator", "on", { friendly_name: "Ventilator", percentage: 66, percentage_step: 33.33 });
+  window.nfDemoSet("light.wohnzimmer_ventilator", "on", { friendly_name: "Ventilator Licht", brightness: 200, color_mode: "brightness" });
+  const panel = document.querySelector("nextfloor-panel"); const b = structuredClone(panel.data.building); ${CEILING_DOC} panel.data.edit(b);`;
 // advanced energy mode: a sub-meter for the upper floor (its sensor reads 520 W) with the balcony plant behind it
 const SUB_METER = (unmetered) => `
   window.nfDemoSet("sensor.og_zaehler", "520", { friendly_name: "OG Zähler", device_class: "power", unit_of_measurement: "W" });
@@ -105,6 +117,9 @@ const shots = [
   { name: "dev-panel-fold-wide", dev: true, query: "", width: 1600, height: 900, click: "Erdgeschoss", then: "Wohnzimmer", viewScript: "const f = (r) => { for (const el of r.querySelectorAll('*')) { if (el.tagName === 'NF-ROOM-PANEL') return el; if (el.shadowRoot) { const h = f(el.shadowRoot); if (h) return h; } } return null; }; f(document).shadowRoot.querySelector('.nf-rp-close').click();" },
   { name: "dev-card-fold", dev: true, query: "?card&roombuttons", width: 1400, height: 820, click: "Wohnzimmer", viewScript: "const f = (r) => { for (const el of r.querySelectorAll('*')) { if (el.tagName === 'NF-ROOM-PANEL') return el; if (el.shadowRoot) { const h = f(el.shadowRoot); if (h) return h; } } return null; }; f(document).shadowRoot.querySelector('.nf-rp-close').click();" },
   { name: "dev-plugin-room", dev: true, query: "", width: 1600, height: 900, click: "Erdgeschoss", then: "Wohnzimmer", viewScript: PLUGIN_SCRIPT, afterWait: 1200 },
+  { name: "dev-ceilings", dev: true, query: "", width: 1500, height: 950, click: "Erdgeschoss", then: "Wohnzimmer", viewScript: CEILING_SCRIPT, afterWait: 1500 },
+  { name: "dev-ceilings-edit", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: `const b = structuredClone(e._doc); ${CEILING_DOC} e.setDoc(b); e._floorId = b.floors[0].id; e.selectItem("room", b.floors[0].rooms.find((r) => r.name === "Bad").id);`, openDetails: true },
+  { name: "dev-fan-form", dev: true, query: "", width: 1500, height: 1300, editor: true, editorScript: `const b = structuredClone(e._doc); ${CEILING_DOC} e.setDoc(b); e._floorId = b.floors[0].id; e.selectItem("furniture", "fan_demo");`, openDetails: true },
   { name: "dev-pool-cut", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: POOL_SCRIPT, then3d: "Erdgeschoss" },
   { name: "view-room-light", query: "", ha: "light", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
   { name: "card-light", query: "?card", ha: "light", width: 1400, height: 820 },

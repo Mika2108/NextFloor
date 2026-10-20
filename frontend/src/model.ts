@@ -54,6 +54,11 @@ export interface Room {
    * into parts of their own (each with its own height), e.g. a 2.5 m wall next to a 1.7 m one in line.
    */
   wall_splits?: (number[] | null)[];
+  /**
+   * Height of this room's ceiling in m (null = the floor height): a low bathroom on a high floor. Ceiling lights, LED strips and ceiling-mounted
+   * items hang from it, and its walls default to it (a wall shared with a room without a ceiling of its own keeps the floor height).
+   */
+  ceiling?: number | null;
 }
 
 export type OpeningType = "door" | "window" | "garage";
@@ -177,6 +182,10 @@ export interface Furniture extends LightEffectConfig {
   marker?: MarkerShow | null;
   /** Height of the bottom edge above the floor (null = default: the floor, a pack item's mount, a surface below). */
   mount_y?: number | null;
+  /** Ceiling lights, fans and ceiling-mounted items: the height of the ceiling right there (a sloping ceiling, a high spot); null = the room's ceiling. */
+  ceiling_y?: number | null;
+  /** Ceiling fan: its fan entity (null = found in the room, "none" = none). The linked light is its light kit. */
+  fan_entity?: EntityRef;
   /** Any furniture: an entity whose state the item shows – it glows while on, occupied or home (a bed with an occupancy mat, a chair, a sauna). */
   state_entity?: EntityRef;
   /** A second state entity for the other half: left/right (a double bed) or bottom/top (a bunk bed). */
@@ -755,6 +764,7 @@ export const FURNITURE_TYPES = [
   "lamp_spot",
   "lamp_panel",
   "lamp_pendant",
+  "ceiling_fan",
   "lamp_floor",
   "lamp_table",
   "lamp_wall",
@@ -817,7 +827,7 @@ export const FURNITURE_TYPES = [
 
 /** Furniture library sections (the editor lists them in this order). */
 export const FURNITURE_GROUPS: Record<string, FurnitureType[]> = {
-  lights: ["lamp_ceiling", "lamp_downlight", "lamp_spot", "lamp_panel", "lamp_pendant", "lamp_floor", "lamp_uplight", "lamp_table", "lamp_wall", "led_strip", "lamp_bollard", "lamp_garden"],
+  lights: ["lamp_ceiling", "lamp_downlight", "lamp_spot", "lamp_panel", "lamp_pendant", "ceiling_fan", "lamp_floor", "lamp_uplight", "lamp_table", "lamp_wall", "led_strip", "lamp_bollard", "lamp_garden"],
   living: ["sofa", "armchair", "stool", "coffee_table", "tv_board", "tv_wall", "sideboard", "shelf", "plant", "rug"],
   dining: ["table", "table_round", "chair", "bench", "corner_bench", "bar_stool"],
   kitchen: ["kitchen", "kitchen_wall", "kitchen_tall", "island", "worktop", "sink", "stove", "dishwasher", "fridge"],
@@ -838,6 +848,7 @@ export const LAMP_TYPES = new Set<string>([
   "lamp_spot",
   "lamp_panel",
   "lamp_pendant",
+  "ceiling_fan",
   "lamp_floor",
   "lamp_uplight",
   "lamp_table",
@@ -852,7 +863,7 @@ export const WALL_LAMP_Y = 1.75;
 
 /** Items that can be lifted off the floor (a wall cabinet, a shelf, a wall light, an LED strip): everything but lamps hung from the ceiling and the ceiling-mounted pack items. */
 export function canLift(f: Pick<Furniture, "type">): boolean {
-  if (["lamp_ceiling", "lamp_downlight", "lamp_spot", "lamp_panel", "lamp_pendant", "stairs", "stairwell", "parking"].includes(f.type)) return false;
+  if (CEILING_TYPES.has(f.type) || ["stairs", "stairwell", "parking"].includes(f.type)) return false;
   return packItem(f.type)?.mount !== "ceiling";
 }
 
@@ -931,6 +942,19 @@ export function builtinBase(f: Pick<Furniture, "type" | "h"> & { variant?: strin
       return 0;
   }
 }
+
+/** Furniture that hangs from the ceiling: its height comes from the ceiling above it (the room's, or its own ceiling_y). */
+export const CEILING_TYPES = new Set<string>(["lamp_ceiling", "lamp_downlight", "lamp_spot", "lamp_panel", "lamp_pendant", "ceiling_fan"]);
+
+/** The height of the ceiling above a point of a floor: the room's own ceiling, else the floor height. */
+export function ceilingAt(floor: Pick<Floor, "height" | "rooms">, x: number, z: number): number {
+  const room = floor.rooms.find((r) => r.points.length >= 3 && pointInPolygon([x, z], r.points));
+  return room?.ceiling != null && room.ceiling > 0 ? room.ceiling : floor.height;
+}
+
+/** The ceiling a piece hangs from: its own ceiling height set by hand, else the ceiling above it. */
+export const ceilingOf = (floor: Pick<Floor, "height" | "rooms">, f: Pick<Furniture, "x" | "z"> & { ceiling_y?: number | null }): number =>
+  f.ceiling_y != null && f.ceiling_y > 0 ? f.ceiling_y : ceilingAt(floor, f.x, f.z);
 
 export function surfaceHeight(floor: Floor, x: number, z: number): number {
   let top = 0;
@@ -1013,6 +1037,8 @@ export const FURNITURE_SIZE: Record<FurnitureType, [number, number, number]> = {
   robot_vacuum: [0.36, 0.5, 0.1],
   parking: [2.6, 5.2, 0.02],
   lamp_pendant: [0.4, 0.4, 0.8],
+  // a 52" fan; its height is how far it hangs down from the ceiling (more = on a downrod)
+  ceiling_fan: [1.32, 1.32, 0.32],
   lamp_floor: [0.4, 0.4, 1.7],
   lamp_table: [0.28, 0.28, 0.45],
   lamp_wall: [0.22, 0.12, 0.2],
@@ -1260,6 +1286,7 @@ export const LAMP_MODEL: Record<string, LampModel> = {
   lamp_bollard: "bollard",
   lamp_garden: "garden",
   lamp_pendant: "pendant",
+  ceiling_fan: "fan",
   lamp_floor: "floor",
   lamp_table: "table",
   lamp_wall: "wall",

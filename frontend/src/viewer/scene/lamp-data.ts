@@ -13,6 +13,7 @@ export const LAMP_SIZE: Record<LampModel, readonly [number, number, number]> = {
   bollard: [0.16, 0.16, 0.8],
   garden: [0.12, 0.12, 0.3],
   pendant: [0.4, 0.4, 0.8],
+  fan: [1.32, 1.32, 0.32],
   floor: [0.42, 0.42, 1.7],
   table: [0.26, 0.26, 0.45],
   wall: [0.22, 0.12, 0.2],
@@ -20,7 +21,7 @@ export const LAMP_SIZE: Record<LampModel, readonly [number, number, number]> = {
 };
 
 /** Models that hang from the ceiling, which the cut view hides. */
-export const HANGING_LAMPS: ReadonlySet<LampModel> = new Set(["ceiling", "downlight", "spot", "panel", "pendant", "strip"]);
+export const HANGING_LAMPS: ReadonlySet<LampModel> = new Set(["ceiling", "downlight", "spot", "panel", "pendant", "fan", "strip"]);
 
 /** LED strips mounted lower than this (metres) wash the wall upwards instead of lighting down. */
 export const LOW_STRIP = 1.0;
@@ -41,6 +42,9 @@ export function lightOrigin(model: LampModel, ceiling: number, base: number, hei
       return [ceiling - 0.05, "ceiling"];
     case "pendant":
       return [Math.max(0.5, ceiling - height), "pendant"];
+    // the light kit under the motor shines down
+    case "fan":
+      return [Math.max(0.5, ceiling - height + 0.02), "ceiling"];
     case "floor":
       return [base + height - 0.15, "omni"];
     case "uplight":

@@ -56,7 +56,8 @@ import { coverPositionable, lightAbilities } from "./quick-menu.ts";
 import "./quick-menu.ts";
 import { load3d } from "../load3d.ts";
 import { scaleGlow, buildMarkers, openMoreInfo, stateText, toggleEntity, withPluginPatch } from "../markers.ts";
-import { furnitureFootprint, isLamp, LAMP_MODEL, outdoorGround, pointInPolygon, surfaceHeight, type Building, type Furniture, type StartView } from "../model.ts";
+import { fanSpin } from "../entities/fans.ts";
+import { ceilingOf, furnitureFootprint, isLamp, LAMP_MODEL, outdoorGround, pointInPolygon, surfaceHeight, type Building, type Furniture, type StartView } from "../model.ts";
 import { floorCounts, floorInfoText, personsInRooms } from "../presence.ts";
 import { controls, tokens } from "../styles.ts";
 import type { HassEntity, HomeAssistant } from "../types.ts";
@@ -184,7 +185,7 @@ export class NfView3d extends LitElement {
   /** The start view last handed to the viewer (JSON), to notice a new one. */
   private shownStartView: string | undefined;
   /** A running swipe on a lamp or blind: the value shown next to the finger. */
-  private declare _swipe: { entity: string; kind: "light" | "cover"; start: number; value: number; x: number; y: number } | null;
+  private declare _swipe: { entity: string; kind: "light" | "cover" | "fan"; start: number; value: number; x: number; y: number } | null;
   /** Quick menu at a device (long press). */
   private declare _menu: { entity: string; x: number; y: number; car?: CarState } | null;
   /** Looking through a camera: its live picture lies over the 3D view; `back` is the view to return to. */
@@ -778,7 +779,17 @@ export class NfView3d extends LitElement {
         const faces = this.stateFaces(hass, f);
         if (faces.length) screens.set(f.id, { color: faces[0].color, level: faces[0].level, faces });
         if (isLamp(f.type)) {
-          markers.push(this.lampMarker(hass, floor, f, linked?.entity ?? null));
+          const lamp = this.lampMarker(hass, floor, f, linked?.entity ?? null);
+          markers.push(lamp);
+          if (f.type === "ceiling_fan") {
+            const fan = linked?.fan ? hass.states[linked.fan] : undefined;
+            lamp.spin = fanSpin(fan);
+            if (fan && !taken.has(fan.entity_id)) {
+              taken.add(fan.entity_id);
+              // the fan's own pin under the blades: tap switches it, a swipe changes its speed
+              markers.push({ ...lamp, id: fan.entity_id, y: Math.max(0.5, lamp.y - 0.3), icon: f.icon ? mdiIcon(f.icon) : iconSvg("fan"), name: f.name || entityName(hass, fan.entity_id), text: fanText(hass, fan), active: isActive(fan), unavailable: isUnavailable(fan), glow: null, lamp: null, spin: undefined, pickable: undefined, effect: undefined });
+            }
+          }
           continue;
         }
         // a home battery with only its charge, a wallbox with only its status still gets its marker
@@ -985,7 +996,8 @@ export class NfView3d extends LitElement {
           ? outdoorGround(floor, f.x, f.z)
           : 0;
     const room = floor.rooms.find((r) => r.points.length >= 3 && pointInPolygon([f.x, f.z], r.points));
-    const H = floor.height;
+    // hanging lamps hang from the ceiling right above them: the room's own, or one set on the lamp (a sloping ceiling)
+    const H = ceilingOf(floor, f);
     // pack lamps: the marker sits above the lamp (below it when it hangs from the ceiling)
     const y = item
       ? item.mount === "ceiling"
@@ -997,6 +1009,7 @@ export class NfView3d extends LitElement {
       spot: H - 0.35,
       panel: H - 0.25,
       pendant: Math.max(0.6, H - f.h - 0.25),
+      fan: Math.max(0.6, H - f.h - 0.2),
       floor: base + f.h + 0.25,
       uplight: base + f.h + 0.25,
       table: base + f.h + 0.2,
@@ -1030,6 +1043,7 @@ export class NfView3d extends LitElement {
       furnitureId: f.id,
       pack: item ? f.type : null,
       lightY: item ? (item.mount === "ceiling" ? base : base + f.h * 0.85) : undefined,
+      ceiling: H,
       effect: st?.state === "on" ? lightAnimation(f, lightEffectSource(hass, f, entity)) : undefined,
       variant: f.variant,
       show: f.marker ?? undefined,
@@ -1051,6 +1065,8 @@ export class NfView3d extends LitElement {
     if (m.lamp) return false;
     const kind = kindOf(m.id);
     if (kind === "light") return false;
+    // a ceiling fan's pin is how it is switched (its blades belong to the light kit)
+    if (m.fromFurniture && kind === "fan") return true;
     if (m.fromFurniture) return (m.power ?? 0) >= 1 || (kind === "media" && m.active) || (!!m.energyDevice && !!m.text);
     return true;
   }
@@ -1142,6 +1158,12 @@ export class NfView3d extends LitElement {
         this._swipe = { entity: entityId, kind: "light", start: pct, value: pct, x, y };
         return true;
       }
+      // a fan with speeds: up = faster, down to 0 = off
+      if (kind === "fan" && typeof st.attributes.percentage_step === "number") {
+        const pct = st.state === "on" && typeof st.attributes.percentage === "number" ? st.attributes.percentage : 0;
+        this._swipe = { entity: entityId, kind: "fan", start: pct, value: pct, x, y };
+        return true;
+      }
       if (kind === "cover" && coverPositionable(st)) {
         const pos = st.attributes.current_position as number;
         this._swipe = { entity: entityId, kind: "cover", start: pos, value: pos, x, y };
@@ -1175,6 +1197,9 @@ export class NfView3d extends LitElement {
     if (s.kind === "light") {
       if (s.value <= 0) void this.hass.callService("light", "turn_off", { entity_id: s.entity });
       else void this.hass.callService("light", "turn_on", { entity_id: s.entity, brightness_pct: s.value });
+    } else if (s.kind === "fan") {
+      if (s.value <= 0) void this.hass.callService("fan", "turn_off", { entity_id: s.entity });
+      else void this.hass.callService("fan", "set_percentage", { entity_id: s.entity, percentage: s.value });
     } else void this.hass.callService("cover", "set_cover_position", { entity_id: s.entity, position: s.value });
   }
 
@@ -2631,3 +2656,9 @@ function markerHeight(f: Furniture): number {
   return f.h + 0.35;
 }
 
+
+/** The text under a fan's pin: its speed in per cent while it runs, its state otherwise. */
+function fanText(hass: HomeAssistant, st: HassEntity): string {
+  const pct = st.attributes.percentage;
+  return st.state === "on" && typeof pct === "number" ? `${Math.round(pct)} %` : stateText(hass, st);
+}

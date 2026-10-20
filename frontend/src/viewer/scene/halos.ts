@@ -18,6 +18,8 @@ export function haloHeight(model: LampModel, ceiling: number, base: number, heig
       return ceiling - 0.03;
     case "pendant":
       return Math.max(0.4, ceiling - height) + 0.08;
+    case "fan":
+      return Math.max(0.5, ceiling - height + 0.03);
     case "floor":
       return base + height - 0.15;
     case "uplight":

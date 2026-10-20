@@ -46,10 +46,10 @@ function mainEntity(item: Furniture, hass: EditorHost["hass"]): { accept: (id: s
 }
 
 /** What "automatic" would choose for a link: the item is looked at again with that link cleared. */
-function automaticLink(host: EditorHost, item: Furniture, key: "entity" | "power"): string | null {
+function automaticLink(host: EditorHost, item: Furniture, key: "entity" | "power" | "fan"): string | null {
   if (!host.hass) return null;
   const probe = structuredClone(host.doc.floors);
-  for (const floor of probe) for (const f of floor.furniture) if (f.id === item.id) f[key] = null;
+  for (const floor of probe) for (const f of floor.furniture) if (f.id === item.id) f[key === "fan" ? "fan_entity" : key] = null;
   return furnitureEntities(host.hass, probe).get(item.id)?.[key] ?? null;
 }
 
@@ -100,9 +100,12 @@ export function furnitureLinks(host: EditorHost, item: Furniture, actions: Furni
   const strings = (host.doc.settings.roof.strings ?? []).filter((s) => s.inverter === item.id).map((s) => s.name);
   const hasLink = !!item.entity && item.entity !== "none";
   const doors = item.type === "fridge_smart" ? kindOptions((id) => id.startsWith("binary_sensor.")) : [];
-  const hintKey: I18nKey = lamp ? (item.type === "lamp_pendant" ? "lamp_hint_pendant" : "lamp_hint") : isMediaFurniture(item.type) ? "furn_links_hint_tv" : item.type === "robot_vacuum" ? "robot_hint" : "furn_links_hint";
+  const hintKey: I18nKey = item.type === "ceiling_fan" ? "fan_hint" : lamp ? (item.type === "lamp_pendant" ? "lamp_hint_pendant" : "lamp_hint") : isMediaFurniture(item.type) ? "furn_links_hint_tv" : item.type === "robot_vacuum" ? "robot_hint" : "furn_links_hint";
   return html`${linkBlock(
       item.type === "grid_point" ? hint(t("grid_point_hint"), "nf-wide") : entityField(host, t(main.label), item.entity ?? null, automaticLink(host, item, "entity"), kindOptions(main.accept), (v) => actions.update({ entity: v })),
+      item.type === "ceiling_fan"
+        ? entityField(host, t("furn_fan_entity"), item.fan_entity ?? null, automaticLink(host, item, "fan"), kindOptions((id) => id.startsWith("fan.")), (v) => actions.update({ fan_entity: v }))
+        : nothing,
       !lamp && !(ENERGY_DEVICES as readonly string[]).includes(item.type) && !hasScreen(item.type) ? stateLinks(host, item, actions) : nothing,
       lamp && hasLink
         ? html`${entityField(host, t("furn_color_entity"), item.color_entity ?? null, undefined, kindOptions((id) => id.startsWith("light.") && id !== item.entity), set("color_entity"))}${hint(t("furn_color_entity_hint"), "nf-wide")}`

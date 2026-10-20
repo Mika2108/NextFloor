@@ -42,6 +42,7 @@ const LAMP_NAMES: Record<string, RegExp> = {
   lamp_bollard: /(weg|garten|garden|path|poller|außen|aussen|outdoor)/i,
   lamp_garden: /(garten|garden|spot|außen|aussen|outdoor|baum|tree)/i,
   lamp_pendant: /(pendel|pendant|hänge|esstisch|dining)/i,
+  ceiling_fan: /(ventilator|fan)/i,
   lamp_floor: /(steh|floor)/i,
   lamp_table: /(tisch|nacht|table|bedside|lese|reading)/i,
   lamp_wall: /(wand|wall)/i,
@@ -53,6 +54,8 @@ const TV_FURNITURE = new Set(["tv_board", "tv_wall"]);
 export interface FurnitureLinks {
   entity: string | null;
   power: string | null;
+  /** Ceiling fan: its fan entity. */
+  fan?: string | null;
 }
 
 /** Whether a rule of a screen picture holds now: the state or attribute equals the value or contains it (3+ letters); "*" always. */
@@ -98,7 +101,7 @@ export function furnitureEntities(hass: HomeAssistant, floors: readonly Floor[])
   for (const floor of floors) {
     // entities set by hand and devices placed in the plan (an Echo Show in the corner) are taken already
     const used = new Set<string>(
-      [...floor.furniture.flatMap((f) => [f.entity, f.power]), ...floor.placements.map((p) => p.entity_id)].filter(isSet),
+      [...floor.furniture.flatMap((f) => [f.entity, f.power, f.fan_entity]), ...floor.placements.map((p) => p.entity_id)].filter(isSet),
     );
     for (const piece of floor.furniture) {
       const isLamp = piece.type in LAMP_NAMES;
@@ -111,7 +114,12 @@ export function furnitureEntities(hass: HomeAssistant, floors: readonly Floor[])
 
       let entity: string | null = piece.entity === "none" ? null : (piece.entity ?? null);
       if (piece.entity == null) {
-        if (isLamp) entity = pickByName(ofKind("light"), pattern, describe, true);
+        if (piece.type === "ceiling_fan") {
+          // the fan's light kit: a light on the same device as a free fan, or one whose name fits (a fan without light takes none)
+          const all = (room ? areaEntities(hass, room.area_id) : []).filter((id) => !used.has(id));
+          const devices = new Set(all.filter((id) => kindOf(id) === "fan").map((id) => hass.entities?.[id]?.device_id).filter(Boolean));
+          entity = all.find((id) => kindOf(id) === "light" && devices.has(hass.entities?.[id]?.device_id)) ?? pickByName(ofKind("light"), pattern, describe, false);
+        } else if (isLamp) entity = pickByName(ofKind("light"), pattern, describe, true);
         else if (piece.type === "robot_vacuum") {
           // vacuums are not a device kind of their own, so they are looked up in the room's area directly
           const area = room?.area_id ?? null;
@@ -131,7 +139,19 @@ export function furnitureEntities(hass: HomeAssistant, floors: readonly Floor[])
         if (!power && pattern && room && !isLamp) power = areaEntities(hass, room.area_id).find((id) => isPower(hass, id) && !used.has(id) && pattern.test(describe(id))) ?? null;
         if (power) used.add(power);
       }
-      if (entity || power) links.set(piece.id, { entity, power });
+      // a ceiling fan's fan: on the light's device first, else a free fan of the room
+      let fan: string | null = null;
+      if (piece.type === "ceiling_fan") {
+        fan = piece.fan_entity === "none" ? null : (piece.fan_entity ?? null);
+        if (piece.fan_entity == null) {
+          // every fan of the area: the light kit's device may count as one device with the light, which only keeps one of them
+          const fans = (room ? areaEntities(hass, room.area_id) : []).filter((id) => kindOf(id) === "fan" && !used.has(id));
+          const device = entity ? hass.entities?.[entity]?.device_id : undefined;
+          fan = (device ? fans.find((id) => hass.entities?.[id]?.device_id === device) : undefined) ?? fans[0] ?? null;
+          if (fan) used.add(fan);
+        }
+      }
+      if (entity || power || fan) links.set(piece.id, { entity, power, ...(piece.type === "ceiling_fan" ? { fan } : {}) });
     }
   }
   return links;

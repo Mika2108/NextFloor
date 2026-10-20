@@ -39,7 +39,7 @@ import {
 } from "three";
 import type { Building, Floor, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
-import { centroid, pointInPolygon, openingStyle, WALL_LAMP_Y } from "../model.ts";
+import { CEILING_TYPES, ceilingOf, centroid, pointInPolygon, openingStyle, WALL_LAMP_Y } from "../model.ts";
 import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
 import { centredAt, floorLabelPosition, floorShowsMarkers, LabelPlacer, leftAt, project, stackFloorLabels, type FloorLabel, type ScreenPoint } from "./scene/labels.ts";
 import { easeFloor, fadeMaterials, floorShare, floorTarget } from "./scene/floor-motion.ts";
@@ -169,6 +169,10 @@ export interface DeviceMarker {
   pack?: string | null;
   /** Height its light comes from (pack lamps). */
   lightY?: number;
+  /** Hanging lamps and fans: the ceiling they hang from (null = the floor height). */
+  ceiling?: number;
+  /** Ceiling fan: turns of its blades per second (0 or unset = standing still). */
+  spin?: number;
   /** A colour effect runs (colour loop …): the colour is animated in 3D. */
   effect?: AnimationName;
   /** Pendant shape: shade (default), globe, cone or drum. */
@@ -180,7 +184,7 @@ export interface DeviceMarker {
 export type FloorStack = "dim" | "stacked" | "single";
 
 
-export type LampModel = "ceiling" | "downlight" | "spot" | "panel" | "pendant" | "floor" | "uplight" | "table" | "wall" | "strip" | "bollard" | "garden";
+export type LampModel = "ceiling" | "downlight" | "spot" | "panel" | "pendant" | "fan" | "floor" | "uplight" | "table" | "wall" | "strip" | "bollard" | "garden";
 
 /** A ray from the camera through the pointer, in building coordinates (heights above the ground). */
 export interface SurfaceRay {
@@ -253,10 +257,15 @@ const ROOF_GAP = 1.4;
 /** Grid cells across the ground texture. */
 const GROUND_CELLS = 32;
 const LAMP_BODY = 0x2a3a60;
+/** Fan blades: a little lighter than the lamp bodies, so they read against the motor. */
+const FAN_BLADE = 0x4a5c88;
 const LAMP_SHADE = 0x1d2946;
 /** Lamps that hang from the ceiling (hidden in the cut view). */
 const FLASH_MS = 450;
 const EFFECT_MS = 125;
+/** A ceiling fan's blades and the angle between them. */
+const FAN_BLADES = 5;
+const FAN_SPACING = 360 / FAN_BLADES;
 
 
 interface FloorView {
@@ -682,7 +691,8 @@ export class NextFloorViewer {
   setDevices(devices: DeviceMarker[]): void {
     this.devices = devices;
     this.labelsDirty = true;
-    this.effectFloors = new Set(devices.filter((d) => d.effect && d.glow).map((d) => d.floorId));
+    // colour effects and turning fans are drawn in steps by the shared effect timer
+    this.effectFloors = new Set(devices.filter((d) => (d.effect && d.glow) || (d.spin ?? 0) > 0).map((d) => d.floorId));
     this.deviceFloor = new Map(devices.map((d) => [d.id, d.floorId]));
     const seen = new Set<string>();
     for (const d of devices) {
@@ -1649,6 +1659,12 @@ export class NextFloorViewer {
     return moving;
   }
 
+  /** The turn of a fan's blades now (degrees, one blade spacing at most): turning fans move on with the effect timer. */
+  private fanPhase(d: DeviceMarker): number {
+    if (d.lamp !== "fan" || !d.spin) return 0;
+    return Math.round(((this.effectTime * d.spin * 360) % FAN_SPACING) * 10) / 10;
+  }
+
   /** One sampler for lamp shades, halos, cones and room light surfaces. */
   private glowOf(d: DeviceMarker): DeviceMarker["glow"] {
     return animateGlow(d.glow, d.effect, this.effectTime);
@@ -1673,7 +1689,7 @@ export class NextFloorViewer {
     const shapeSig =
       this.wallMode +
       (this.lowQuality ? "L" : this.highQuality ? "H" : "M") +
-      lamps.map((d) => `${d.id},${d.lamp},${d.variant},${d.x},${d.z},${d.y},${d.rotation ?? 0},${d.roll ?? 0},${d.upright ? 1 : 0},${d.size?.join("/")},${d.base ?? 0},${d.pack ?? ""},${d.mirror ? 1 : 0}`).join(";");
+      lamps.map((d) => `${d.id},${d.lamp},${d.variant},${d.x},${d.z},${d.y},${d.rotation ?? 0},${d.roll ?? 0},${d.upright ? 1 : 0},${d.size?.join("/")},${d.base ?? 0},${d.pack ?? ""},${d.mirror ? 1 : 0},${d.ceiling ?? ""},${this.fanPhase(d)}`).join(";");
     const glows = lamps.map((d) => this.glowOf(d));
     const colorSig = lamps.map((d, i) => `${flash(d.id)},${glows[i] ? `${glows[i]!.level.toFixed(3)},${glows[i]!.color.map((c) => c.toFixed(3)).join("/")}` : "off"}`).join(";");
     if (shapeSig !== fv.lampShapeSig || !fv.lampMesh.geometry.getAttribute("position")) {
@@ -1686,14 +1702,14 @@ export class NextFloorViewer {
       const H = fv.floor.height;
       for (const d of lamps) {
         // hanging lamps would float above cut walls
-        const hanging = d.lamp === "strip" ? (d.base ?? H) > Math.min(fv.floor.cut_height, H) : d.lamp ? HANGING_LAMPS.has(d.lamp) : false;
+        const hanging = d.lamp === "strip" ? (d.base ?? H) > Math.min(fv.floor.cut_height, d.ceiling ?? H) : d.lamp ? HANGING_LAMPS.has(d.lamp) : false;
         if (!d.lamp || (hanging && this.wallMode === "cut")) continue;
         const start = buf.count;
         const packed = d.pack ? packItem(d.pack) : undefined;
         const [pw, pd, ph] = d.size ?? [0.3, 0.3, 0.3];
         // shades get the sentinel colour and are recoloured below
         if (packed) pushPackLamp(buf, packed, { x: d.x, z: d.z, rotation: d.rotation ?? 0, w: pw, d: pd, h: ph, mirror: d.mirror }, d.base ?? 0, SHADE_SENTINEL);
-        else pushLampModel(buf, { ...d, lamp: d.lamp! }, H, SHADE_SENTINEL);
+        else pushLampModel(buf, { ...d, lamp: d.lamp!, phase: this.fanPhase(d) }, d.ceiling ?? H, SHADE_SENTINEL);
         // keyed by the furniture: two lamps may share one light (one switch for two strips)
         ranges.set(d.furnitureId ?? d.id, { start, end: buf.count });
         if (d.pickable !== false) tris.push({ id: d.id, start, end: buf.count });
@@ -1761,8 +1777,8 @@ export class NextFloorViewer {
       if (marker.floorId !== fv.floor.id || !marker.lamp || !glow) continue;
       if (cut && hiddenInCut(marker.lamp)) continue;
       const lamp = marker as DeviceMarker & { lamp: LampModel };
-      addLampHalo(points, lamp, glow, fv.floor.height);
-      if (this.highQuality && (marker.lamp === "downlight" || marker.lamp === "spot")) addSpotCone(cones, lamp, glow, fv.floor.height);
+      addLampHalo(points, lamp, glow, marker.ceiling ?? fv.floor.height);
+      if (this.highQuality && (marker.lamp === "downlight" || marker.lamp === "spot")) addSpotCone(cones, lamp, glow, marker.ceiling ?? fv.floor.height);
     }
     const geometry = new Geometry();
     geometry.setAttribute("position", new Float32BufferAttribute(points.positions, 3));
@@ -2250,13 +2266,13 @@ export class NextFloorViewer {
     if (!fv || !f) return;
     const x = this.grab?.id === f.id ? this.grab.x : f.x;
     const z = this.grab?.id === f.id ? this.grab.z : f.z;
-    const H = fv.floor.height;
-    const hanging = ["lamp_ceiling", "lamp_downlight", "lamp_spot", "lamp_panel", "lamp_pendant"].includes(f.type);
+    const H = ceilingOf(fv.floor, { ...f, x, z });
+    const hanging = CEILING_TYPES.has(f.type);
     const h = Math.max(0.1, f.type === "lamp_pendant" ? 0.3 : f.h);
     const y0 = packItem(f.type) || f.type === "lamp_wall" || f.type === "led_strip"
       ? mountBase(fv.floor, f)
       : hanging
-        ? f.type === "lamp_pendant"
+        ? f.type === "lamp_pendant" || f.type === "ceiling_fan"
           ? H - f.h - 0.1
           : H - h
         : mountBase(fv.floor, f);
@@ -2892,7 +2908,7 @@ export function createViewer(host: HTMLElement, options?: ViewerOptions): NextFl
 /** Model of a lamp into a buffer (3D view and furniture previews); `H` is the ceiling height. */
 export function pushLampModel(
   buf: GeoBuffer,
-  d: Pick<DeviceMarker, "x" | "z" | "size" | "base" | "rotation" | "variant" | "roll" | "upright"> & { lamp: LampModel },
+  d: Pick<DeviceMarker, "x" | "z" | "size" | "base" | "rotation" | "variant" | "roll" | "upright"> & { lamp: LampModel; phase?: number },
   H: number,
   shadeCol: number,
 ): void {
@@ -2939,6 +2955,25 @@ export function pushLampModel(
       } else {
         cyl(r * 0.35, bottom + 0.14, bottom + 0.2, shadeCol, shadeCol, 12);
         cyl(r, bottom, bottom + 0.14, shadeCol, shadeCol, 16);
+      }
+      break;
+    }
+    case "fan": {
+      // canopy at the ceiling, a downrod when it hangs lower, the motor with the blades and the light kit underneath
+      const bottom = Math.max(0.05, H - Math.max(0.22, h));
+      const motorTop = bottom + 0.16;
+      cyl(0.07, H - 0.05, H, LAMP_BODY, LAMP_BODY, 10);
+      if (motorTop < H - 0.05) cyl(0.014, motorTop, H - 0.05, LAMP_BODY, LAMP_BODY, 6);
+      cyl(0.11, bottom + 0.06, motorTop, LAMP_BODY, LAMP_BODY, 14);
+      cyl(0.1, bottom, bottom + 0.06, shadeCol, shadeCol, 14);
+      const reach = Math.max(0.2, Math.min(w, dd) / 2);
+      const bladeY = bottom + 0.1;
+      for (let i = 0; i < FAN_BLADES; i++) {
+        const a = ((d.phase ?? 0) + i * FAN_SPACING) * DEG;
+        const [c, s] = [Math.cos(a), Math.sin(a)];
+        // a blade: narrow at the motor, wider towards its tip
+        const at = (along: number, across: number): [number, number] => [d.x + along * c - across * s, d.z + along * s + across * c];
+        pushPrism(buf, [at(0.1, -0.035), at(reach, -0.075), at(reach, 0.075), at(0.1, 0.035)], bladeY, bladeY + 0.012, FAN_BLADE, FAN_BLADE, { aoFrom: 0, bottom: true });
       }
       break;
     }

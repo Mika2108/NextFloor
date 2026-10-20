@@ -4,7 +4,7 @@ import { html, nothing, type TemplateResult } from "lit";
 import { defaultHeight, entityName, hasScreen, kindOf, TOGGLE_KINDS } from "../../../devices.ts";
 import type { I18nKey } from "../../../i18n.ts";
 import { iconPath } from "../../../icons.ts";
-import { FURNITURE_TYPES, isLamp, type LampMount, type Placement } from "../../../model.ts";
+import { ceilingAt, FURNITURE_TYPES, isLamp, type LampMount, type Placement } from "../../../model.ts";
 import { isElectric, isPackType, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
 import { checkField, glowField, iconField, markerField, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
@@ -59,7 +59,7 @@ export function renderDeviceForm(host: EditorHost, placed: Placement, actions: D
   const kind = kindOf(placed.entity_id);
   const light = kind === "light";
   const mount = placed.mount ?? "ceiling";
-  const automatic = kind ? defaultHeight(kind, host.floor?.height ?? 2.5, light ? mount : null) : 1;
+  const automatic = kind ? defaultHeight(kind, host.floor ? ceilingAt(host.floor, placed.x, placed.z) : 2.5, light ? mount : null) : 1;
   const set = (patch: Partial<Placement>) => actions.update(patch);
   const mountChange = (value: LampMount) => set({ mount: value, y: null });
   const lampMounts = (["ceiling", "floor", "table", "wall"] as const).map((m): [LampMount, string] => [m, t(`lamp_${m}`)]);

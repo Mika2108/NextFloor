@@ -83,6 +83,15 @@ function corners(host: EditorHost, room: Room, rectangle: boolean, actions: Room
   </details>`;
 }
 
+/** The room's own ceiling height (a low bathroom on a high floor); at the floor height or above it is the floor's again. */
+function ceilingField(host: EditorHost, room: Room, floor: Floor, actions: RoomActions): TemplateResult {
+  const t = host.t;
+  const set = (v: number) => actions.patch({ ceiling: v >= floor.height - 0.005 ? null : Math.max(1, Math.round(v * 1000) / 1000) });
+  return html`${numberField(host, t("room_ceiling"), room.ceiling ?? floor.height, set, 0.01, 1)}
+    ${room.ceiling != null ? html`<button class="nf-btn nf-field-btn" ?disabled=${!host.admin} @click=${() => actions.patch({ ceiling: null })}>${t("height_auto")}</button>` : nothing}
+    ${hint(t("room_ceiling_hint"), "nf-wide")}`;
+}
+
 /** The form of the selected room. */
 export function renderRoomForm(host: EditorHost, state: SideState, room: Room, actions: RoomActions): TemplateResult {
   const t = host.t;
@@ -99,6 +108,7 @@ export function renderRoomForm(host: EditorHost, state: SideState, room: Room, a
       ${textField(host, t("room_name"), room.name, (v) => actions.patch({ name: v }), { wide: true })}
       ${selectField(host, t("area"), room.area_id ?? "", areaChoices, (id) => actions.setArea(id), { wide: true })}
       ${selectField(host, t("material"), room.floor_material, materials, (floor_material) => actions.patch({ floor_material }), { wide: true })}
+      ${host.floor ? ceilingField(host, room, host.floor, actions) : nothing}
       ${rectangle
         ? html`${numberField(host, t("x"), box.x0, (v) => actions.setRect("x", v))} ${numberField(host, t("z"), box.z0, (v) => actions.setRect("z", v))}
           ${numberField(host, t("width"), box.x1 - box.x0, (v) => actions.setRect("w", v), 0.01, 0.05)}

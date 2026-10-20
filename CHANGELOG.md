@@ -2,15 +2,13 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
-## Unreleased
+## 0.11.0
 
 ### Added
 
-- **Effektanimationen je Leuchte konfigurieren:** exakte HA-Programmnamen lassen sich im Leuchteneditor auf statisch, Regenbogen, Pulsieren oder Flackern abbilden. Ein eigener Schalter pausiert alle Animationen der Platzierung, ohne Home Assistant zu verändern.
-
-### Fixed
-
-- **Lichtprogramme werden nicht mehr pauschal zu Regenbogen:** bestehende Pläne ohne Zuordnung und unbekannte Programme bleiben bei HA-Farbe und -Helligkeit. Pulsieren und Flackern erhalten die Grundfarbe; ausgeschaltete oder nicht verfügbare Leuchten animieren nicht. Unsichtbare Ansichten und Etagen halten keinen Effekttakt am Laufen.
+- **Ceiling height per room** (#12): a room can have its own ceiling height (room form → *Ceiling height*), e.g. a 2.12 m bathroom on a 4 m floor. Ceiling lights, ceiling fans, LED strips under the ceiling, ceiling devices and placed ceiling lights hang from it, and the room's walls are that high (a wall shared with a room without its own ceiling keeps the floor height; between two rooms with their own ceilings it takes the higher one). Heights set by hand on a wall still win.
+- **Ceiling height at one spot** (#12): ceiling lights and other hanging items have a *Ceiling here* field for a sloping ceiling or a single high spot (a light at 4 m).
+- **Ceiling fans** (#11): a new *Ceiling fan* in the lights section. Link its light kit like any lamp and its fan entity (found on the light's device or in the room). In 3D the blades turn as fast as the fan runs; the fan's pin shows its speed, a tap switches it, swiping up or down changes the speed and a long press opens the quick menu. Its height is how far it hangs from the ceiling, so a fan on a downrod hangs lower.
 
 ## 0.10.0
 
@@ -18,11 +16,15 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 - **Plugins:** NextFloor can now be extended without changing its code. A plugin is a JavaScript file you add on the **Extensions** page (from `/config/www`, HACS or HTTPS). Plugins can add their own light animations (they show up in a light's effect settings), show entities NextFloor does not know (a robot vacuum, a lawn mower) with their own icon and text, and add small cards to a room's panel. A broken plugin never breaks the house view; its errors show next to it on the Extensions page. How to write one: [docs/plugins.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/plugins.md).
 - **Sub-meters (advanced energy mode)** by @TheRealSimon42 (#8): a meter can hang off another meter, e.g. one sub-meter per flat behind the house's main meter; solar plants and batteries can hang off a sub-meter, and the house card shows the common rest. Off by default.
-- **Configurable light effects** by @TazztheMonster (#9): map a light's effect names to rainbow, pulse, flicker or a static look, or turn animations off.
+- **Configurable light effects** by @TazztheMonster (#9): map a light's effect names to rainbow, pulse, flicker or a static look, or turn animations off for one lamp without changing anything in Home Assistant.
 
 ### Changed
 
 - The README credits NeonPlan 3D by Mastershort, the project NextFloor started from.
+
+### Fixed
+
+- Light effects are no longer all shown as a rainbow: plans without a mapping and unknown effects keep the colour and brightness from Home Assistant, pulse and flicker keep the base colour, and lights that are off or unavailable do not animate.
 
 ## 0.9.1
 

@@ -31,7 +31,8 @@ const FULL_STEP = 0.005;
 
 export function renderEdgeHeights(host: EditorHost, room: Room, actions: EdgeActions): TemplateResult {
   const t = host.t;
-  const floorHeight = host.floor!.height;
+  // a room with its own ceiling: its walls are "full" at that height
+  const floorHeight = room.ceiling ?? host.floor!.height;
   const count = room.points.length;
   const { wall_exterior, wall_interior } = host.doc.settings;
   const rowsOf = (edge: number) => {

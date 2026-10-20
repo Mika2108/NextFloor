@@ -24,7 +24,7 @@ export function lightSourcesOf(floor: Floor, zones: readonly number[] | null, ma
     const room = zoneOf(zones as number[] | null, roomIndexAt(floor, marker.x, marker.z));
     const [width, , height] = marker.size ?? (marker.lamp ? LAMP_SIZE[marker.lamp] : FALLBACK_SIZE);
     const base = marker.base ?? 0;
-    const [fallbackY, kind]: [number, LightKind] = marker.lamp ? lightOrigin(marker.lamp, floor.height, base, height) : [marker.y, "omni"];
+    const [fallbackY, kind]: [number, LightKind] = marker.lamp ? lightOrigin(marker.lamp, marker.ceiling ?? floor.height, base, height) : [marker.y, "omni"];
     const y = marker.lightY ?? fallbackY;
     const { color, level } = glow;
     if (marker.lamp !== "strip") {

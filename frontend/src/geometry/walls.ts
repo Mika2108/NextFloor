@@ -172,6 +172,14 @@ function edgeSettings(rooms: readonly Room[], pieces: Piece[]) {
         if (atA !== null) a = Math.min(a, atA);
         if (atB !== null) b = Math.min(b, atB);
       }
+      // no height set by hand: the rooms' own ceilings – the higher one, so the wall closes the taller room; a room without
+      // a ceiling of its own stands for the full floor height
+      const ceilings = list.map((p) => roomById.get(p.room)?.ceiling);
+      if (ceilings.every((c): c is number => typeof c === "number" && c > 0)) {
+        const top = Math.max(...ceilings);
+        if (a === Infinity) a = top;
+        if (b === Infinity) b = top;
+      }
       return { ...(a < Infinity ? { a } : {}), ...(b < Infinity ? { b } : {}) };
     },
     /** A thickness set on a room edge; a shared wall takes the thicker one of its two rooms. */

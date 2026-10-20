@@ -156,6 +156,16 @@ export function furnitureSymbol(type: string, w: number, d: number): Part[] | ty
       }
       return out;
     }
+    case "ceiling_fan": {
+      // the motor in the middle and five blades from above
+      const r = Math.min(w, d) / 2;
+      const out: Part[] = [circle(0, 0, 0.11, "nf-sym-fill")];
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        out.push(line(Math.cos(a) * 0.12, Math.sin(a) * 0.12, Math.cos(a) * r * 0.97, Math.sin(a) * r * 0.97, "nf-sym-strong"));
+      }
+      return [...out, circle(0, 0, r)];
+    }
     case "lamp_wall":
       return [rect(-w / 2, -d / 2, w / 2, -d / 2 + 0.03, "nf-sym-fill"), ellipse(0, 0.01, w * 0.4, d * 0.4)];
     case "led_strip":

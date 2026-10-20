@@ -1,7 +1,7 @@
 // Quick find: rooms and devices of the plan, looked up by name, room or entity id.
 
 import { defaultHeight, entityName, furnitureEntities, kindOf, type DeviceKind } from "./devices.ts";
-import { centroid, pointInPolygon, type Building, type Floor, type Room } from "./model.ts";
+import { ceilingAt, centroid, pointInPolygon, type Building, type Floor, type Room } from "./model.ts";
 import type { HomeAssistant } from "./types.ts";
 
 export interface SearchItem {
@@ -50,14 +50,14 @@ function indexFloor(hass: HomeAssistant, floor: Floor, links: ReturnType<typeof 
   };
 
   for (const p of floor.placements) {
-    const height = p.y ?? defaultHeight(kindOf(p.entity_id) ?? "sensor", floor.height, p.mount);
+    const height = p.y ?? defaultHeight(kindOf(p.entity_id) ?? "sensor", ceilingAt(floor, p.x, p.z), p.mount);
     push(p.entity_id, p.x, p.z, height);
   }
   for (const piece of floor.furniture) {
     const link = links.get(piece.id);
     const entity = link?.entity ?? link?.power;
     if (!entity) continue;
-    const ceiling = floor.height - 0.3;
+    const ceiling = ceilingAt(floor, piece.x, piece.z) - 0.3;
     push(entity, piece.x, piece.z, Math.min(ceiling, Math.max(0.5, piece.h)));
   }
   return items;

@@ -5,7 +5,7 @@ import { html, nothing, type TemplateResult } from "lit";
 import { defaultHeight, entityName, kindOf } from "../devices.ts";
 import { furnitureName } from "../furniture-names.ts";
 import type { I18nKey } from "../i18n.ts";
-import { canLift, type Building, type Floor, type Furniture, type LampMount, type Placement } from "../model.ts";
+import { canLift, ceilingAt, type Building, type Floor, type Furniture, type LampMount, type Placement } from "../model.ts";
 import { mountBase } from "../packs.ts";
 import type { HomeAssistant } from "../types.ts";
 import { parseTyped, rounded } from "./edits.ts";
@@ -97,7 +97,7 @@ function deviceFields(host: FurnishHost, entityId: string): TemplateResult | typ
       ${options.map(([value, text]) => html`<option value=${value} ?selected=${value === current}>${text}</option>`)}
     </select>`;
   const lampMounts = (["ceiling", "floor", "table", "wall"] as const).map((m): [LampMount, string] => [m, host.t(`lamp_${m}`)]);
-  const automatic = kind ? defaultHeight(kind, floor.height, kind === "light" ? (placed.mount ?? "ceiling") : null) : 1;
+  const automatic = kind ? defaultHeight(kind, ceilingAt(floor, placed.x, placed.z), kind === "light" ? (placed.mount ?? "ceiling") : null) : 1;
   return html`${kind === "light" ? mountSelect("lamp_mount", lampMounts, placed.mount ?? "ceiling") : nothing}
     ${numberField({
       label: host.t("size_short_h"),

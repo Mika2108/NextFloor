@@ -87,6 +87,8 @@ ROOM_SCHEMA = vol.Schema(
             ],
             vol.Length(max=MAX_POINTS),
         ),
+        # the room's own ceiling height (None = the floor height)
+        vol.Optional("ceiling", default=None): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0.5, max=20))),
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -246,6 +248,9 @@ FURNITURE_SCHEMA = vol.Schema(
         # factor, and a sensor naming the kind of vehicle with a state -> vehicle mapping
         # height of the bottom edge above the floor (None = default: the floor, a pack item's mount)
         vol.Optional("mount_y", default=None): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0, max=10))),
+        # hanging items: the ceiling height right there (None = the room's ceiling); ceiling fan: its fan entity
+        vol.Optional("ceiling_y", default=None): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0.5, max=20))),
+        vol.Optional("fan_entity", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
         # any furniture: an entity whose state the item shows (glows while on / occupied / home), optionally
         # two of them for the halves of a bed (left/right) or a bunk bed (bottom/top)
         vol.Optional("state_entity", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),

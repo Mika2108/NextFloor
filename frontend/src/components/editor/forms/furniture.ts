@@ -4,7 +4,7 @@ import { html, nothing, type TemplateResult } from "lit";
 import { furnitureName } from "../../../furniture-names.ts";
 import { holeInRoom } from "../../../geometry/holes.ts";
 import type { I18nKey } from "../../../i18n.ts";
-import { canLift, FURNITURE_TYPES, furnitureFootprint, isLamp, type Furniture } from "../../../model.ts";
+import { canLift, CEILING_TYPES, ceilingAt, ceilingOf, FURNITURE_TYPES, furnitureFootprint, isLamp, type Furniture } from "../../../model.ts";
 import { isElectric, mountBase, packItem, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
 import { checkField, hint, numberField, selectField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
@@ -104,8 +104,16 @@ function geometryFields(host: EditorHost, item: Furniture, actions: FurnitureAct
     ${canLift(item) && floor
       ? html`${numberField(host, t("mount_height"), item.mount_y ?? mountBase(floor, item), (v) => set({ mount_y: Math.max(0, v) }), 0.01, 0)}
         ${item.mount_y != null ? html`<button class="nf-btn nf-field-btn" ?disabled=${!host.admin} @click=${() => set({ mount_y: null })}>${t("height_auto")}</button>` : nothing}`
+      : nothing}
+    ${hangs(item) && floor
+      ? html`${numberField(host, t("ceiling_here"), ceilingOf(floor, item), (v) => set({ ceiling_y: Math.abs(v - ceilingAt(floor, item.x, item.z)) < 0.005 ? null : Math.max(0.5, v) }), 0.01, 0.5)}
+        ${item.ceiling_y != null ? html`<button class="nf-btn nf-field-btn" ?disabled=${!host.admin} @click=${() => set({ ceiling_y: null })}>${t("height_auto")}</button>` : nothing}
+        ${hint(t("ceiling_here_hint"), "nf-wide")}`
       : nothing}`;
 }
+
+/** Items that hang from the ceiling: their own ceiling height can be set (a lamp in a sloping ceiling). */
+const hangs = (item: Furniture): boolean => CEILING_TYPES.has(item.type) || packItem(item.type)?.mount === "ceiling";
 
 /** Notes under the form for stairs and stairwells, with a warning when a stairwell lies outside every room. */
 function typeNotes(host: EditorHost, item: Furniture): TemplateResult | typeof nothing {

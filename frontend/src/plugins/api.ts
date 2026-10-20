@@ -73,6 +73,10 @@ export interface NextFloorPlugin {
 export interface PluginRef {
   url: string;
   enabled: boolean;
+  /** Set for plugins installed from the store: the plugin's store id, its version and the file's SHA-256. */
+  id?: string;
+  version?: string;
+  sha256?: string;
 }
 
 /** Where plugin modules may be loaded from: Home Assistant's own www folder, HACS, or HTTPS. */

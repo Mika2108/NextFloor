@@ -9,6 +9,15 @@ file (an ES module) that calls `window.NextFloor.register({...})`.
 
 ## Installing a plugin
 
+**From the store:** open **Extensions → Plugins → Open plugin store** and press **Install**. The store
+lists plugins that were reviewed and added through a pull request to
+[NextFloor-Plugins](https://github.com/therealMRBK/NextFloor-Plugins), where you also find how to submit your own.
+Each entry is pinned to one commit and carries the file's SHA-256, which NextFloor checks before the
+plugin runs. A newer version of a plugin shows up as **Update** in the store. Store plugins must be a
+single self-contained file, because they are run from memory after the check.
+
+**Your own file:**
+
 1. Put the file into Home Assistant's `www` folder, e.g. `/config/www/nextfloor/my-plugin.js`.
 2. In NextFloor open **Extensions → Plugins**, enter `/local/nextfloor/my-plugin.js` and press **Add**.
 3. The plugin loads right away. Turning a plugin off or removing it takes effect after reloading the page.

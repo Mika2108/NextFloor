@@ -540,6 +540,10 @@ PLUGIN_SCHEMA = vol.Schema(
             vol.Match(re.compile(r"^(https://|/local/|/hacsfiles/)\S+\.m?js(\?\S*)?$", re.IGNORECASE)),
         ),
         vol.Required("enabled"): bool,
+        # set for plugins installed from the plugin store (id and version of the entry, SHA-256 of the file)
+        vol.Optional("id"): vol.All(str, vol.Length(max=64)),
+        vol.Optional("version"): vol.All(str, vol.Length(max=40)),
+        vol.Optional("sha256"): vol.All(str, vol.Match(re.compile(r"^[0-9a-f]{64}$"))),
     },
     extra=vol.PREVENT_EXTRA,
 )

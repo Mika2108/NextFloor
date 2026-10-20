@@ -6,6 +6,7 @@ import { REPO_URL } from "../features.ts";
 import { translate, type I18nKey } from "../i18n.ts";
 import { isAllowedPluginUrl, type PluginRef } from "../plugins/api.ts";
 import { pluginLoadStates } from "../plugins/loader.ts";
+import { fetchStoreIndex, STORE_REPO, storeState, withStoreEntry, type StoreEntry } from "../plugins/store.ts";
 import { onPluginsChanged, pluginStatuses } from "../plugins/registry.ts";
 import { controls, tokens } from "../styles.ts";
 import type { HomeAssistant } from "../types.ts";
@@ -15,16 +16,24 @@ export class PluginManager extends LitElement {
     hass: { attribute: false },
     plugins: { attribute: false },
     _error: { state: true },
+    _store: { state: true },
+    _storeError: { state: true },
+    _storeOpen: { state: true },
   };
 
   declare hass: HomeAssistant | undefined;
   declare plugins: PluginRef[] | undefined;
   declare _error: string;
+  declare _store: StoreEntry[] | undefined;
+  declare _storeError: string;
+  declare _storeOpen: boolean;
   private stop: (() => void) | null = null;
 
   constructor() {
     super();
     this._error = "";
+    this._storeError = "";
+    this._storeOpen = false;
   }
 
   connectedCallback(): void {
@@ -54,6 +63,54 @@ export class PluginManager extends LitElement {
     this._error = "";
     input.value = "";
     this.emit([...list, { url, enabled: true }]);
+  }
+
+  private async toggleStore(): Promise<void> {
+    this._storeOpen = !this._storeOpen;
+    if (!this._storeOpen || this._store) return;
+    this._storeError = "";
+    try {
+      this._store = await fetchStoreIndex();
+    } catch (err) {
+      this._storeError = this.t("store_failed", { error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  private install(entry: StoreEntry): void {
+    const list = this.plugins ?? [];
+    const installed = list.some((p) => p.id === entry.id);
+    if (!installed && list.length >= 20) return void (this._error = this.t("plugins_limit"));
+    if (!installed && list.some((p) => p.url === entry.url)) return void (this._error = this.t("plugins_exists"));
+    if (!window.confirm(this.t("store_confirm", { name: entry.name, author: entry.author || "?", url: entry.url }))) return;
+    this._error = "";
+    this.emit(withStoreEntry(list, entry));
+  }
+
+  private renderStore() {
+    return html`<div class="nf-store">
+      <button class="nf-btn" @click=${() => this.toggleStore()}>${this._storeOpen ? this.t("store_close") : this.t("store_open")}</button>
+      ${this._storeOpen
+        ? html`<p class="nf-sub">${this.t("store_intro")} <a href="https://github.com/${STORE_REPO}" target="_blank" rel="noopener">${this.t("store_submit")}</a></p>
+            ${this._storeError ? html`<p class="nf-error" role="alert">${this._storeError}</p>` : nothing}
+            ${!this._store && !this._storeError ? html`<p class="nf-sub">${this.t("plugins_loading")}</p>` : nothing}
+            ${this._store && !this._store.length ? html`<p class="nf-sub">${this.t("store_empty")}</p>` : nothing}
+            <ul>
+              ${(this._store ?? []).map((entry) => {
+                const state = storeState(entry, this.plugins);
+                return html`<li>
+                  <div class="nf-plugin-main">
+                    <span><strong>${entry.name}</strong> <span class="nf-detail">${entry.version}${entry.author ? ` · ${entry.author}` : ""}</span></span>
+                    ${entry.description ? html`<span class="nf-detail">${entry.description}</span>` : nothing}
+                    ${entry.homepage ? html`<a class="nf-detail" href=${entry.homepage} target="_blank" rel="noopener">${entry.homepage}</a>` : nothing}
+                  </div>
+                  ${state === "installed"
+                    ? html`<span class="nf-state ok">${this.t("store_installed")}</span>`
+                    : html`<button class="nf-btn" @click=${() => this.install(entry)}>${state === "update" ? this.t("store_update") : this.t("store_install")}</button>`}
+                </li>`;
+              })}
+            </ul>`
+        : nothing}
+    </div>`;
   }
 
   private stateOf(url: string): { label: string; tone: "ok" | "warn" | "err"; detail: string } {
@@ -87,7 +144,7 @@ export class PluginManager extends LitElement {
                     @change=${(e: Event) => this.emit(list.map((p, j) => (j === i ? { ...p, enabled: (e.target as HTMLInputElement).checked } : p)))} />
                 </label>
                 <div class="nf-plugin-main">
-                  <code>${ref.url}</code>
+                  <code>${ref.id ? `${ref.id}${ref.version ? ` ${ref.version}` : ""}` : ref.url}</code>
                   <span class="nf-state ${st.tone}">${st.label}</span>
                   ${st.detail ? html`<span class="nf-detail">${st.detail}</span>` : nothing}
                 </div>
@@ -99,6 +156,7 @@ export class PluginManager extends LitElement {
       ${fromDashboard.length
         ? html`<p class="nf-sub">${this.t("plugins_from_dashboard")}: ${fromDashboard.map((s) => `${s.name}${s.version ? ` ${s.version}` : ""}`).join(", ")}</p>`
         : nothing}
+      ${this.renderStore()}
       <div class="nf-add">
         <input type="text" placeholder="/local/nextfloor/my-plugin.js" aria-label=${this.t("plugins_add")}
           @keydown=${(e: KeyboardEvent) => e.key === "Enter" && this.add(e.target as HTMLInputElement)} />
@@ -176,6 +234,10 @@ export class PluginManager extends LitElement {
         font-size: 12px;
         color: var(--nf-soft);
         overflow-wrap: anywhere;
+      }
+      .nf-store {
+        display: grid;
+        gap: 8px;
       }
       .nf-add {
         display: flex;

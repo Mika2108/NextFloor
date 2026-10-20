@@ -2,6 +2,12 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## Unreleased
+
+### Added
+
+- **Plugin store**: *Extensions → Plugins → Open plugin store* lists reviewed community plugins from [NextFloor-Plugins](https://github.com/therealMRBK/NextFloor-Plugins) and installs them with one click. Authors submit a plugin with a pull request, which is reviewed by hand. Every entry points at a file pinned to one commit and carries its SHA-256; NextFloor checks the hash before the plugin runs and offers newer versions as an update.
+
 ## 0.11.0
 
 ### Added

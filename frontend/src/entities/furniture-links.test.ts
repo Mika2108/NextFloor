@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { setPacks } from "../packs.ts";
 import type { Furniture } from "../model.ts";
 import { box, entity, floorWith, hassOf, opening } from "./fixtures.ts";
 import { confirmEntities, fridgeDoors, furnitureEntities, hasScreen, isMediaFurniture, pictureRuleMatches, roomPanelEntities } from "./furniture-links.ts";
@@ -61,6 +62,34 @@ test("a robot vacuum and a radiator find their own kind in the room's area", () 
   const links = furnitureEntities(hass, [floorWith([room], { furniture: [piece("v", "robot_vacuum"), piece("r", "radiator")] })]);
   assert.equal(links.get("v")?.entity, "vacuum.rob");
   assert.equal(links.get("r")?.entity, "climate.heater");
+});
+
+test("a climate pack item finds a climate entity in its room's area", () => {
+  setPacks([
+    {
+      id: "test.hvac",
+      name: "HVAC",
+      publisher: "Test",
+      items: [
+        {
+          id: "mini_split",
+          name: { en: "Mini split" },
+          size: [0.9, 0.22, 0.28],
+          climate: true,
+          parts: [{ shape: "box", x: 0, z: 0, w: 1, d: 1, y: 0, h: 1, color: "body" }],
+        },
+      ],
+    },
+  ]);
+  const hass = hassOf(
+    [entity("climate.ac", "cool"), entity("switch.plug", "on")],
+    inRoom("climate.ac", "switch.plug"),
+  );
+  const floor = floorWith([room], {
+    furniture: [piece("ac", "pack:test.hvac:mini_split")],
+  });
+  assert.equal(furnitureEntities(hass, [floor]).get("ac")?.entity, "climate.ac");
+  setPacks([]);
 });
 
 test("screens: built-in TVs and a few devices have one", () => {

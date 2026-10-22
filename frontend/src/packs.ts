@@ -58,6 +58,8 @@ export interface PackItem {
   /** Standard width, depth and height in metres. */
   size: [number, number, number];
   electric?: boolean;
+  /** A thermostat / heat pump / A/C item linked to a Home Assistant climate entity. */
+  climate?: boolean;
   /** Stands on the floor, on furniture below it, on a wall (from wall_y up) or hangs from the ceiling. */
   mount?: "floor" | "surface" | "wall" | "ceiling";
   wall_y?: number;
@@ -153,8 +155,10 @@ export function furnitureSize(type: string): [number, number, number] {
 /** Whether entities (power sensor, switch ...) can be linked. A pack item that only lights counts: it links a light like a lamp. */
 export function isElectric(type: string): boolean {
   const item = packItem(type);
-  return ELECTRIC_FURNITURE.has(type) || !!item?.electric || !!item?.light;
+  return ELECTRIC_FURNITURE.has(type) || !!item?.electric || !!item?.light || !!item?.climate;
 }
+/** Whether a pack item is specifically a Home Assistant climate device. */
+export const isClimateFurniture = (type: string): boolean => !!packItem(type)?.climate;
 
 /** An item's name in a language: that language, else English, else whatever is there, else its id. */
 export function packItemName(item: PackItem, language: string): string {

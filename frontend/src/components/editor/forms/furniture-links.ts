@@ -5,7 +5,7 @@ import { canHangOff, deviceMeter, meterParent, subMeterIds } from "../../../ener
 import { furnitureEntities, hasScreen, isMediaFurniture, isStatusSensor, robotRoomSensor } from "../../../devices.ts";
 import type { I18nKey } from "../../../i18n.ts";
 import { ENERGY_DEVICES, isLamp, type Furniture } from "../../../model.ts";
-import { isPackType, packDisplay } from "../../../packs.ts";
+import { isClimateFurniture, isPackType, packDisplay } from "../../../packs.ts";
 import { entityOptions, isBinary, isNumeric, isPowerSensor } from "../entities.ts";
 import { checkField, entityField, glowField, hint, iconField, markerField, selectField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
@@ -40,7 +40,7 @@ function mainEntity(item: Furniture, hass: EditorHost["hass"]): { accept: (id: s
   const tvLike = media && (!isPackType(item.type) || packDisplay(item.type));
   if (isLamp(item.type)) return { accept: (id) => /^(light|switch|input_boolean)\./.test(id), label: "furn_entity_light" };
   if (tvLike) return { accept: (id) => /^(media_player|switch|input_boolean|light)\./.test(id), label: "furn_entity_tv" };
-  if (item.type === "radiator") return { accept: (id) => id.startsWith("climate."), label: "furn_entity_climate" };
+  if (item.type === "radiator" || isClimateFurniture(item.type)) return { accept: (id) => id.startsWith("climate."), label: "furn_entity_climate" };
   if (item.type === "robot_vacuum") return { accept: (id) => id.startsWith("vacuum."), label: "furn_entity_vacuum" };
   return { accept: (id) => /^(switch|media_player|fan|input_boolean|climate|vacuum|cover)\./.test(id) || isStatusSensor(hass?.states[id]), label: "furn_entity" };
 }

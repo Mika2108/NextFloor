@@ -110,6 +110,8 @@ ITEM_SCHEMA = vol.Schema(
         vol.Required("name"): vol.All({vol.All(str, vol.Length(min=2, max=5)): _TEXT}, vol.Length(min=1, max=10)),
         vol.Required("size"): vol.All([_METRES], vol.Length(min=3, max=3)),
         vol.Optional("electric", default=False): bool,
+        # a thermostat / heat pump / A/C item: links to a climate entity and may also have a power sensor
+        vol.Optional("climate", default=False): bool,
         # where it stands: on the floor, on the furniture below it, on a wall (bottom at wall_y) or
         # hanging from the ceiling
         vol.Optional("mount", default="floor"): vol.In(["floor", "surface", "wall", "ceiling"]),

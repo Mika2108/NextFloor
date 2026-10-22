@@ -73,6 +73,10 @@ entfernen, und ein importiertes Pack darf nicht dieselbe ID haben.
   Anteil der kleineren Seite) und `line` (`x1`, `z1`, `x2`, `z2`). Ohne Symbol zeichnet der Plan die
   Teile von oben.
 - `electric`: das Möbel lässt sich mit einem Schalter und Leistungssensor verknüpfen.
+- `climate`: kennzeichnet das Möbel als Klimagerät (z. B. Klimaanlage oder Wärmepumpe).
+  Es lässt sich mit einer `climate`-Entität und optional einem Leistungssensor verknüpfen.
+  Die automatische Zuordnung sucht passende `climate`-Entitäten im
+  Home-Assistant-Bereich des Raums. Diese Option fügt noch keine 3D-Animation hinzu.
 - `mount`: wo das Möbel sitzt – `floor` (Standard), `surface` (auf dem Möbel darunter, z. B.
   Kaffeemaschine auf der Arbeitsplatte), `wall` (Unterkante bei `wall_y` Metern, z. B. Wallbox) oder
   `ceiling` (hängt von der Decke, z. B. Dunstabzug, Pendelleuchten).

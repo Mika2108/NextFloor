@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { newFloor, type Furniture } from "./model.ts";
-import { furnitureSize, getPacks, hasMesh, isElectric, isPackType, markMeshReady, mountBase, packDisplay, packItem, packItemName, packName, packScreen, packsVersion, packType, setPacks, type PackItem, type PackPart } from "./packs.ts";
+import { furnitureSize, getPacks, hasMesh, isElectric, isClimateFurniture, isPackType, markMeshReady, mountBase, packDisplay, packItem, packItemName, packName, packScreen, packsVersion, packType, setPacks, type PackItem, type PackPart } from "./packs.ts";
 
 const part = (extra: Partial<PackPart> = {}): PackPart => ({ shape: "box", x: 0, z: 0, w: 1, d: 1, y: 0, h: 1, color: "body", ...extra });
 const item = (id: string, extra: Partial<PackItem> = {}): PackItem => ({ id, name: { en: id }, size: [1, 1, 1], parts: [part()], ...extra });
@@ -19,6 +19,7 @@ beforeEach(() =>
         item("shelf", { mount: "wall", wall_y: 1.4 }),
         item("hanging", { mount: "ceiling" }),
         item("lampy", { light: "pendant" as never }),
+        item("climate", { climate: true }),
         item("modelled", { mesh: "m1" }),
       ],
     },
@@ -61,8 +62,11 @@ test("sizes: built-in table, pack item, else a small default", () => {
   assert.equal(furnitureSize("sofa").length, 3);
 });
 
-test("a light-only pack item counts as electric, a plain one does not", () => {
+test("light and climate pack items count as electric, a plain one does not", () => {
   assert.equal(isElectric("pack:demo.pack:lampy"), true);
+  assert.equal(isElectric("pack:demo.pack:climate"), true);
+  assert.equal(isClimateFurniture("pack:demo.pack:climate"), true);
+  assert.equal(isClimateFurniture("pack:demo.pack:plain"), false);
   assert.equal(isElectric("pack:demo.pack:plain"), false);
 });
 

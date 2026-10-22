@@ -2,7 +2,7 @@
 // hand; otherwise they are found among the entities of the room the piece stands in, by their names.
 
 import { pointInPolygon, type EntityRef, type Floor, type Room } from "../model.ts";
-import { packScreen } from "../packs.ts";
+import { isClimateFurniture, packScreen } from "../packs.ts";
 import type { HomeAssistant } from "../types.ts";
 import { entityName, kindOf } from "./kinds.ts";
 import { openingEntities } from "./openings.ts";
@@ -105,8 +105,9 @@ export function furnitureEntities(hass: HomeAssistant, floors: readonly Floor[])
     );
     for (const piece of floor.furniture) {
       const isLamp = piece.type in LAMP_NAMES;
+      const isClimate = isClimateFurniture(piece.type);
       const pattern = isLamp ? LAMP_NAMES[piece.type] : FURNITURE_NAMES[piece.type];
-      if (!pattern && piece.entity == null && piece.power == null) continue;
+      if (!pattern && !isClimate && piece.entity == null && piece.power == null) continue;
       const room = roomOf(floor, piece.x, piece.z);
       const free = (room ? primaryEntities(hass, areaEntities(hass, room.area_id)) : []).filter((id) => !used.has(id));
       const describe = (id: string) => `${id} ${entityName(hass, id)}`;
@@ -124,7 +125,7 @@ export function furnitureEntities(hass: HomeAssistant, floors: readonly Floor[])
           // vacuums are not a device kind of their own, so they are looked up in the room's area directly
           const area = room?.area_id ?? null;
           entity = Object.keys(hass.entities ?? {}).find((id) => id.startsWith("vacuum.") && !used.has(id) && entityAreaId(hass, id) === area) ?? null;
-        } else if (piece.type === "radiator") entity = pickByName(ofKind("climate"), pattern, describe, true);
+        } else if (piece.type === "radiator" || isClimate) entity = pickByName(ofKind("climate"), pattern, describe, true);
         else if (isMediaFurniture(piece.type)) {
           const players = ofKind("media");
           // a TV takes the TV (or any player of the room); a monitor or smart speaker only a player whose name fits

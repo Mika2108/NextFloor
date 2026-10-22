@@ -44,6 +44,13 @@ def test_a_plain_pack_is_accepted() -> None:
     assert err.value.code == "not_a_pack"
 
 
+def test_a_climate_pack_item_is_accepted() -> None:
+    payload = copy.deepcopy(PAYLOAD)
+    payload["items"][0]["climate"] = True
+    clean = packs.validate_payload(payload)
+    assert clean["items"][0]["climate"] is True
+
+
 def test_a_pack_needs_items() -> None:
     with pytest.raises(packs.PackError):
         packs.validate_payload({**PAYLOAD, "items": []})

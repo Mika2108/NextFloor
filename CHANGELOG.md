@@ -8,6 +8,10 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 - **Plugin store**: *Extensions → Plugins → Open plugin store* lists reviewed community plugins from [NextFloor-Plugins](https://github.com/therealMRBK/NextFloor-Plugins) and installs them with one click. Authors submit a plugin with a pull request, which is reviewed by hand. Every entry points at a file pinned to one commit and carries its SHA-256; NextFloor checks the hash before the plugin runs and offers newer versions as an update.
 
+### Fixed
+
+- **Solar fields on a mansard roof** (#13) now lie on the roof instead of sinking into it. Each side offers two roof faces to choose from: the steep lower slope and the flatter upper slope above the break. Fields placed on a mansard before keep their spot on the lower slope; move a field that should sit higher onto the upper face.
+
 ## 0.11.0
 
 ### Added

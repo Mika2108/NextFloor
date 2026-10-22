@@ -6,13 +6,17 @@
 import { generateWalls } from "../geometry/walls.ts";
 import { outdoorGround, type Building, type Floor, type RoofSection, type SolarField } from "../model.ts";
 import { sectionFrame, sectionOverhang, sectionProfile } from "../roof-sections.ts";
+import { gradient, mansardParts } from "../roof/frame.ts";
 import { cross, DEG, length, normalize, sub, type V3 } from "./vec.ts";
 
 /** Thickness of a flat roof slab as the roof draws it. */
 export const FLAT_SLAB = 0.25;
 
 export interface RoofFace {
-  /** "main:a", "main:b", "main:top" for the single roof; "<section id>:a", ":b", ":top" for sections; hip ends are ":c" (start) and ":d" (end). */
+  /**
+   * "main:a", "main:b", "main:top" for the single roof; "<section id>:a", ":b", ":top" for sections; hip ends are ":c"
+   * (start) and ":d" (end). A mansard's ":a"/":b" are the steep lower slopes, ":au"/":bu" the upper ones above the break.
+   */
   key: string;
   /** The section the face belongs to (null: the single roof). */
   section: string | null;
@@ -121,7 +125,9 @@ function sectionFaces(s: RoofSection, overhang: Overhang): RoofFace[] {
   }
   if (s.shape === "pent") return [slopeFace(`${s.id}:a`, s.id, "a", at(U0, -ovA, yA), at(U1, -ovA, yA), at(U0, frame.w + ovB, yB), s.pitch_a, () => [0, width])];
 
-  // a pyramid is a hip whose ridge has no length; half-hip and mansard place their modules like a gable
+  if (s.shape === "mansard") return mansardFaces(s, frame, U0, U1, ovA, ovB);
+
+  // a pyramid is a hip whose ridge has no length; a half-hip places its modules like a gable
   const isHip = s.shape === "hip" || s.shape === "pyramid";
   const half = (frame.u1 - frame.u0) / 2;
   const run = s.shape === "pyramid" ? half : isHip ? Math.min(half, Math.min(profile.vr, frame.w - profile.vr) || frame.w / 2) : 0;
@@ -143,6 +149,29 @@ function sectionFaces(s: RoofSection, overhang: Overhang): RoofFace[] {
     const finishEnd = triangleFace(`${s.id}:d`, s.id, "d", at(U1, -ovA, yA), at(U1, frame.w + ovB, yB), at(frame.u1 - run, profile.vr, profile.rh));
     faces.push(...[startEnd, finishEnd].filter((f): f is RoofFace => f !== null));
   }
+  return faces;
+}
+
+/**
+ * A mansard breaks each side at a kink: the steep lower slope from the eave to the break, then the flatter upper slope
+ * to the ridge. One plane from eave to ridge would cut under the break, so each part is a face of its own.
+ */
+function mansardFaces(s: RoofSection, frame: ReturnType<typeof sectionFrame>, U0: number, U1: number, ovA: number, ovB: number): RoofFace[] {
+  const m = mansardParts(frame.w, s.eave_a, s.eave_b, gradient(s.pitch_a), gradient(s.pitch_b));
+  const at = (u: number, v: number): V3 => {
+    const [x, z] = frame.at(u, v);
+    return [x, m.y(v), z];
+  };
+  const width = U1 - U0;
+  const span = (): [number, number] => [0, width];
+  const upperPitch = (rise: number, run: number) => Math.atan2(rise, run) / DEG;
+  const faces: RoofFace[] = [];
+  const [wb, bb] = [frame.w + ovB, frame.w - m.vlb];
+  if (m.vla + ovA > 0.3) faces.push(slopeFace(`${s.id}:a`, s.id, "a", at(U0, -ovA), at(U1, -ovA), at(U0, m.vla), s.pitch_a, span));
+  if (m.vr - m.vla > 0.3) faces.push(slopeFace(`${s.id}:au`, s.id, "a", at(U0, m.vla), at(U1, m.vla), at(U0, m.vr), upperPitch(m.rh - m.yla, m.vr - m.vla), span));
+  // side b: eaves at v = w + overhang, running the other way so the faces look outwards
+  if (m.vlb + ovB > 0.3) faces.push(slopeFace(`${s.id}:b`, s.id, "b", at(U1, wb), at(U0, wb), at(U1, bb), s.pitch_b, span));
+  if (bb - m.vr > 0.3) faces.push(slopeFace(`${s.id}:bu`, s.id, "b", at(U1, bb), at(U0, bb), at(U1, m.vr), upperPitch(m.rh - m.ylb, bb - m.vr), span));
   return faces;
 }
 

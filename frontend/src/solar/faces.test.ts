@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { emptyBuilding, newFloor, type RoofSection } from "../model.ts";
+import { sectionProfile, sectionUV } from "../roof/frame.ts";
 import { GROUND, fieldFace, groundFace, groundFloor, roofFaces, topFloor, wallFaces } from "./faces.ts";
 import { cottage, field, near } from "./fixtures.ts";
 
@@ -36,6 +37,25 @@ test("a flat roof is one level face sitting on the slab", () => {
   assert.equal(face.flat, true);
   near(face.o[1], 2.6 + 0.25);
   near(face.lu, 12 + 2 * 0.8);
+});
+
+test("a mansard has a lower and an upper face per side, and both lie on the roof as it is drawn", () => {
+  for (const patch of [{ shape: "mansard" as const, pitch_a: 70, pitch_b: 70 }, { shape: "mansard" as const, pitch_a: 75, pitch_b: 60, eave_b: 2.5, flip: true, overhang: 0.4 }]) {
+    const s = section(patch);
+    const faces = roofFaces(cottage({ type: "custom", pitch: 35, overhang: 0, sections: [s] }));
+    assert.deepEqual(faces.map((f) => f.key), ["s:a", "s:au", "s:b", "s:bu"]);
+    near(faces[0].pitch, s.pitch_a);
+    near(faces[1].pitch, 30, 1e-3);
+    const profile = sectionProfile(s);
+    for (const f of faces) {
+      assert.ok(f.n[1] > 0, "normals point up");
+      for (const [ku, ks] of [[0.1, 0], [0.5, 0.5], [0.9, 1]]) {
+        const p = [0, 1, 2].map((i) => f.o[i] + f.eu[i] * f.lu * ku + f.es[i] * f.ls * ks);
+        const [, v] = sectionUV(s, p[0], p[2]);
+        near(p[1], profile.y(v), 1e-6);
+      }
+    }
+  }
 });
 
 test("sections of a custom roof give their own faces: a hip adds two end triangles, a pyramid has four faces in all", () => {

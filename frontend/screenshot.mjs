@@ -168,6 +168,8 @@ window.__smoke = out;` },
   { name: "editor-drag", query: "", width: 1500, height: 950, editor: true, editorScript: "e._floorId = e._doc.floors[0].id; window.__x0 = e._doc.floors[0].rooms[0].points[0][0]; window.__f0 = e._doc.floors[0].furniture.length;", mouseDrag: [[330, 480], [430, 480]] },
   { name: "editor-roof", query: "", width: 1500, height: 950, editor: true, click: "Dach" },
   { name: "extensions", query: "", width: 1280, height: 950, click: "✦ Erweiterungen", wait: 800 },
+  // pastes a small pack into the furniture packs block and imports it
+  { name: "dev-pack-paste", dev: true, query: "", width: 1280, height: 950, click: "✦ Erweiterungen", wait: 800, viewScript: "const pm = document.querySelector('nextfloor-panel').shadowRoot.querySelector('nf-extensions').shadowRoot.querySelector('nf-pack-manager'); const pack = { format: 'nfpack', version: 1, id: 'demo.hvac', name: 'Klima', publisher: 'Demo', items: [{ id: 'split', name: { de: 'Split-Klimagerät' }, size: [0.9, 0.3, 0.22], climate: true, mount: 'wall', wall_y: 2.1, parts: [{ shape: 'box', x: 0, z: 0, w: 1, d: 1, y: 0, h: 1, color: 'body' }] }] }; pm.renderRoot.querySelector('textarea').value = JSON.stringify(pack, null, 2); pm.renderRoot.querySelector('.nf-primary').click(); setTimeout(() => pm.scrollIntoView({ block: 'start' }), 400);", afterWait: 800 },
   // other devices
   { name: "card", query: "?card", width: 1400, height: 820 },
   { name: "phone", query: "", width: 390, height: 844, click: "Erdgeschoss" },

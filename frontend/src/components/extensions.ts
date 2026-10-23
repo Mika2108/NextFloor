@@ -1,4 +1,4 @@
-// The "Extensions" page of the panel: uploading your own 3D models, plugins, plus the links to the project.
+// The "Extensions" page of the panel: your own furniture packs, uploading your own 3D models, plugins, plus the links to the project.
 // It lives in the editor bundle (loaded with it) and is shown to admins only.
 
 import { css, html, LitElement } from "lit";
@@ -6,6 +6,7 @@ import { REPO_URL } from "../features.ts";
 import { translate, type I18nKey } from "../i18n.ts";
 import type { FurniturePack } from "../packs.ts";
 import "./model-upload.ts";
+import "./pack-manager.ts";
 import "./plugin-manager.ts";
 import type { PluginRef } from "../plugins/api.ts";
 import { controls, tokens } from "../styles.ts";
@@ -36,6 +37,7 @@ export class Extensions extends LitElement {
           <a class="nf-btn" href="${REPO_URL}#readme" target="_blank" rel="noopener">📖 ${this.t("manual")}</a>
         </div>
       </header>
+      <nf-pack-manager .hass=${this.hass} .packs=${this.packs}></nf-pack-manager>
       <nf-model-upload .hass=${this.hass} .packs=${this.packs}></nf-model-upload>
       <nf-plugin-manager .hass=${this.hass} .plugins=${this.plugins}></nf-plugin-manager>
     </div>`;

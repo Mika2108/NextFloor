@@ -18,8 +18,9 @@ entfernen, und ein importiertes Pack darf nicht dieselbe ID haben.
 
 1. Pack schreiben (JSON, Format unten). Die `id` sollte mit deinem Namen beginnen (`meinname.kueche`),
    damit sie mit niemandem kollidiert; `nextfloor.*` ist für die mitgelieferten Packs reserviert.
-2. Import in Home Assistant: **Erweiterungen → Möbel-Packs importieren …** (mehrere Dateien auf einmal
-   gehen).
+2. Import in Home Assistant unter **Erweiterungen → Möbel-Packs**: mit **Pack-Dateien importieren …**
+   (mehrere Dateien auf einmal gehen) oder das JSON ins Textfeld einfügen und **JSON importieren**.
+   Dort lassen sich eigene Packs auch wieder entfernen.
 3. Eine neuere Version mit derselben `id` ersetzt die alte; Möbel im Plan bleiben erhalten. Wird ein
    Pack entfernt, bleiben seine Möbel als einfache Kästen im Plan und kommen mit einem erneuten Import
    zurück.

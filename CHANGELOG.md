@@ -6,6 +6,7 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 ### Added
 
+- **Import furniture packs again**: *Extensions → Furniture packs* imports your own packs as files or as JSON pasted straight into a text field, lists the packs you imported and removes them. The format is in [docs/packs.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/packs.md).
 - **Climate devices in furniture packs** by @carmona15 (#14): a pack item marked `climate: true` (a wall-mounted A/C, a heat pump) links to a Home Assistant climate entity, found automatically in the room's area like a radiator's thermostat, and can have a power sensor. How to mark an item: [docs/packs.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/packs.md).
 
 ## 0.12.0

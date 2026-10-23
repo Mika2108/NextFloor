@@ -2,6 +2,12 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## Unreleased
+
+### Added
+
+- **Climate devices in furniture packs** by @carmona15 (#14): a pack item marked `climate: true` (a wall-mounted A/C, a heat pump) links to a Home Assistant climate entity, found automatically in the room's area like a radiator's thermostat, and can have a power sensor. How to mark an item: [docs/packs.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/packs.md).
+
 ## 0.12.0
 
 ### Added

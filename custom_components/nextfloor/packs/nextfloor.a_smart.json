@@ -1703,7 +1703,8 @@
    ],
    "mount": "wall",
    "wall_y": 1.4,
-   "electric": true
+   "electric": true,
+   "climate": true
   },
   {
    "id": "dehumidifier",

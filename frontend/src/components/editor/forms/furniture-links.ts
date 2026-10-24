@@ -39,8 +39,9 @@ function mainEntity(item: Furniture, hass: EditorHost["hass"]): { accept: (id: s
   // a pack item that only has a status light (a printer's panel, a wallbox's LED) links like any device
   const tvLike = media && (!isPackType(item.type) || packDisplay(item.type));
   if (isLamp(item.type)) return { accept: (id) => /^(light|switch|input_boolean)\./.test(id), label: "furn_entity_light" };
-  if (tvLike) return { accept: (id) => /^(media_player|switch|input_boolean|light)\./.test(id), label: "furn_entity_tv" };
+  // before the TV check: a thermostat has a display too, but it links to a climate entity
   if (item.type === "radiator" || isClimateFurniture(item.type)) return { accept: (id) => id.startsWith("climate."), label: "furn_entity_climate" };
+  if (tvLike) return { accept: (id) => /^(media_player|switch|input_boolean|light)\./.test(id), label: "furn_entity_tv" };
   if (item.type === "robot_vacuum") return { accept: (id) => id.startsWith("vacuum."), label: "furn_entity_vacuum" };
   return { accept: (id) => /^(switch|media_player|fan|input_boolean|climate|vacuum|cover)\./.test(id) || isStatusSensor(hass?.states[id]), label: "furn_entity" };
 }

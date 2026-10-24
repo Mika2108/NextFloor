@@ -774,6 +774,7 @@ def build(bp):
         mount="wall",
         wall_y=1.4,
         electric=True,
+        climate=True,
     )
     S(
         "dehumidifier",

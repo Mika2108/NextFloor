@@ -218,3 +218,9 @@ def test_mesh_id_of_an_item_is_checked() -> None:
     for bad in ("../etc/passwd", "Model Y", ""):
         with pytest.raises(packs.PackError):
             packs.validate_payload(pack(bad))
+
+
+def test_builtin_thermostats_link_to_climate_entities() -> None:
+    """The wall thermostat has a display, but it must still ask for a climate entity, not a TV."""
+    items = {i["id"]: i for p in packs.load_builtin_packs() for i in p["items"]}
+    assert items["thermostat_wall"]["climate"] is True

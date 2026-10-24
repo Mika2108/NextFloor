@@ -5,7 +5,7 @@ import { defaultHeight, entityName, hasScreen, kindOf, TOGGLE_KINDS } from "../.
 import type { I18nKey } from "../../../i18n.ts";
 import { iconPath } from "../../../icons.ts";
 import { ceilingAt, FURNITURE_TYPES, isLamp, type LampMount, type Placement } from "../../../model.ts";
-import { isElectric, isPackType, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
+import { isClimateFurniture, isElectric, isPackType, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
 import { checkField, glowField, iconField, markerField, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { lightEffectFields } from "../light-effect-fields.ts";
@@ -31,7 +31,7 @@ export function furnitureFor(host: EditorHost, entityId: string, packs: readonly
   ];
   const fits = (type: string): boolean => {
     if (kind === "light") return isLamp(type);
-    if (kind === "climate") return type === "radiator";
+    if (kind === "climate") return type === "radiator" || isClimateFurniture(type);
     if (entityId.startsWith("vacuum.")) return type === "robot_vacuum" || (isPackType(type) && type.endsWith(":robot_vacuum"));
     if (kind === "media") return hasScreen(type) || (isElectric(type) && SPEAKER_LIKE.test(type));
     return isElectric(type) && !isLamp(type);

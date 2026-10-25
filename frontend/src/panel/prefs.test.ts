@@ -11,8 +11,18 @@ test("nothing stored gives the defaults", () => {
   const prefs = new PrefStore(memory()).load();
   assert.deepEqual(prefs, {
     explode: true, keepRoof: false, quality: "auto", stats: false, markers: "important", heat: "none", theme: "neon", accent: null,
-    floorStack: "dim", roomNames: true, clean: false, navWrap: false, weather: true,
+    floorStack: "dim", roomNames: true, clean: false, navWrap: false, weather: true, clock: "none",
   });
+});
+
+test("the auto look and a clock corner are kept", () => {
+  const storage = memory();
+  const store = new PrefStore(storage);
+  store.save("theme", "auto");
+  store.save("clock", "top_right");
+  const prefs = new PrefStore(storage).load();
+  assert.equal(prefs.theme, "auto");
+  assert.equal(prefs.clock, "top_right");
 });
 
 test("saved values come back, under the key names earlier versions used", () => {

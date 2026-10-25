@@ -266,6 +266,8 @@ const LAMP_SHADE = 0x1d2946;
 /** Lamps that hang from the ceiling (hidden in the cut view). */
 const FLASH_MS = 450;
 const EFFECT_MS = 125;
+/** On the tablet level, decorations (colour effects, rain, robots, the energy flow) come to rest this long after the last touch or change. */
+const REST_AFTER_MS = 30000;
 /** A ceiling fan's blades and the angle between them. */
 const FAN_BLADES = 5;
 const FAN_SPACING = 360 / FAN_BLADES;
@@ -405,6 +407,10 @@ export class NextFloorViewer {
   private effectTick = false;
   private tintTick = false;
   private effectTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Until when decorations keep moving on the tablet level (a touch or a visible change wakes them). */
+  private awakeUntil = 0;
+  /** What the devices looked like at the last change (on/off and colour), to tell a real change from a new sensor value. */
+  private deviceLook = "";
   private readonly haloTexture: CanvasTexture;
   /** Roof over the top floor (house view only), its opacity and the camera distance of the house view. */
   /** The roof: one group with a part per floor it sits on (each part follows its floor). */
@@ -527,6 +533,9 @@ export class NextFloorViewer {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(host);
     document.addEventListener("visibilitychange", this.onVisibility);
+    // any touch on the view (canvas, pins, labels) wakes resting decorations
+    this.host.addEventListener("pointerdown", this.onTouch, { passive: true });
+    this.awakeUntil = performance.now() + REST_AFTER_MS;
     if (typeof IntersectionObserver === "function") {
       this.intersection = new IntersectionObserver((entries) => {
         const on = entries.some((e) => e.isIntersecting);
@@ -690,6 +699,12 @@ export class NextFloorViewer {
 
   /** Replace the device markers; pins are reused per entity, light cones rebuilt per floor. */
   setDevices(devices: DeviceMarker[]): void {
+    // a light switched or a device that started or stopped wakes resting decorations; a sensor value does not
+    const look = devices.map((d) => `${d.id}:${d.active ? 1 : 0}:${d.glow ? d.glow.level.toFixed(1) : "-"}`).join(";");
+    if (look !== this.deviceLook) {
+      this.deviceLook = look;
+      this.wake();
+    }
     this.devices = devices;
     this.labelsDirty = true;
     // colour effects and turning fans are drawn in steps by the shared effect timer
@@ -983,8 +998,21 @@ export class NextFloorViewer {
 
   /** Target states of doors and windows (sashes and blinds move there smoothly). */
   setOpeningStates(states: Map<string, OpeningState>): void {
+    const before = this.openingTargets;
     this.openingTargets = states;
+    if ([...states].some(([id, s]) => !atTarget(before.get(id) ?? CLOSED, s))) this.wake();
     this.invalidate();
+  }
+
+  /** Something happened: decorations move again (for the rest time on the tablet level). */
+  wake(): void {
+    this.awakeUntil = performance.now() + REST_AFTER_MS;
+    this.invalidate();
+  }
+
+  /** The tablet level has seen nothing happen for a while: decorations stand still until the next touch or change. */
+  private get resting(): boolean {
+    return this.lowQuality && performance.now() > this.awakeUntil;
   }
 
   /** Which doors of the smart fridges stand open; the doors swing there over a few frames. */
@@ -1016,7 +1044,7 @@ export class NextFloorViewer {
     for (const id of [...this.covers.keys()]) if (!reach.has(id)) this.covers.delete(id);
     if (changed) {
       for (const fv of this.floors) this.buildFridges(fv);
-      this.invalidate();
+      this.wake();
     }
   }
 
@@ -1113,6 +1141,7 @@ export class NextFloorViewer {
     this.resizeObserver.disconnect();
     this.intersection?.disconnect();
     document.removeEventListener("visibilitychange", this.onVisibility);
+    this.host.removeEventListener("pointerdown", this.onTouch);
     this.controls.dispose();
     this.clear();
     this.building = null;
@@ -1160,7 +1189,7 @@ export class NextFloorViewer {
 
   private makeControls(): OrbitControls {
     return new OrbitControls(this.renderer.domElement, this.camera, {
-      change: () => this.invalidate(),
+      change: () => this.wake(),
       tap: (x, y) => this.onTap(x, y),
       hold: (x, y) => this.onHold(x, y),
       swipeStart: (x, y, dx, dy) => this.swipeStart(x, y, dx, dy),
@@ -1180,6 +1209,8 @@ export class NextFloorViewer {
     });
   }
 
+  private readonly onTouch = () => this.wake();
+
   private readonly onVisibility = () => {
     if (document.hidden) {
       clearTimeout(this.effectTimer);
@@ -1190,7 +1221,7 @@ export class NextFloorViewer {
 
   /** One shared timer, independent of the number of animated lamps. */
   private scheduleEffects(): void {
-    if (!this.hasVisibleEffects(document.hidden)) {
+    if (!this.hasVisibleEffects(document.hidden) || this.resting) {
       clearTimeout(this.effectTimer);
       this.effectTimer = undefined;
       return;
@@ -2640,14 +2671,15 @@ export class NextFloorViewer {
         this.invalidate();
       }, this.lowQuality ? 66 : 33);
     }
-    if (!moving && weatherMoving && !this.weatherTimer) {
+    const resting = this.resting;
+    if (!moving && weatherMoving && !this.weatherTimer && !resting) {
       // falling rain or snow: about 30 frames per second
       this.weatherTimer = setTimeout(() => {
         this.weatherTimer = undefined;
         this.invalidate();
       }, 33);
     }
-    if (!moving && robotsMoving && !this.robotTimer) {
+    if (!moving && robotsMoving && !this.robotTimer && !resting) {
       // a driving robot: about 30 frames per second, 15 on the tablet level
       this.robotTimer = setTimeout(() => {
         this.robotTimer = undefined;

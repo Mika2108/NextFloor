@@ -63,6 +63,11 @@ export function renderSettings(host: EditorHost, actions: SettingsActions): Temp
       <div class="nf-sub nf-wide">${t("weather_effects")}</div>
       ${WEATHER_EFFECTS.map((effect) => checkField(host, t(`weather_effect_${effect}` as I18nKey), current.includes(effect), (on) => set({ weather_effects: withEffect(current, effect, on) }), { wide: false }))}
       ${checkField(host, t("rain_warning"), s.rain_warning !== false, (on) => set({ rain_warning: on }))}
+      ${host.hass && s.rain_warning !== false
+        ? entityField(host, t("rain_sensor"), s.rain_sensor ?? null, undefined, entityOptions(host.hass, (id) => /^(binary_sensor|sensor)\./.test(id)), (v) => set({ rain_sensor: v === "none" ? null : v }))
+        : nothing}
+      ${host.hass ? entityField(host, t("outage_sensor"), s.outage_sensor ?? null, undefined, entityOptions(host.hass, (id) => /^(binary_sensor|sensor)\./.test(id)), (v) => set({ outage_sensor: v === "none" ? null : v })) : nothing}
+      ${hint(t("outage_hint"), "nf-wide")}
       ${checkField(host, t("sun_patches"), s.sun_patches !== false, (on) => set({ sun_patches: on }), { title: t("sun_patches_hint") })}
       ${backdropFields(host, s.backdrop ?? null, (backdrop) => set({ backdrop }))}
     </div>

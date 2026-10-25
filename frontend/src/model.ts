@@ -118,6 +118,8 @@ export interface Opening {
   confirm?: boolean;
   cover: EntityRef;
   contact: EntityRef;
+  /** Windows: false leaves this window out of the rain warning (a window under a roof or an awning). */
+  rain_warning?: boolean;
   /** Doors: a smart lock (lock.*). A tap on the door locks or unlocks it after asking; while unlocked, its free edge glows. */
   lock?: string | null;
   tilt: EntityRef;
@@ -499,6 +501,10 @@ export interface BuildingSettings {
   start_view?: StartView | null;
   /** A real map under the plan (null = none). */
   map?: MapSettings | null;
+  /** The rain warning asks this sensor (a weather station: on, or a rain rate above 0) instead of the weather entity. */
+  rain_sensor?: string | null;
+  /** A sensor that tells a power outage: a warning for the whole house while the grid is gone. */
+  outage_sensor?: string | null;
   /** An own background behind the house instead of the look's sky: a colour and/or a picture (/local/… or https), dimmed. */
   backdrop?: { color?: string | null; image?: string | null; dim?: number | null } | null;
   /** Plugin modules to load (Extensions page); see docs/plugins.md. */

@@ -177,6 +177,7 @@ export function renderOpeningForm(host: EditorHost, o: Opening, actions: Opening
       ${garage ? nothing : styleField(host, o, actions)} ${sidelightFields(host, o, actions)}
       ${selectField(host, t("opening_mark"), o.mark === "closed" ? "closed" : "", markChoices, (v) => at({ mark: v === "closed" ? "closed" : null }), { wide: true, title: t("opening_mark_hint") })}
       ${garage ? nothing : selectField(host, t(o.leaves === 2 ? "main_leaf" : "hinge"), o.hinge, hingeChoices, (hinge) => at({ hinge }), { wide: true })}
+      ${window ? checkField(host, t("opening_rain_warning"), o.rain_warning !== false, (on) => at({ rain_warning: on ? undefined : false }), { wide: true }) : nothing}
       ${blindFields(host, o, actions, lists)}
       ${window
         ? html`${o.leaves === 2 ? html`<h4 class="nf-lib-head nf-wide">${t("leaf_main")}</h4>` : nothing}${sashSensors(host, o, 1, actions, lists)}

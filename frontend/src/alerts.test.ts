@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { alertColor, alertEntities, alertSources, alertText, findAlerts, RAIN_STATES } from "./alerts.ts";
+import { alertColor, alertEntities, alertSources, alertText, findAlerts, isPowerOut, RAIN_STATES } from "./alerts.ts";
 import type { OpeningEntities } from "./devices.ts";
 import { emptyBuilding, newFloor, type Opening } from "./model.ts";
 import type { HomeAssistant } from "./types.ts";
@@ -114,4 +114,41 @@ test("the banner text names the room when there is one", () => {
   assert.ok(inRoom.includes("Smoke detector"), inRoom);
   const houseWide = alertText(hass, building, { kind: "alarm", entity: "alarm_control_panel.house", roomId: null, floorId: null });
   assert.ok(!houseWide.includes(" · "), houseWide);
+});
+
+test("an own rain sensor decides instead of the weather, and a window can be left out", () => {
+  const { hass, building, links } = house();
+  hass.states["sensor.rain_rate"] = { entity_id: "sensor.rain_rate", state: "0", attributes: { unit_of_measurement: "mm/h" } };
+  building.settings.rain_sensor = "sensor.rain_rate";
+  const sources = alertSources(hass, building);
+  assert.equal(sources.rain, "sensor.rain_rate");
+  assert.ok(alertEntities(sources).includes("sensor.rain_rate"));
+  set(hass, "binary_sensor.casement", "on");
+  set(hass, "weather.home", "pouring");
+  assert.equal(findAlerts(hass, building, sources, links).length, 0, "the station says dry, the forecast does not count");
+  set(hass, "sensor.rain_rate", "1.2");
+  assert.equal(findAlerts(hass, building, sources, links)[0]?.kind, "window_rain");
+  building.floors[0].openings[0].rain_warning = false;
+  assert.equal(findAlerts(hass, building, sources, links).length, 0, "a window under the awning stays quiet");
+});
+
+test("a power outage warns for the whole house, whatever kind of sensor tells it", () => {
+  const { hass, building, links } = house();
+  const cases: [string, string, Record<string, unknown>, boolean][] = [
+    ["binary_sensor.grid", "off", { device_class: "power" }, true],
+    ["binary_sensor.grid", "on", { device_class: "power" }, false],
+    ["binary_sensor.outage", "on", { device_class: "problem" }, true],
+    ["sensor.inverter_mode", "off_grid", {}, true],
+    ["sensor.inverter_mode", "on_grid", {}, false],
+    ["sensor.voltage", "3", { unit_of_measurement: "V" }, true],
+    ["sensor.voltage", "231", { unit_of_measurement: "V" }, false],
+    ["sensor.voltage", "unavailable", { unit_of_measurement: "V" }, false],
+  ];
+  for (const [id, state, attributes, out] of cases) {
+    hass.states[id] = { entity_id: id, state, attributes };
+    building.settings.outage_sensor = id;
+    assert.equal(isPowerOut(hass, id), out, `${id} = ${state}`);
+    const found = findAlerts(hass, building, alertSources(hass, building), links);
+    assert.equal(found.some((a) => a.kind === "power_outage" && a.roomId === null), out);
+  }
 });

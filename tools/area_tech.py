@@ -1072,6 +1072,44 @@ def build(bp):
         wall_y=0.1,
     )
 
+    # light switches and sockets: 1 to 4 in one frame, each button (gang) with its own entity; the gang parts glow
+    for n in range(1, 5):
+        width = 0.086 + 0.071 * (n - 1)
+
+        def switch(m, n=n):
+            parts = [m.b(0, 0, m.w, m.d, 0, m.h, "white", edges="faint")]
+            for i in range(n):
+                cx = -m.w / 2 + 0.043 + 0.071 * i
+                parts.append(m.b(cx, m.d / 2 - 0.002, 0.055, 0.004, 0.016, 0.055, "#f4f6fa", edges="faint", gang=i))
+            return parts
+
+        def socket(m, n=n):
+            parts = [m.b(0, 0, m.w, m.d, 0, m.h, "white", edges="faint")]
+            for i in range(n):
+                cx = -m.w / 2 + 0.043 + 0.071 * i
+                parts.append(m.c(cx, m.d / 2 - 0.002, 0.05, 0.004, 0.018, 0.05, "#dfe4ec", axis="z", gang=i))
+                parts += [m.c(cx + sx, m.d / 2 - 0.001, 0.008, 0.002, 0.039, 0.008, "dark", axis="z") for sx in (-0.01, 0.01)]
+            return parts
+
+        word = {1: "1-fach", 2: "2-fach", 3: "3-fach", 4: "4-fach"}[n]
+        S(f"light_switch_{n}", f"Lichtschalter {word}", f"Light switch, {n} gang", (width, 0.012, 0.086), switch, mount="wall", wall_y=1.05, gangs=n)
+        S(f"socket_{n}", f"Steckdose {word}", f"Socket, {n} gang", (width, 0.012, 0.086), socket, mount="wall", wall_y=0.3, gangs=n)
+    S(
+        "socket_outdoor",
+        "Steckdose außen (mit Deckel)",
+        "Outdoor socket with lid",
+        (0.09, 0.05, 0.11),
+        lambda m: [
+            m.b(0, -0.01, m.w, 0.03, 0, m.h, "#9aa4b2", edges="faint"),
+            m.c(0, 0.006, 0.05, 0.004, 0.018, 0.05, "#dfe4ec", axis="z", gang=0),
+            # the hinged lid, flipped up over the socket like a small roof
+            m.l(0, 0.012, m.w, 0.026, 0.075, 0.035, "#b8c1cc", tz=0.002, td=0.006, edges="faint"),
+        ],
+        mount="wall",
+        wall_y=0.4,
+        gangs=1,
+    )
+
     return [
         (
             "nextfloor.a_kino",

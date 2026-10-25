@@ -8,7 +8,7 @@ import { canLift, CEILING_TYPES, ceilingAt, ceilingOf, FURNITURE_TYPES, furnitur
 import { isElectric, mountBase, packItem, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
 import { checkField, hint, numberField, selectField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
-import { furnitureLinks, stateLinks, type FurnitureLinkActions } from "./furniture-links.ts";
+import { furnitureLinks, gangLinks, stateLinks, type FurnitureLinkActions } from "./furniture-links.ts";
 import { parkingForm } from "./parking.ts";
 
 export interface FurnitureActions extends FurnitureLinkActions {
@@ -139,7 +139,8 @@ function buttons(host: EditorHost, item: Furniture, actions: FurnitureActions): 
 
 /** The form of the selected piece of furniture. */
 export function renderFurnitureForm(host: EditorHost, item: Furniture, actions: FurnitureActions): TemplateResult {
-  const links = isElectric(item.type) ? furnitureLinks(host, item, actions) : !NO_STATE_TYPES.has(item.type) ? html`<div class="nf-form nf-links">${stateLinks(host, item, actions)}</div>` : nothing;
+  const gangs = packItem(item.type)?.gangs ?? 0;
+  const links = gangs ? gangLinks(host, item, gangs, actions) : isElectric(item.type) ? furnitureLinks(host, item, actions) : !NO_STATE_TYPES.has(item.type) ? html`<div class="nf-form nf-links">${stateLinks(host, item, actions)}</div>` : nothing;
   return html`<section>
     <div class="nf-h3row"><h3>${item.name || host.t("furniture")}</h3>${actions.lockButton}</div>
     <div class="nf-form">${nameFields(host, item, actions)} ${kindField(host, item, actions.packs, actions)} ${geometryFields(host, item, actions)}</div>

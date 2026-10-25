@@ -71,7 +71,7 @@ export function isActive(st: HassEntity | undefined): boolean {
 
 // ---------------------------------------------------------------- light colour
 
-type Rgb = [number, number, number];
+export type Rgb = [number, number, number];
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 

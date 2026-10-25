@@ -8,6 +8,8 @@ import {
   entityName,
   furnitureEntities,
   isActive,
+  gangGlows,
+  gangEntities,
   isUnavailable,
   kindOf,
   lightGlow,
@@ -107,6 +109,7 @@ export class NfView3d extends LitElement {
     _liveCardOn: { state: true },
     _swipe: { state: true },
     _menu: { state: true },
+    _plate: { state: true },
     _blend: { state: true },
     _wallBig: { state: true },
     _find: { state: true },
@@ -192,6 +195,8 @@ export class NfView3d extends LitElement {
   private declare _swipe: { entity: string; kind: "light" | "cover" | "fan"; start: number; value: number; x: number; y: number } | null;
   /** Quick menu at a device (long press). */
   private declare _menu: { entity: string; x: number; y: number; car?: CarState } | null;
+  /** The buttons of a tapped switch plate or socket to pick from. */
+  private declare _plate: { ids: string[]; x: number; y: number } | null;
   /** Looking through a camera: its live picture lies over the 3D view; `back` is the view to return to. */
   /** Camera wall: the camera shown big (null: all tiles). */
   private declare _wallBig: string | null;
@@ -317,6 +322,7 @@ export class NfView3d extends LitElement {
     this._energy = null;
     this._swipe = null;
     this._menu = null;
+    this._plate = null;
     this._wallBig = null;
     this._blend = 0.6;
     this._find = null;
@@ -783,6 +789,14 @@ export class NfView3d extends LitElement {
         // two entities light the halves (left/right of a bed, bottom/top of a bunk bed)
         const faces = this.stateFaces(hass, f);
         if (faces.length) screens.set(f.id, { color: faces[0].color, level: faces[0].level, faces });
+        // a light switch or socket: each button glows with its own entity; a tap switches it (or asks which, with several)
+        const plate = packItem(f.type);
+        if (plate?.gangs) {
+          const gangs = gangGlows(hass, (f.gang_entities ?? []).slice(0, plate.gangs), /socket/.test(f.type));
+          if (gangs.length) screens.set(f.id, { color: gangs[0].color, level: gangs[0].level, gangs });
+          if (gangEntities(f.gang_entities, plate.gangs).length) targets.set(f.id, `gang:${f.id}`);
+          continue;
+        }
         if (isLamp(f.type)) {
           const lamp = this.lampMarker(hass, floor, f, linked?.entity ?? null);
           markers.push(lamp);
@@ -1412,6 +1426,32 @@ export class NfView3d extends LitElement {
     </div>`;
   }
 
+  /** A light switch or socket was tapped: one button switches at once, several open a small list to pick from. */
+  private tapPlate(furnitureId: string, x: number, y: number): void {
+    const f = this.building?.floors.flatMap((fl) => fl.furniture).find((it) => it.id === furnitureId);
+    const ids = f ? gangEntities(f.gang_entities, packItem(f.type)?.gangs ?? 0) : [];
+    if (ids.length === 1) return this.onDeviceTap(ids[0], x, y);
+    if (ids.length > 1) this._plate = { ids, x, y };
+  }
+
+  private renderPlate() {
+    const p = this._plate;
+    if (!p || !this.hass) return nothing;
+    const hass = this.hass;
+    const close = () => (this._plate = null);
+    return html`<div class="nf-menu-backdrop" @click=${close}></div>
+      <div class="nf-plate-menu" style="left:${Math.max(8, p.x - 110)}px;top:${Math.max(8, p.y - 20 - p.ids.length * 46)}px" role="menu">
+        ${p.ids.map((id, i) => {
+          const st = hass.states[id];
+          const on = isActive(st) || st?.state === "on";
+          return html`<button role="menuitem" class=${on ? "on" : ""} @click=${() => {
+            close();
+            this.onDeviceTap(id, p.x, p.y);
+          }}><b>${i + 1}</b><span>${entityName(hass, id)}</span><i>${st ? stateText(hass, st) : "–"}</i></button>`;
+        })}
+      </div>`;
+  }
+
   private renderMenu() {
     const m = this._menu;
     if (!m || !this.hass) return nothing;
@@ -1436,6 +1476,7 @@ export class NfView3d extends LitElement {
   private onDeviceTap(entityId: string, x = 0, y = 0): void {
     // lamps without a light are drawn, but nothing of Home Assistant stands behind them
     if (entityId.startsWith("lamp:")) return;
+    if (entityId.startsWith("gang:")) return this.tapPlate(entityId.slice(5), x, y);
     // the street end of the grid cable opens the grid sensor: the balance's, else the meter's (#223)
     if (entityId === "grid") {
       const b = this.building;
@@ -1643,7 +1684,7 @@ export class NfView3d extends LitElement {
     >
       ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()} ${this.renderMapCredit()}
       ${this.renderAlerts()} ${this.clean ? nothing : html`${this.renderThumbs()} ${this.renderScenes()} ${this.renderFind()} ${this.renderCentral()}`} ${this.renderSwipe()}
-      ${this.renderMenu()} ${this.renderEye()}
+      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()}
       ${this.showStats && this._stats
         ? html`<span class="nf-stats"
             ><b>${this._stats.fps ? translate(this.hass, "stats_fps", { fps: this._stats.fps, ms: this._stats.worstMs }) : translate(this.hass, "stats_idle")}</b>
@@ -2244,6 +2285,54 @@ export class NfView3d extends LitElement {
         right: 0;
         bottom: 0;
         background: var(--nf-warm);
+      }
+.nf-plate-menu {
+        position: absolute;
+        z-index: 6;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 220px;
+        padding: 6px;
+        border-radius: 16px;
+        background: var(--nf-bg2, #1c2233);
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+      }
+      .nf-plate-menu button {
+        display: grid;
+        grid-template-columns: 24px 1fr auto;
+        align-items: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 12px;
+        background: none;
+        color: var(--nf-text, #e8eeff);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .nf-plate-menu button:hover {
+        background: rgba(127, 127, 127, 0.14);
+      }
+      .nf-plate-menu button.on b {
+        background: var(--nf-accent, #37e0ff);
+        color: #041018;
+      }
+      .nf-plate-menu b {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgba(127, 127, 127, 0.2);
+        font-size: 12px;
+      }
+      .nf-plate-menu i {
+        font-style: normal;
+        color: var(--nf-muted, #9aa5bd);
+        font-size: 13px;
       }
       .nf-menu-backdrop {
         position: absolute;

@@ -38,7 +38,7 @@ function furnitureIds(inputs: WatchInputs): MaybeId[] {
   const pieces = furnitureOf(building);
   return [
     ...[...furnitureLinks.values()].flatMap((l) => [l.entity, l.power]),
-    ...pieces.flatMap((m) => [m.state_entity, m.state_entity2, m.color_entity]),
+    ...pieces.flatMap((m) => [m.state_entity, m.state_entity2, m.color_entity, ...(m.gang_entities ?? [])]),
     ...pieces.flatMap((m) => [m.door_left, m.door_right, m.soc, m.status, m.charge, m.export]),
     ...pieces.filter((m) => m.type === "robot_vacuum").map((m) => robotRoomSensor(hass, furnitureLinks.get(m.id)?.entity ?? null, m.room_sensor)),
     ...pieces.flatMap((m) => (m.pictures ?? []).flatMap((rule) => [rule.entity, ...(rule.image.startsWith("camera:") ? [rule.image.slice("camera:".length)] : [])])),

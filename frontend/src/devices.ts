@@ -6,3 +6,4 @@ export * from "./entities/openings.ts";
 export * from "./entities/furniture-links.ts";
 export * from "./entities/car.ts";
 export * from "./entities/misc.ts";
+export * from "./entities/gangs.ts";

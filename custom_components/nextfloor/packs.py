@@ -59,6 +59,8 @@ PART_SCHEMA = vol.Schema(
         vol.Optional("glow", default=False): bool,
         # a screen (TV, monitor): shows the linked media player's app colour and picture on its front (+z)
         vol.Optional("screen", default=False): bool,
+        # a button or socket of a switch plate (0 = the first): glows while the entity of that gang is on
+        vol.Optional("gang"): vol.All(vol.Coerce(int), vol.Range(min=0, max=7)),
         # loft: centre and extent of the top rectangle (default: the same as the bottom)
         vol.Optional("tx"): _FRACTION,
         vol.Optional("tz"): _FRACTION,
@@ -122,6 +124,8 @@ ITEM_SCHEMA = vol.Schema(
         vol.Optional("mesh"): vol.All(str, vol.Match(r"^[a-z0-9_]{1,48}$")),
         # a vehicle: offered for parking spots
         vol.Optional("vehicle", default=False): bool,
+        # light switches and sockets: how many buttons (gangs) the item has, each linked to its own entity
+        vol.Optional("gangs"): vol.All(vol.Coerce(int), vol.Range(min=1, max=8)),
         # scale every part evenly when resized, instead of keeping legs, arms and plates at their size
         vol.Optional("stretch", default=False): bool,
         # stairs: when it reaches the floor above, it cuts a stairwell opening into that floor

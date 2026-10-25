@@ -128,6 +128,8 @@ const shots = [
   // ../preview/screenshots/stretch.json: a pack sofa and table at their size and resized (keeps arms, legs and plates)
   { name: "dev-stretch", dev: true, query: "?state=/preview/screenshots/stretch.json&noshowcase", width: 1400, height: 800, viewScript: "document.querySelector(\"nextfloor-panel\")._clean = true; const w = v.viewer.getView(); w.target.set(4.5, 0.5, 2.8); w.theta = -0.25; w.phi = 1.0; w.radius = 9; v.viewer.flyTo(w, 1);" },
   { name: "dev-lock", dev: true, query: "", width: 1400, height: 850, click: "Flur", settle: 1500 },
+  // ../preview/screenshots/switches.json: light switches and sockets on a kitchen wall, some buttons on
+  { name: "dev-switches", dev: true, query: "?state=/preview/screenshots/switches.json&noshowcase", width: 1400, height: 800, viewScript: "document.querySelector(\"nextfloor-panel\")._clean = true; const w = v.viewer.getView(); w.target.set(2.0, 1.0, 0.0); w.theta = 0.0; w.phi = 1.35; w.radius = 2.6; v.viewer.flyTo(w, 1);" },
   { name: "dev-pool-cut", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: POOL_SCRIPT, then3d: "Erdgeschoss" },
   { name: "view-room-light", query: "", ha: "light", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
   { name: "card-light", query: "?card", ha: "light", width: 1400, height: 820 },

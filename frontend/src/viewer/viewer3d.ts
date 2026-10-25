@@ -54,7 +54,7 @@ import { createDevicePin, type PinHooks } from "./scene/pins.ts";
 import { buildFloorGeometry, SLAB, stairHoles, type FloorGeometry } from "./build.ts";
 import { OrbitControls, type OrbitView } from "./controls.ts";
 import { type FoldMasks } from "./fold.ts";
-import { pushPackLamp, screenRect, pushFridgeDoors } from "./furniture.ts";
+import { pushPackGlow, pushPackLamp, screenRect, pushFridgeDoors } from "./furniture.ts";
 import { hasMesh, mountBase, packItem, setMeshSource, setPacks, type FurniturePack, type MeshSource } from "../packs.ts";
 import { withVehicles } from "../parking.ts";
 import { buildRoof, type RoofWindowState } from "./roof.ts";
@@ -210,6 +210,8 @@ export interface ScreenState {
   halo?: number;
   /** Furniture with a state: glowing faces on top of the item instead of a screen – the whole top, or a half of it. */
   faces?: { part: "all" | "left" | "right" | "top" | "bottom"; color: [number, number, number]; level: number }[];
+  /** Light switches and sockets: the buttons (gangs) that are on glow in their colour. */
+  gangs?: { gang: number; color: [number, number, number]; level: number }[];
 }
 
 /** Position of the sun (from sun.sun): degrees above the horizon and clockwise from north. */
@@ -1801,6 +1803,16 @@ export class NextFloorViewer {
       const c = Math.cos(a);
       const s = Math.sin(a);
       const P = (x: number, y: number, z: number) => [f.x + x * c - z * s, y, f.z + x * s + z * c];
+      if (st.gangs) {
+        // a switch plate or socket: each button that is on glows in its light's colour (green for a socket)
+        const item = packItem(f.type);
+        if (!item) continue;
+        for (const g of st.gangs) {
+          const col = new Color(...g.color.map((v) => Math.min(1, v * (0.45 + 0.55 * g.level))) as [number, number, number]);
+          pushPackGlow(buf, item, f, mountBase(fv.floor, f), col.getHex(), (p) => p.gang === g.gang);
+        }
+        continue;
+      }
       if (st.faces) {
         // a state on the item itself: a glowing plate on its top (a half of it for a bed's side or a bunk)
         const w = Math.max(0.05, f.w) * (f.mirror ? -1 : 1);

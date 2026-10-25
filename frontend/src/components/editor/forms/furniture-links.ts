@@ -88,6 +88,23 @@ function subMeterLinks(host: EditorHost, item: Furniture, actions: FurnitureLink
   );
 }
 
+/** A light switch or socket: one entity per button or socket, in order from the left. */
+export function gangLinks(host: EditorHost, item: Furniture, gangs: number, actions: FurnitureLinkActions): TemplateResult {
+  const t = host.t;
+  const socket = /socket/.test(item.type);
+  const options = entityOptions(host.hass, (id) => /^(light|switch|input_boolean|fan)\./.test(id));
+  const current = item.gang_entities ?? [];
+  const set = (i: number) => (v: string | null) => {
+    const next = Array.from({ length: gangs }, (_, k) => current[k] ?? null);
+    next[i] = noneAsNull(v);
+    actions.update({ gang_entities: next });
+  };
+  return html`<div class="nf-form nf-links">
+    ${Array.from({ length: gangs }, (_, i) => entityField(host, gangs === 1 ? t(socket ? "gang_socket_one" : "gang_switch_one") : t(socket ? "gang_socket" : "gang_switch", { n: i + 1 }), current[i] ?? null, undefined, options, set(i)))}
+    ${hint(t(socket ? "gang_socket_hint" : "gang_switch_hint"), "nf-wide")}
+  </div>`;
+}
+
 /** The links of electric furniture: the main entity and the power sensor, and what is special to the kind of device. */
 export function furnitureLinks(host: EditorHost, item: Furniture, actions: FurnitureLinkActions): TemplateResult | typeof nothing {
   const { hass } = host;

@@ -27,6 +27,8 @@ export interface PackPart {
   glow?: boolean;
   /** A screen: shows the colour and picture of the linked media player on its front face. */
   screen?: boolean;
+  /** A button or socket of a switch plate (0 = the first): glows while the entity of that gang is on. */
+  gang?: number;
   /** Loft: centre and size of the top rectangle (default: same as the base). */
   tx?: number;
   tz?: number;
@@ -69,6 +71,8 @@ export interface PackItem {
   mesh?: string;
   /** A vehicle; offered for parking spots. */
   vehicle?: boolean;
+  /** Light switches and sockets: how many buttons (gangs) it has, each linked to its own entity. */
+  gangs?: number;
   /** Scale every part evenly when the item is resized, instead of keeping legs, arms and plates at their size. */
   stretch?: boolean;
   /** Stairs: cut a stairwell into the floor above where they reach it. */

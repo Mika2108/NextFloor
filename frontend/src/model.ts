@@ -193,6 +193,8 @@ export interface Furniture extends LightEffectConfig {
   /** A second state entity for the other half: left/right (a double bed) or bottom/top (a bunk bed). */
   state_entity2?: EntityRef;
   state_split?: "left_right" | "top_bottom" | null;
+  /** Light switches and sockets: the entity of each button or socket, in order (null = none). */
+  gang_entities?: (string | null)[];
   /** Lamps: a second entity whose colour and brightness the lamp shows while the linked switch is on (a relay switches the light, the bulb itself knows its colour). */
   color_entity?: EntityRef;
   /** Mirrored (left-right) – an L-sofa the other way round, a cabinet with its door on the other side. */

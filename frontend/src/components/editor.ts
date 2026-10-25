@@ -62,6 +62,7 @@ import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWall
 import { insertRoofCorner, roofOutline } from "./editor/ops/roof.ts";
 import { insertOutdoorCorner, outdoorRectangleAfter, removeOutdoorCorner } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
+import "./editor/wall-view.ts";
 import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
 import { insertCorner } from "./editor/ops/rooms.ts";
 import { aimReach, dragStep, facingAngle, gridPositionAfter, hasLeftStart, headingAngle, outlineWithCornerAt, shifted, steppedDelta, straightEnd } from "./editor/ops/drags.ts";
@@ -178,6 +179,7 @@ export class NfEditor extends LitElement {
     _measureLen: { state: true },
     _rectSize: { state: true },
     _tool: { state: true },
+    _wallView: { state: true },
     _draft: { state: true },
     _cursor: { state: true },
     _guides: { state: true },
@@ -223,6 +225,8 @@ export class NfEditor extends LitElement {
   private declare _measureLen: number;
   private declare _rectSize: [number, number];
   private declare _tool: Tool;
+  /** The wall shown from the front (room and edge), or null. */
+  private declare _wallView: { roomId: string; edge: number } | null;
   private declare _draft: Vec2[];
   private declare _cursor: Vec2 | null;
   private declare _guides: Guides;
@@ -294,6 +298,7 @@ export class NfEditor extends LitElement {
     this._measureLen = 3;
     this._rectSize = [4, 3];
     this._tool = "select";
+    this._wallView = null;
     this._draft = [];
     this._cursor = null;
     this._guides = {};
@@ -1911,6 +1916,7 @@ export class NfEditor extends LitElement {
 
   private edgeActions(): EdgeActions {
     return {
+      openWall: (room, edge) => (this._wallView = { roomId: room.id, edge }),
       partsOf: (room, edge) => this.edgeParts(room, edge),
       isOuter: (room, edge) => this.wallsOfFloor().some((w) => w.exterior && w.sources.some((s) => s.room_id === room.id && s.edge === edge)),
       setHeight: (room, edge, part, height) => {
@@ -2652,6 +2658,9 @@ export class NfEditor extends LitElement {
     const walls = floor ? generateWalls(floor.rooms, { exterior: this._doc.settings.wall_exterior, interior: this._doc.settings.wall_interior }, floor.walls ?? []) : null;
     return html`
       ${renderPreview(this.host, this.lib.preview)}
+      ${this._wallView
+        ? html`<nf-wall-view .host=${this.host} .doc=${this._doc} .roomId=${this._wallView.roomId} .edge=${this._wallView.edge} @close=${() => (this._wallView = null)}></nf-wall-view>`
+        : nothing}
       <div class="nf-editor ${this.narrow ? "nf-narrow" : ""}">
         <div class="nf-main">
           <div class="nf-toolbar">

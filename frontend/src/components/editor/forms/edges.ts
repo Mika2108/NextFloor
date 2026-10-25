@@ -9,6 +9,8 @@ import type { EditorHost } from "../host.ts";
 import { edgeLength, thicknessFromTyped } from "../ops/edges.ts";
 
 export interface EdgeActions {
+  /** Shows the wall from the front, with its doors, windows and furniture. */
+  openWall(room: Room, edge: number): void;
   /** Where the parts of a wall start, along it; one part when it is whole. */
   partsOf(room: Room, edge: number): number[];
   /** Whether the wall is an outer wall (it then has the outer default thickness). */
@@ -68,6 +70,7 @@ export function renderEdgeHeights(host: EditorHost, room: Room, actions: EdgeAct
           : nothing}
         ${host.admin && height !== 0 ? html`<button class="nf-btn" title=${t("wall_none_hint")} @click=${() => set(0)}>${t("wall_none")}</button>` : nothing}
         ${host.admin && length >= 0.4 ? html`<button class="nf-btn" title=${t("wall_split_hint")} @click=${() => actions.cut(room, edge, part)}>✂</button>` : nothing}
+        ${(part === undefined || part === 0) && height !== 0 ? html`<button class="nf-btn" title=${t("wall_view_hint")} @click=${() => actions.openWall(room, edge)}>▣ ${t("wall_view")}</button>` : nothing}
         ${(part === undefined || part === 0) && height !== 0
           ? html`<span class="nf-wide nf-split-row" title=${t("wall_thickness_hint")}
               >${numberField(host, t("edge_thickness"), room.wall_thickness?.[edge] ?? standard, (v) => actions.setThickness(room, edge, thicknessFromTyped(v, standard)), 0.01, 0.02)}

@@ -5,6 +5,7 @@
 // flight into it). Each floor is a group with its own materials so its height and opacity can be
 // animated independently.
 
+import { isLowEnd } from "../hardware.ts";
 import {
   AdditiveBlending,
   Box3,
@@ -338,12 +339,7 @@ interface FloorView {
 
 const ACTIVE_FLOOR = new Color(0x1a2a4d);
 
-export function isLowEnd(): boolean {
-  const nav = navigator as Navigator & { deviceMemory?: number };
-  const mem = nav.deviceMemory ?? 8;
-  const cores = navigator.hardwareConcurrency || 8;
-  return mem <= 3 || cores <= 4 || /Silk|KF[A-Z]{2,4}\b/.test(navigator.userAgent);
-}
+export { isLowEnd };
 
 export class NextFloorViewer {
   private readonly host: HTMLElement;

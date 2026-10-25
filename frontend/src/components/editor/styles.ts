@@ -584,6 +584,113 @@ export const editorStyles = css`
     font-weight: 500;
     font-size: 13px;
   }
+  /* the library cards: a picture, the name, size and source, a star, and size chips for a model in several sizes */
+  .nf-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .nf-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border-radius: 14px;
+    background: var(--nf-chrome);
+    box-shadow: 0 0 0 1px var(--nf-line);
+  }
+  .nf-card-main {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 6px 8px;
+    border: 0;
+    border-radius: 14px;
+    background: none;
+    color: var(--nf-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .nf-card-main:hover,
+  .nf-card-main:focus-visible {
+    background: rgba(127, 127, 127, 0.1);
+    outline: none;
+  }
+  .nf-card-name {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+  }
+  .nf-card-meta {
+    font-size: 11px;
+    color: var(--nf-muted);
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nf-card-star {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--nf-muted);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .nf-card-star[aria-pressed="true"] {
+    color: var(--nf-warm, #ffb547);
+  }
+  .nf-card-sizes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 6px 8px;
+  }
+  .nf-size {
+    min-width: 34px;
+    padding: 3px 6px;
+    border: 1px solid var(--nf-line);
+    border-radius: 999px;
+    background: none;
+    color: var(--nf-muted);
+    font: inherit;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+  .nf-size[aria-pressed="true"] {
+    border-color: var(--nf-accent);
+    color: var(--nf-accent);
+  }
+  .nf-lib-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .nf-lib-chip {
+    min-height: 30px;
+    padding: 4px 10px;
+    font-size: 12px;
+    box-shadow: 0 0 0 1px var(--nf-line);
+  }
+  .nf-lib-chip[aria-pressed="true"] {
+    color: var(--nf-accent);
+    box-shadow: 0 0 0 1px var(--nf-accent);
+  }
+  .nf-lib-all {
+    width: 100%;
+    margin-top: 12px;
+  }
   /* the background picture while it is edited: a dashed frame and a corner handle */
   .nf-bg-frame {
     fill: none;

@@ -123,6 +123,8 @@ const shots = [
   { name: "dev-ceilings-edit", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: `const b = structuredClone(e._doc); ${CEILING_DOC} e.setDoc(b); e._floorId = b.floors[0].id; e.selectItem("room", b.floors[0].rooms.find((r) => r.name === "Bad").id);`, openDetails: true },
   { name: "dev-fan-form", dev: true, query: "", width: 1500, height: 1300, editor: true, editorScript: `const b = structuredClone(e._doc); ${CEILING_DOC} e.setDoc(b); e._floorId = b.floors[0].id; e.selectItem("furniture", "fan_demo");`, openDetails: true },
   { name: "dev-plan-example", dev: true, query: "?state=/preview/screenshots/plan-example.json&noshowcase", width: 1400, height: 800 },
+  { name: "dev-library", dev: true, query: "", width: 1500, height: 950, editor: true, click: "Möbel", wait: 500 },
+  { name: "dev-library-kitchen", dev: true, query: "", width: 1500, height: 950, editor: true, click: "Möbel", tapAt: [690, 520], wait: 500, settle: 6000 },
   { name: "dev-pool-cut", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: POOL_SCRIPT, then3d: "Erdgeschoss" },
   { name: "view-room-light", query: "", ha: "light", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
   { name: "card-light", query: "?card", ha: "light", width: 1400, height: 820 },
@@ -395,6 +397,7 @@ for (const shot of shots.filter((s) => (only ? only.includes(s.name) : !s.dev)))
     });
     await new Promise((r) => setTimeout(r, 300));
   }
+  if (shot.settle) await new Promise((r) => setTimeout(r, shot.settle));
   await page.screenshot({ path: join(outDir, `${shot.name}.png`) });
   await page.close();
   console.log(`saved ${shot.name}.png`);

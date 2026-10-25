@@ -126,6 +126,13 @@ test("a garage door shows its cover, else its contact, else closed", () => {
   assert.equal(openingState(hass, plain(), "garage").sensed, false);
 });
 
+test("a garage door whose cover is unknown (a remote without feedback) follows its contact", () => {
+  const hass = hassOf([entity("cover.remote", "unknown", { assumed_state: true }), entity("binary_sensor.shut", "off"), entity("binary_sensor.gc", "on")]);
+  assert.equal(openingState(hass, plain({ cover: "cover.remote", contact: "binary_sensor.shut" }), "garage").cover, 1);
+  assert.equal(openingState(hass, plain({ cover: "cover.remote", contact: "binary_sensor.gc" }), "garage").cover, 0);
+  assert.equal(openingState(hass, plain({ cover: "cover.remote" }), "garage").cover, 0, "without a contact it stays as before");
+});
+
 test("the second leaf of a double window has contact and tilt of its own and stays closed without sensors", () => {
   const hass = hassOf([entity("binary_sensor.c2", "on"), entity("binary_sensor.t2", "on")]);
   assert.deepEqual([openingState(hass, plain({ contact2: "binary_sensor.c2" })).open2, openingState(hass, plain()).open2], [1, 0]);

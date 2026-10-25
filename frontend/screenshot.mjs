@@ -132,6 +132,7 @@ const shots = [
   { name: "dev-switches", dev: true, query: "?state=/preview/screenshots/switches.json&noshowcase", width: 1400, height: 800, viewScript: "document.querySelector(\"nextfloor-panel\")._clean = true; const w = v.viewer.getView(); w.target.set(2.0, 1.0, 0.0); w.theta = 0.0; w.phi = 1.35; w.radius = 2.6; v.viewer.flyTo(w, 1);" },
   // ../preview/screenshots/covers.json: an awning, a curtain, an inside roller blind and a sliding gate following demo covers
   { name: "dev-covers", dev: true, query: "?state=/preview/screenshots/covers.json&noshowcase", width: 1400, height: 850, settle: 5000, viewScript: "document.querySelector(\"nextfloor-panel\")._clean = true; const w = v.viewer.getView(); w.target.set(3.5, 1.0, 4.0); w.theta = 0.5; w.phi = 1.0; w.radius = 11; v.viewer.flyTo(w, 1);" },
+  { name: "dev-clock", dev: true, query: "", width: 1400, height: 850, settle: 1500, viewScript: "v.clock = \"top_right\"; v.lockButton = true; v.building = { ...v.building, settings: { ...v.building.settings, backdrop: { color: \"#3a1c4a\", image: null, dim: 0.3 } } };" },
   { name: "dev-pool-cut", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: POOL_SCRIPT, then3d: "Erdgeschoss" },
   { name: "view-room-light", query: "", ha: "light", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
   { name: "card-light", query: "?card", ha: "light", width: 1400, height: 820 },

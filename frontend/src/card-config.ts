@@ -30,7 +30,11 @@ export interface CardConfig {
   /** Heatmap of the rooms: none | temperature | humidity | co2. */
   heatmap?: "none" | "temperature" | "humidity" | "co2";
   /** Look: neon | blueprint | day. */
-  theme?: "neon" | "blueprint" | "day";
+  theme?: "auto" | "neon" | "blueprint" | "day";
+  /** A clock in a corner of the view (default none). */
+  clock?: "none" | "top_left" | "top_right" | "bottom_left" | "bottom_right";
+  /** The 🔒 button that locks the camera on this device (default shown). */
+  lock_button?: boolean;
   /** Accent colour for the neon look and the card's chips ("#rrggbb"); leave out for the stock cyan. */
   accent?: string;
   /** Energy values at the top (default true). */

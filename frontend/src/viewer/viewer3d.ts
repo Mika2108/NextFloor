@@ -592,10 +592,11 @@ export class NextFloorViewer {
     this.renderer.dispose();
     this.renderer.forceContextLoss();
     this.renderer = next;
-    const view = this.controls.view;
+    const { view, locked } = this.controls;
     this.controls.dispose();
     this.controls = this.makeControls();
     this.controls.view = view;
+    this.controls.locked = locked;
     this.resize();
   }
 
@@ -802,6 +803,11 @@ export class NextFloorViewer {
       this.personPins.delete(id);
     }
     this.invalidate();
+  }
+
+  /** The 3D lock of a wall tablet: no turning, panning or zooming by hand (flights to rooms and taps still work). */
+  setNavigationLocked(on: boolean): void {
+    this.controls.locked = on;
   }
 
   /** Entities opened by tapping furniture or openings in 3D (by furniture / opening id). */

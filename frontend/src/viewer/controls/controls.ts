@@ -40,6 +40,8 @@ export class OrbitControls {
   view: OrbitView = { target: new Vector3(), radius: 16, theta: -0.6, phi: 0.85 };
   minRadius = 2;
   maxRadius = 80;
+  /** A wall tablet's 3D lock: the camera does not turn, pan or zoom by hand; taps, holds and swipes on devices still work. */
+  locked = false;
 
   private readonly pointers = new Map<number, PointerInfo>();
   private velocity = { theta: 0, phi: 0 };
@@ -172,6 +174,10 @@ export class OrbitControls {
       }
     }
 
+    if (this.locked) {
+      [pointer.x, pointer.y] = [e.clientX, e.clientY];
+      return;
+    }
     if (this.pointers.size === 1) {
       if (!(this.press && !this.press.moved)) {
         if (pointer.button === 1 || pointer.button === 2 || e.shiftKey) panView(this.view, dx, dy, this.el.clientHeight, this.camera.fov);
@@ -221,6 +227,7 @@ export class OrbitControls {
 
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
+    if (this.locked) return;
     this.flight = null;
     this.zoom(Math.exp(e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015)));
     this.events.change();

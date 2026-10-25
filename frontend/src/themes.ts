@@ -4,6 +4,17 @@ export type Theme = "neon" | "blueprint" | "day";
 
 export const THEMES: Theme[] = ["neon", "blueprint", "day"];
 
+/** A look to pick: one of the looks, or "auto" – day while the sun is up, neon after sunset. */
+export type Look = Theme | "auto";
+
+export const LOOKS: Look[] = ["auto", ...THEMES];
+
+/** The look to draw now: "auto" follows sun.sun (day above the horizon, else neon; neon when there is no sun entity). */
+export function lookNow(look: Look | undefined, sunState: string | undefined): Theme {
+  if (look !== "auto") return look ?? "neon";
+  return sunState === "above_horizon" ? "day" : "neon";
+}
+
 /** Background of the 3D stage per look (sky in the middle, ground at the edges), night and day. */
 export const STAGE: Record<Theme, { night: [number[], number[]]; day: [number[], number[]] }> = {
   neon: {

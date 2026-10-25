@@ -17,7 +17,7 @@ import { NEXTFLOOR_MARK } from "./panel/mark.ts";
 import { browserStorage, PrefStore, type DevicePrefs } from "./panel/prefs.ts";
 import { panelStyles } from "./panel/styles.ts";
 import { colorSchemeOf, controls, tokens } from "./styles.ts";
-import { THEMES, type Theme } from "./themes.ts";
+import { LOOKS, lookNow, type Look } from "./themes.ts";
 import type { HomeAssistant } from "./types.ts";
 import type { FloorStack, Quality, WallMode } from "./viewer/viewer3d.ts";
 
@@ -216,8 +216,14 @@ export class NextFloorPanel extends LitElement {
     return html`<button class="nf-opts-btn" aria-expanded=${this._optsOpen} title=${this.t("view_options")} aria-label=${this.t("view_options")} @click=${() => (this._optsOpen = !this._optsOpen)}>⚙</button>
       <div class="nf-view-opts ${this._optsOpen ? "nf-opts-open" : ""}">
         ${this.choiceRow("quality", ["auto", "low", "high"] as Quality[], p.quality, (q) => this.t(`quality_${q}`), (q) => this.setPref("quality", q))}
-        ${this.choiceRow("theme", THEMES as readonly Theme[], p.theme, (th) => this.t(`theme_${th}`), (th) => this.setPref("theme", th), this.accentPicker())}
+        ${this.choiceRow("theme", LOOKS as readonly Look[], p.theme, (th) => this.t(`theme_${th}`), (th) => this.setPref("theme", th), this.accentPicker())}
         ${this.choiceRow("markers", ["none", "important", "all"] as MarkerMode[], p.markers, (m) => this.t(`markers_${m}`), (m) => this.setPref("markers", m))}
+        <label class="nf-seg nf-clock-pick" title=${this.t("clock")}
+          >🕒
+          <select aria-label=${this.t("clock")} @change=${(e: Event) => this.setPref("clock", (e.target as HTMLSelectElement).value as typeof p.clock)}>
+            ${(["none", "top_left", "top_right", "bottom_left", "bottom_right"] as const).map((c) => html`<option value=${c} ?selected=${p.clock === c}>${this.t(`clock_${c}`)}</option>`)}
+          </select>
+        </label>
         <div class="nf-seg nf-quality">
           <button aria-pressed=${p.stats} title=${this.t("fps_title")} @click=${() => this.setPref("stats", !p.stats)}>${this.t("fps")}</button>
         </div>
@@ -407,7 +413,9 @@ export class NextFloorPanel extends LitElement {
           .keepRoof=${p.keepRoof}
           .markerMode=${p.markers}
           .heatMode=${p.heat}
-          .theme=${p.theme}
+          .theme=${lookNow(p.theme, this.hass?.states["sun.sun"]?.state)}
+          .clock=${p.clock === "none" ? null : p.clock}
+          .lockButton=${true}
           .accent=${p.accent}
           ?furnish=${this._furnish}
           .selectedFurniture=${this._selFurniture}

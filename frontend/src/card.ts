@@ -15,6 +15,7 @@ import { loadCardEditor } from "./load-card-editor.ts";
 import { colorSchemeOf, controls, tokens } from "./styles.ts";
 import type { HomeAssistant } from "./types.ts";
 import type { WallMode } from "./viewer/viewer3d.ts";
+import { lookNow } from "./themes.ts";
 
 type HeatMode = NonNullable<CardConfig["heatmap"]>;
 type Key = Parameters<typeof translate>[1];
@@ -291,7 +292,9 @@ export class NextFloorCard extends LitElement {
       .central=${c?.central !== false}
       .buttons=${c?.buttons?.map((button, i) => ({ id: `card_${i}`, ...button })) ?? null}
       .heatMode=${s.heat}
-      .theme=${c?.theme ?? "neon"}
+      .theme=${lookNow(c?.theme, this.hass?.states["sun.sun"]?.state)}
+      .clock=${c?.clock && c.clock !== "none" ? c.clock : null}
+      .lockButton=${c?.lock_button !== false}
       .accent=${c?.accent ?? null}
       .showEnergy=${c?.energy ?? true}
       .flows=${c?.flows ?? null}

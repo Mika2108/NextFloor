@@ -499,6 +499,8 @@ export interface BuildingSettings {
   start_view?: StartView | null;
   /** A real map under the plan (null = none). */
   map?: MapSettings | null;
+  /** An own background behind the house instead of the look's sky: a colour and/or a picture (/local/… or https), dimmed. */
+  backdrop?: { color?: string | null; image?: string | null; dim?: number | null } | null;
   /** Plugin modules to load (Extensions page); see docs/plugins.md. */
   plugins?: PluginRef[];
 }

@@ -5,7 +5,7 @@ import { DEFAULT_WEATHER_EFFECTS, WEATHER_EFFECTS, type Building, type RoofType 
 import { entityOptions } from "../entities.ts";
 import { renderCompass } from "./compass.ts";
 import { renderMapSettings } from "./map.ts";
-import { checkField, entityField, hint, numberField, selectField } from "../fields.ts";
+import { checkField, entityField, hint, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { clamp, withEffect } from "../ops/settings.ts";
 
@@ -15,6 +15,26 @@ export interface SettingsActions {
 }
 
 const ROOF_TYPES = ["none", "flat", "gable", "custom"] as const;
+
+type Backdrop = NonNullable<Building["settings"]["backdrop"]>;
+
+/** An own background behind the house: on or off, a colour, a picture and how much it is dimmed. */
+function backdropFields(host: EditorHost, b: Backdrop | null, onChange: (b: Backdrop | null) => void): TemplateResult {
+  const t = host.t;
+  const on = !!b;
+  const patch = (p: Partial<Backdrop>) => onChange({ color: null, image: null, dim: 0.35, ...(b ?? {}), ...p });
+  return html`<div class="nf-sub nf-wide">${t("backdrop")}</div>
+    ${checkField(host, t("backdrop"), on, (v) => onChange(v ? { color: "#101828", image: null, dim: 0.35 } : null))}
+    ${on
+      ? html`<label class="nf-field"
+            >${t("backdrop_color")}
+            <input type="color" .value=${b?.color ?? "#101828"} ?disabled=${!host.admin} @change=${(e: Event) => patch({ color: (e.target as HTMLInputElement).value })}
+          /></label>
+          ${numberField(host, t("backdrop_dim"), Math.round((b?.dim ?? 0.35) * 100), (v) => patch({ dim: clamp(v, 0, 80) / 100 }), 5, 0)}
+          ${textField(host, t("backdrop_image"), b?.image ?? "", (v) => patch({ image: v || null }), { wide: true, placeholder: "/local/hintergrund.jpg" })}
+          ${hint(t("backdrop_hint"), "nf-wide")}`
+      : nothing}`;
+}
 
 /** Wall thickness, grid, north, roof shape, the weather source and its effects. */
 export function renderSettings(host: EditorHost, actions: SettingsActions): TemplateResult {
@@ -44,6 +64,7 @@ export function renderSettings(host: EditorHost, actions: SettingsActions): Temp
       ${WEATHER_EFFECTS.map((effect) => checkField(host, t(`weather_effect_${effect}` as I18nKey), current.includes(effect), (on) => set({ weather_effects: withEffect(current, effect, on) }), { wide: false }))}
       ${checkField(host, t("rain_warning"), s.rain_warning !== false, (on) => set({ rain_warning: on }))}
       ${checkField(host, t("sun_patches"), s.sun_patches !== false, (on) => set({ sun_patches: on }), { title: t("sun_patches_hint") })}
+      ${backdropFields(host, s.backdrop ?? null, (backdrop) => set({ backdrop }))}
     </div>
     ${hint(`${t("north_hint")} ${t("weather_entity_hint")}`)}
   </details>`;

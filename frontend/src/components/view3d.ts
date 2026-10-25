@@ -1,5 +1,6 @@
 // Lit wrapper around the lazily loaded 3D viewer.
 
+import { backdropStyle } from "../backdrop.ts";
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 import {
   type CarState,
@@ -72,6 +73,12 @@ export type MarkerMode = "none" | "important" | "all";
 
 
 
+/** Where the clock sits in the view. */
+export type ClockCorner = "top_left" | "top_right" | "bottom_left" | "bottom_right";
+
+const LOCK_KEY = "nextfloor.lock3d";
+
+
 export class NfView3d extends LitElement {
   static properties = {
     hass: { attribute: false },
@@ -123,6 +130,10 @@ export class NfView3d extends LitElement {
     floorThumbs: { attribute: false },
     clean: { attribute: false },
     cleanButton: { attribute: false },
+    clock: { attribute: false },
+    lockButton: { attribute: false },
+    _locked: { state: true },
+    _now: { state: true },
     roomLabels: { attribute: false },
     floorStack: { attribute: false },
     panelOpen: { attribute: false },
@@ -212,6 +223,15 @@ export class NfView3d extends LitElement {
   declare clean: boolean;
   /** Show the eye button that toggles the clean view (the host listens for "clean-toggle"). */
   declare cleanButton: boolean;
+  /** A clock in a corner of the view (null: none). */
+  declare clock: ClockCorner | null;
+  /** Show the 🔒 button that locks the camera (a wall tablet nobody should turn by accident). */
+  declare lockButton: boolean;
+  /** The camera is locked on this device. */
+  private declare _locked: boolean;
+  /** The time the clock shows, refreshed every few seconds while a clock is shown. */
+  private declare _now: number;
+  private clockTimer: ReturnType<typeof setInterval> | undefined;
   /** Room names in 3D (cards can switch them off). */
   declare roomLabels: boolean;
   /** Floors below an opened floor: dimmed, stacked (the house up to it) or hidden. */
@@ -340,6 +360,16 @@ export class NfView3d extends LitElement {
     this.floorThumbs = true;
     this.clean = false;
     this.cleanButton = false;
+    this.clock = null;
+    this.lockButton = false;
+    this._now = Date.now();
+    this._locked = (() => {
+      try {
+        return localStorage.getItem(LOCK_KEY) === "1";
+      } catch {
+        return false;
+      }
+    })();
     this.roomLabels = true;
     this.floorStack = "dim";
     this._low = false;
@@ -383,6 +413,8 @@ export class NfView3d extends LitElement {
     this.resizeObs = null;
     clearInterval(this.alertTimer);
     this.alertTimer = undefined;
+    clearInterval(this.clockTimer);
+    this.clockTimer = undefined;
     this.live = null;
     this.viewer?.dispose();
     this.viewer = null;
@@ -441,6 +473,7 @@ export class NfView3d extends LitElement {
       this.viewer.setWallMode(this.wallMode);
       this.viewer.setTheme(this.theme);
       this.viewer.setAccent(this.accent ?? null);
+      this.viewer.setNavigationLocked(this._locked);
       this.viewer.setFurnishMode(this.furnish);
       this.viewer.setSurfaceGrab(this.surfaceGrab ?? null);
       this.viewer.setFurnishTypes(this.furnishTypes ?? null);
@@ -514,6 +547,11 @@ export class NfView3d extends LitElement {
     if (changed.has("keepRoof")) v.setKeepRoof(this.keepRoof);
     if (changed.has("floorStack")) v.setFloorStack(this.floorStack);
     if (changed.has("theme")) v.setTheme(this.theme);
+    if (changed.has("_locked")) v.setNavigationLocked(this._locked);
+    if (changed.has("clock")) {
+      clearInterval(this.clockTimer);
+      this.clockTimer = this.clock ? setInterval(() => (this._now = Date.now()), 10000) : undefined;
+    }
     if (changed.has("accent")) v.setAccent(this.accent ?? null);
     if (changed.has("surfaceGrab")) v.setSurfaceGrab(this.surfaceGrab ?? null);
     if (changed.has("furnishTypes")) v.setFurnishTypes(this.furnishTypes ?? null);
@@ -1402,6 +1440,35 @@ export class NfView3d extends LitElement {
   }
 
   /** The eye: one tap hides every bar and overlay so only the stage remains, the next brings them back. */
+  private toggleLock(): void {
+    this._locked = !this._locked;
+    try {
+      localStorage.setItem(LOCK_KEY, this._locked ? "1" : "0");
+    } catch {
+      // without storage the lock lasts until the page reloads
+    }
+  }
+
+  private renderLock() {
+    if (!this.lockButton || !this.hass || this.clean) return nothing;
+    const label = translate(this.hass, this._locked ? "lock3d_off" : "lock3d_on");
+    return html`<button class="nf-lock3d ${this._locked ? "nf-lock3d-on" : ""}" title=${label} aria-label=${label} aria-pressed=${this._locked} @click=${() => this.toggleLock()}>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="11" width="14" height="9" rx="2" />
+        ${this._locked ? svg`<path d="M8 11V8a4 4 0 0 1 8 0v3" />` : svg`<path d="M8 11V8a4 4 0 0 1 7.5-2" />`}
+      </svg>
+    </button>`;
+  }
+
+  private renderClock() {
+    if (!this.clock || !this.hass) return nothing;
+    const locale = this.hass.language ?? navigator.language;
+    const now = new Date(this._now);
+    const time = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(now);
+    const day = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(now);
+    return html`<div class="nf-clock nf-clock-${this.clock}" aria-hidden="true"><b>${time}</b><span>${day}</span></div>`;
+  }
+
   private renderEye() {
     // while the search is open its field takes the eye's place (#220)
     if (!this.cleanButton || !this.hass || (this._find !== null && !this.clean)) return nothing;
@@ -1681,14 +1748,14 @@ export class NfView3d extends LitElement {
     const sky = this._sky;
     const mix = (a: number[], b: number[]) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * sky)).join(",")})`;
     const stage = STAGE[this.theme] ?? STAGE.neon;
-    const style = `--nf-sky:${mix(stage.night[0], stage.day[0])};--nf-ground:${mix(stage.night[1], stage.day[1])}`;
+    const style = `--nf-sky:${mix(stage.night[0], stage.day[0])};--nf-ground:${mix(stage.night[1], stage.day[1])}` + backdropStyle(this.building?.settings.backdrop);
     return html`<div
       class="nf-stage ${this.roomLabels ? "" : "nf-no-room-names"} ${this._low ? "nf-low" : ""} ${this.panelOpen ? "nf-panel-open" : ""} ${this._alerts.length ? "nf-has-alerts" : ""} ${this._narrowStage ? "nf-narrow" : ""}"
       style=${style}
     >
       ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()} ${this.renderMapCredit()}
       ${this.renderAlerts()} ${this.clean ? nothing : html`${this.renderThumbs()} ${this.renderScenes()} ${this.renderFind()} ${this.renderCentral()}`} ${this.renderSwipe()}
-      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()}
+      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()} ${this.renderLock()} ${this.renderClock()}
       ${this.showStats && this._stats
         ? html`<span class="nf-stats"
             ><b>${this._stats.fps ? translate(this.hass, "stats_fps", { fps: this._stats.fps, ms: this._stats.worstMs }) : translate(this.hass, "stats_idle")}</b>
@@ -2139,6 +2206,67 @@ export class NfView3d extends LitElement {
         backdrop-filter: none;
       }
       /* the eye sits beside the search button; alone in the corner once the view is clean */
+      .nf-lock3d {
+        position: absolute;
+        left: 100px;
+        bottom: calc(10px + var(--nf-bottom-inset, 0px));
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border-radius: 50%;
+        border: 1px solid rgba(160, 240, 255, 0.35);
+        background: rgba(8, 16, 34, 0.7);
+        color: var(--nf-text);
+        cursor: pointer;
+        z-index: 4;
+      }
+      .nf-lock3d-on {
+        color: #041018;
+        background: var(--nf-accent);
+        border-color: var(--nf-accent);
+      }
+      .nf-clock {
+        position: absolute;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        padding: 8px 14px;
+        border-radius: 16px;
+        background: rgba(8, 16, 34, 0.55);
+        color: var(--nf-text);
+        pointer-events: none;
+        line-height: 1.1;
+      }
+      .nf-clock b {
+        font-size: clamp(28px, 6cqmin, 64px);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+      }
+      .nf-clock span {
+        font-size: clamp(12px, 1.8cqmin, 18px);
+        color: var(--nf-muted);
+      }
+      .nf-clock-top_left {
+        left: 16px;
+        top: 16px;
+      }
+      .nf-clock-top_right {
+        right: 16px;
+        top: 16px;
+        align-items: flex-end;
+      }
+      .nf-clock-bottom_left {
+        left: 16px;
+        bottom: calc(60px + var(--nf-bottom-inset, 0px));
+      }
+      .nf-clock-bottom_right {
+        right: 16px;
+        bottom: calc(60px + var(--nf-bottom-inset, 0px));
+        align-items: flex-end;
+      }
       .nf-eye {
         position: absolute;
         left: 56px;

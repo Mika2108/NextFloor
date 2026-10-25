@@ -202,6 +202,25 @@ export const panelStyles = css`
     gap: 2px;
     padding: 0 4px;
   }
+  .nf-clock-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 4px 0 10px;
+    font-size: 14px;
+  }
+  .nf-clock-pick select {
+    border: 0;
+    background: none;
+    color: var(--nf-text);
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 2px;
+    cursor: pointer;
+  }
+  .nf-clock-pick option {
+    color: #111;
+  }
   .nf-accent-pick input[type="color"] {
     width: 22px;
     height: 22px;

@@ -89,6 +89,7 @@ export class NextFloorCardEditor extends LitElement {
     const hideAfter = [0, 10, 30, 60, 120].map((n) => ({ value: n, text: n ? f.t("card_hide_after_s", { n }) : f.t("card_idle_off") }));
     return html`${checkbox(f, on, "card_controls", "card_controls_hint", (checked) => f.set("controls", checked ? true : undefined))}
     ${checkbox(f, f.value.central, "card_central", "card_central_hint", (checked) => f.set("central", checked ? undefined : false))}
+    ${checkbox(f, f.value.lock_button !== false, "card_lock_button", undefined, (checked) => f.set("lock_button", checked ? undefined : false))}
     ${flagOption(f, "marker_names", "card_marker_names", "card_marker_names_hint")} ${flagOption(f, "controls_hidden", "card_controls_hidden", "card_controls_hidden_hint")}
     ${numberChoice(f, "controls_hide_after", "card_controls_hide_after", hideAfter)}
     ${on
@@ -202,7 +203,8 @@ export class NextFloorCardEditor extends LitElement {
             }}
           />
         </label>
-        ${choice(f, "theme", "theme", [["neon", "theme_neon"], ["blueprint", "theme_blueprint"], ["day", "theme_day"]], v.theme)}
+        ${choice(f, "theme", "theme", [["auto", "theme_auto"], ["neon", "theme_neon"], ["blueprint", "theme_blueprint"], ["day", "theme_day"]], v.theme)}
+        ${choice(f, "clock", "clock", [["none", "clock_none"], ["top_left", "clock_top_left"], ["top_right", "clock_top_right"], ["bottom_left", "clock_bottom_left"], ["bottom_right", "clock_bottom_right"]], v.clock ?? "none")}
         <label class="field"
           >${f.t("accent")}
           <input type="color" .value=${this._config.accent ?? "#37e0ff"} @input=${(e: Event) => f.set("accent", (e.target as HTMLInputElement).value)} />

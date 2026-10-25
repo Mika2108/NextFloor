@@ -176,9 +176,12 @@ export function openingState(hass: HomeAssistant, e: OpeningEntities, type: Open
     return { open, open2: positionOf(e.contact2) === "open" ? 1 : 0, tilt: 0, tilt2: 0, cover, sensed: leaf !== null || cover !== null, unlocked: isUnlocked(hass, e.lock) };
   }
   if (type === "garage") {
-    // a garage door without a cover shows its contact: open or closed
+    // a garage door without a cover shows its contact: open or closed; so does one whose cover cannot tell (a remote without
+    // feedback stays unknown)
     const sensed = cover !== null || isKnown(e.contact);
-    return { open: 0, open2: 0, tilt: 0, tilt2: 0, cover: cover ?? (isKnown(e.contact) ? (isOn(e.contact) ? 0 : 1) : 1), sensed };
+    const coverTells = reportedPosition(hass, e.position) !== null || isKnown(e.cover);
+    const fromContact = isKnown(e.contact) ? (isOn(e.contact) ? 0 : 1) : null;
+    return { open: 0, open2: 0, tilt: 0, tilt2: 0, cover: (coverTells ? cover : (fromContact ?? cover)) ?? 1, sensed };
   }
 
   // a window: the second leaf stays closed without a sensor and tilts like the first

@@ -2,13 +2,14 @@
 
 import { html, nothing, type TemplateResult } from "lit";
 import { formatNumber, type I18nKey } from "../../../i18n.ts";
-import { ROOF_SHAPES, type RoofSection, type RoofShape, type RoofWindow } from "../../../model.ts";
+import { ROOF_SHAPES, type RoofEnd, type RoofSection, type RoofShape, type RoofWindow } from "../../../model.ts";
 import { ridgeHeight, sectionFloor } from "../../../roof-sections.ts";
 import { proposeWindow, roofFaces } from "../../../solar.ts";
 import { entityOptions, isBinary, isNumeric } from "../entities.ts";
 import { actions, checkField, entityField, hint, numberField, selectField, textField, toThousandths } from "../fields.ts";
 import { sectionNumber } from "../ops/roof.ts";
 import { choiceButtons, faceLabel, floorButtons, lockButton, type RoofPanelDeps } from "./roof-parts.ts";
+import type { EditorHost } from "../host.ts";
 
 const heading = (title: string, lock: TemplateResult | typeof nothing) => html`<div class="nf-h3row"><h3>${title}</h3>${lock}</div>`;
 const backButton = (label: string, onClick: () => void) => html`<button class="nf-btn nf-back" @click=${onClick}>‹ ${label}</button>`;
@@ -45,7 +46,8 @@ function sectionForm(deps: RoofPanelDeps, section: RoofSection): TemplateResult 
     <section>
       ${floorButtons(deps)}
       ${heading(`${section.dormer ? t("roof_dormer") : t("roof_section")} ${sectionNumber(host.doc.settings.roof.sections ?? [], section.id)}`, host.admin ? lock : nothing)}
-      ${selectField(host, t("roof_shape"), section.shape, shapeChoices, (shape) => set({ shape }), { wide: true })}
+      ${selectField(host, t("roof_shape"), section.shape, shapeChoices, (shape) => set({ shape, ...(shape === "gable" || shape === "hip" || shape === "halfhip" ? {} : { ends: null }) }), { wide: true })}
+      ${section.shape === "gable" || section.shape === "hip" || section.shape === "halfhip" ? endFields(host, section, set) : nothing}
       ${flat ? nothing : choiceButtons(host, [["x", t("roof_axis_x")], ["z", t("roof_axis_z")]] as const, section.axis, (axis) => set({ axis }))}
       ${checkField(host, t("roof_open"), !!section.open, (open) => set({ open }), { title: t("roof_open_hint") })}
       <div class="nf-form">
@@ -139,6 +141,19 @@ function windowList(deps: RoofPanelDeps): TemplateResult {
 }
 
 /** The roof tool's panel: a window's form, a section's form, or the overview of all sections and windows. */
+/** A gable, hip or half-hip section with its own shape at each end of the ridge. */
+function endFields(host: EditorHost, section: RoofSection, set: (patch: Partial<RoofSection>) => void): TemplateResult {
+  const t = host.t;
+  const own = section.shape as RoofEnd;
+  const [start, end] = section.ends ?? [own, own];
+  const choices: [RoofEnd, string][] = (["gable", "hip", "halfhip"] as const).map((e) => [e, t(`roof_shape_${e}` as I18nKey)]);
+  const choose = (pair: [RoofEnd, RoofEnd]) => set({ ends: pair[0] === own && pair[1] === own ? null : pair });
+  return html`<div class="nf-form">
+    ${selectField(host, t("roof_end_start"), start, choices, (v) => choose([v, end]))}
+    ${selectField(host, t("roof_end_end"), end, choices, (v) => choose([start, v]))}
+  </div>`;
+}
+
 export function renderRoofPanel(deps: RoofPanelDeps): TemplateResult {
   const { host, roof } = deps;
   const settings = host.doc.settings.roof;

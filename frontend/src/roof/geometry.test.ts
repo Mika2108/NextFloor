@@ -98,3 +98,11 @@ test("a lean-to has no overhang where it meets the taller house", () => {
   assert.equal(ov.u0, 0.5);
   assert.equal(ov.u1, 0.5);
 });
+
+test("a section can have a hip at one end and an upright gable at the other", () => {
+  const g = sectionGeometry(gableSection({ ends: ["hip", "gable"] }), none);
+  assert.equal(g.faces.length, 3, "two slopes and the hip's triangle");
+  assert.equal(g.endProfiles?.[0], null, "no gable wall under the hip");
+  assert.ok(g.endProfiles?.[1] && g.endProfiles[1].length === 3);
+  assert.equal(g.ridges.length, 3, "the ridge and the two hip lines");
+});

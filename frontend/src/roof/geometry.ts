@@ -1,7 +1,7 @@
 // The roof planes of a section as polygons in (u, v, height): what the 3D view builds, the editor draws the ridges of,
 // and the attic walls end under.
 
-import { pointInPolygon, polygonArea, type Building, type RoofSection, type Vec2 } from "../model.ts";
+import { pointInPolygon, polygonArea, type Building, type RoofEnd, type RoofSection, type Vec2 } from "../model.ts";
 import { gradient, mansardParts, sectionFrame, sectionProfile } from "./frame.ts";
 
 /** A point of a roof plane: along the ridge (u), across (v), and its height. */
@@ -14,6 +14,8 @@ export interface SectionGeometry {
   ridges: [Q, Q][];
   /** The profile of the gable ends, or null when the ends are hipped. */
   gable: [number, number][] | null;
+  /** A section with a different end at each end: the profile under each end (start u0, end u1), null under a hip. */
+  endProfiles?: [[number, number][] | null, [number, number][] | null];
 }
 
 /** Overhang per edge: along the ridge at both ends (u0, u1) and across at both sides (a, b). */
@@ -40,6 +42,47 @@ export function sectionGeometry(s: RoofSection, overhang: SectionOverhang): Sect
   const b0 = onRoof(U0, w + ovB);
   const [gradA, gradB] = [gradient(s.pitch_a), gradient(s.pitch_b)];
   const ridgeAt = (u: number): Q => [u, profile.vr, profile.rh];
+
+  // a gable, hip or half-hip with its own shape at each end (a hip at one end, an upright gable at the other)
+  if (s.ends && (s.shape === "gable" || s.shape === "hip" || s.shape === "halfhip")) {
+    const halfLength = (frame.u1 - frame.u0) / 2;
+    const run = Math.min(halfLength, Math.min(profile.vr, w - profile.vr) || w / 2);
+    const eaveLow = Math.min(profile.y(0), profile.y(w));
+    const hipY = eaveLow + (profile.rh - eaveLow) * 0.55;
+    const hipVA = gradA > 1e-6 ? Math.min(profile.vr, (hipY - s.eave_a) / gradA) : profile.vr;
+    const hipVB = gradB > 1e-6 ? Math.max(profile.vr, w - (hipY - s.eave_b) / gradB) : profile.vr;
+    const hipRun = Math.min(halfLength - 0.1, (profile.rh - hipY) / Math.max(0.2, gradA));
+    const gableProfile: [number, number][] = [[0, profile.y(0)], [profile.vr, profile.rh], [w, profile.y(w)]];
+    const halfProfile: [number, number][] = [[0, profile.y(0)], [hipVA, hipY], [hipVB, hipY], [w, profile.y(w)]];
+    // per end: the points above the eave corner on side a and b, the ridge's end, and the profile under it
+    const end = (kind: RoofEnd, edge: number, inward: number) => {
+      if (kind === "hip") return { upA: [] as Q[], upB: [] as Q[], ridge: ridgeAt(edge === U0 ? frame.u0 + run * inward : frame.u1 - run * inward), profile: null };
+      if (kind === "halfhip") {
+        const ridge = ridgeAt(edge === U0 ? frame.u0 + hipRun : frame.u1 - hipRun);
+        return { upA: [[edge, hipVA, hipY] as Q], upB: [[edge, hipVB, hipY] as Q], ridge, profile: halfProfile };
+      }
+      return { upA: [] as Q[], upB: [] as Q[], ridge: ridgeAt(edge), profile: gableProfile };
+    };
+    const first = end(s.ends[0], U0, 1);
+    const last = end(s.ends[1], U1, 1);
+    const faces: Q[][] = [
+      [a0, a1, ...last.upA, last.ridge, first.ridge, ...[...first.upA].reverse()],
+      [first.ridge, last.ridge, ...[...last.upB].reverse(), b1, b0, ...first.upB],
+    ];
+    const ridges: [Q, Q][] = [[first.ridge, last.ridge]];
+    for (const [e, a, b] of [[first, a0, b0], [last, a1, b1]] as const) {
+      if (e.profile === null) {
+        faces.push(e === first ? [b0, a0, e.ridge] : [a1, b1, e.ridge]);
+        ridges.push([a, e.ridge], [b, e.ridge]);
+      } else if (e.upA.length) {
+        faces.push(e === first ? [e.upB[0], e.upA[0], e.ridge] : [e.upA[0], e.upB[0], e.ridge]);
+        ridges.push([e.upA[0], e.ridge], [e.upB[0], e.ridge]);
+      }
+    }
+    const rimEnd = (e: typeof first) => (e.profile === null ? [] : e.upA.length ? [e.upA[0], e.upB[0]] : [e.ridge]);
+    const rim: Q[] = [a0, a1, ...rimEnd(last), b1, b0, ...[...rimEnd(first)].reverse()];
+    return { faces, rim, ridges, gable: gableProfile, endProfiles: [first.profile, last.profile] };
+  }
 
   switch (s.shape) {
     case "pent":

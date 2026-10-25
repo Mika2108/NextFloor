@@ -51,10 +51,11 @@ export function window(c: Ctx): void {
   bar(W - fw, W, S, T);
   bar(fw, W - fw, S, lowerBar);
   bar(fw, W - fw, T - fw, T);
-  // a window board inside and a sill outside
-  if (S > 0.3) {
-    splitBox(c.frames, frame, { x0: -0.04, x1: W + 0.04, n0: mid + fd, n1: info.faceRoom + 0.07, y0: S - 0.03, y1: S }, sillColor, frameTop, fold);
-    if (info.exterior) splitBox(c.frames, frame, { x0: -0.03, x1: W + 0.03, n0: -info.faceOut - 0.06, n1: mid - fd, y0: S - 0.04, y1: S - 0.02 }, sillColor, frameTop, fold);
+  // a window board inside and a sill outside (automatic: both above 30 cm; or as chosen for this window)
+  const boards = info.opening.sill_boards ?? "auto";
+  if (boards !== "none" && (boards !== "auto" || S > 0.3)) {
+    if (boards !== "outside") splitBox(c.frames, frame, { x0: -0.04, x1: W + 0.04, n0: mid + fd, n1: info.faceRoom + 0.07, y0: S - 0.03, y1: S }, sillColor, frameTop, fold);
+    if (info.exterior && boards !== "inside") splitBox(c.frames, frame, { x0: -0.03, x1: W + 0.03, n0: -info.faceOut - 0.06, n1: mid - fd, y0: S - 0.04, y1: S - 0.02 }, sillColor, frameTop, fold);
   }
 
   // sashes rotate into the room around their hinge, or tilt around their bottom edge; a double window (or French door) has

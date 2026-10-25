@@ -118,6 +118,8 @@ export interface Opening {
   confirm?: boolean;
   cover: EntityRef;
   contact: EntityRef;
+  /** Windows: the board inside and the sill outside – automatic (both when the sill is above 30 cm), none, or only one of them. */
+  sill_boards?: "auto" | "none" | "inside" | "outside" | null;
   /** Windows below the ground: their light well (null = by itself when the sill lies below the ground, false = none, true = always). */
   light_well?: boolean | null;
   /** Windows: false leaves this window out of the rain warning (a window under a roof or an awning). */
@@ -348,7 +350,12 @@ export interface RoofSection {
   locked?: boolean;
   /** A canopy (terrace roof, carport): posts and beams instead of walls, a see-through roof. */
   open?: boolean;
+  /** Gable, hip and half-hip sections: their own shape at the start and at the end of the ridge (null: both as the shape says). */
+  ends?: [RoofEnd, RoofEnd] | null;
 }
+
+/** The end of a ridge: an upright gable, a hip, or a half-hip. */
+export type RoofEnd = "gable" | "hip" | "halfhip";
 
 export interface RoofSettings {
   type: RoofType;

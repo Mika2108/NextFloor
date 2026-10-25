@@ -19,6 +19,8 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 - **Ask the house**: 🎙 asks NextFloor by voice (through your own Assist pipeline's speech-to-text, nothing leaves your Home Assistant) or by typing. It understands "show the kitchen", "where is the washing machine?", "what's open?", "which lights are on?" and "all lights off" in German and English, flies there and answers aloud; anything else goes on to Home Assistant's Assist. Cards turn it on with `voice: true`.
 - **`nextfloor.ask` service and Assist sentences**: automations and voice satellites can ask the same questions (the service returns the answer, and every open NextFloor view flies to a room it shows). *Editor → Settings → Add Assist sentences* writes `custom_sentences/…/nextfloor.yaml` only when you press it.
 - **Light wells**: an outer window whose sill lies below the ground (a cellar window) gets a concrete light well with a grating at ground level by itself; *Light well in front* in the window's form switches it off.
+- **Different end at each end of a roof**: gable, hip and half-hip sections can take their own shape at the start and at the end of the ridge (a hip at one end, an upright gable at the other).
+- **Sill and board per window**: automatic, none, inside only or outside only.
 - **Plan format and AI import**: [docs/plan-format.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/plan-format.md) describes the plan file, with a ready prompt that lets an AI turn a picture of your floor plan into a plan for *Backup → Import*.
 
 ### Fixed

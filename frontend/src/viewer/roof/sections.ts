@@ -77,6 +77,7 @@ export function pushSection(
   let rim: Q[] = [];
   let ridges: [Q, Q][] = [];
   let gableProfile: [number, number][] | null = null;
+  let endProfiles: [[number, number][] | null, [number, number][] | null] | null = null;
   if (s.shape === "flat" || s.shape === "parapet") {
     const y = s.eave_a - yOff;
     const parapet = s.shape === "parapet";
@@ -111,6 +112,7 @@ export function pushSection(
     rim = geometry.rim;
     ridges = geometry.ridges;
     gableProfile = geometry.gable;
+    endProfiles = geometry.endProfiles ?? null;
   }
 
   // a canopy has thin see-through panels; a closed roof its tiles with their thickness below
@@ -140,9 +142,13 @@ export function pushSection(
   const base = s.base;
   if (attic) return;
   if (gableProfile) {
-    const polygon = profileAbove(gableProfile, base - THICK);
     const ends = frontEnd === null ? [frame.u0, frame.u1] : [frontEnd === 0 ? frame.u0 : frame.u1];
-    if (polygon.length >= 3) for (const u of ends) fan(polygon.map(([v, y]) => at(u, v, y)), gableColor);
+    for (const u of ends) {
+      // with an own shape per end, each end has its own wall under it (none under a hip)
+      const own = endProfiles ? endProfiles[u === frame.u0 ? 0 : 1] : gableProfile;
+      const polygon = own ? profileAbove(own, base - THICK) : [];
+      if (polygon.length >= 3) fan(polygon.map(([v, y]) => at(u, v, y)), gableColor);
+    }
   }
   // ... and the knee walls along the eaves where the roof starts above the walls (the high back wall of a pent roof)
   if (s.shape !== "flat" && s.shape !== "parapet") {

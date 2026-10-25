@@ -101,6 +101,8 @@ The card's kiosk section returns to the start view after idle time, dims at nigh
 
 Under *Backup* in the editor: **Export** / **Import** for the plan, **Share as template** (without personal device data), **Back up everything** (plan, pictures, packs in one file) and **Restore a full backup**. Back up before big changes.
 
+A plan can also be written by hand, converted from another program or drawn by an AI from a picture of your floor plan: the format and a ready prompt are in [plan-format.md](plan-format.md).
+
 ## Troubleshooting
 
 - **A device is missing from the room:** the room needs an area, and the device must belong to it (device or entity). Otherwise use *Other areas* or *No area*.

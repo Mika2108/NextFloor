@@ -7,6 +7,11 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 ### Added
 
 - **Less rain and snow on a card** by @Mika2108 (#18): the card option *Amount of rain and snow* (`weather_density`, 15 to 100 %) thins out rain, hail and snow, so a wall tablet still shows the house in heavy weather. Clouds, fog and lightning stay as the weather says.
+- **Plan format and AI import**: [docs/plan-format.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/plan-format.md) describes the plan file, with a ready prompt that lets an AI turn a picture of your floor plan into a plan for *Backup → Import*.
+
+### Fixed
+
+- **Doors and windows of an imported plan can be selected again**: a plan written by hand or by an AI without ids (or with repeated ones) gets an id for every room, door, window, piece of furniture and outdoor area, so they can be picked and changed (e.g. into a garage door). Missing sizes, the plan version and the settings are filled in instead of refusing the file.
 
 ## 0.13.0
 

@@ -145,6 +145,8 @@ Der Kiosk-Abschnitt der Karte kehrt nach einer Ruhezeit zur Startansicht zurück
 
 Unter *Sicherung* im Editor: **Exportieren** / **Importieren** für den Plan, **Als Vorlage teilen** (ohne persönliche Geräte), **Alles sichern** (Plan, Bilder, Packs in einer Datei) und **Vollsicherung wiederherstellen**. Vor größeren Änderungen sichern.
 
+Ein Plan lässt sich auch von Hand schreiben, aus einem anderen Programm umwandeln oder von einer KI aus einem Bild des Grundrisses zeichnen: Format und fertige Anweisung stehen in [plan-format.md](plan-format.md) (Englisch).
+
 ## Probleme und Lösungen
 
 - **Ein Gerät fehlt im Raum:** Der Raum braucht einen Bereich, und das Gerät muss dazugehören (Gerät oder Entity). Sonst *Andere Bereiche* oder *Ohne Bereich* nutzen.

@@ -39,7 +39,8 @@ export function exportFile(building: Building, shareable: boolean): ExportFile {
   };
 }
 
-const looksLikePlan = (b: Building | undefined): b is Building => !!b && b.version === 1 && Array.isArray(b.floors) && !!b.settings;
+// a plan written by hand or by an AI may leave out the version and the settings; normalizeBuilding fills them in
+const looksLikePlan = (b: Building | undefined): b is Building => !!b && (b.version === 1 || b.version === undefined) && Array.isArray(b.floors) && b.floors.every((f) => !!f && typeof f === "object");
 
 /** Reads an export file (or a bare building). Throws Error("not_json") or Error("not_plan"). */
 export function parseExport(text: string): Building {

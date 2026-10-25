@@ -57,3 +57,42 @@ test("stored picture ids come from backgrounds and screens, once, never URLs or 
   b.floors[0].furniture[0].pictures!.push({ entity: "", state: "", image: "abc123" });
   assert.deepEqual(storedImageIds(b).sort(), ["abc123", "bg1"]);
 });
+
+test("a hand- or AI-written plan without ids gets one per piece, so its doors and windows can be selected", () => {
+  const plan = {
+    floors: [
+      {
+        name: "Ground",
+        elevation: 0,
+        height: 2.6,
+        rooms: [{ name: "Garage", points: [[0, 0], [6, 0], [6, 4], [0, 4]] }],
+        openings: [
+          { room_id: "r1", edge: 0, offset: 2, type: "door" },
+          { id: "o", room_id: "r1", edge: 1, offset: 1, type: "window", width: 1 },
+          { id: "o", room_id: "r1", edge: 2, offset: 3, type: "garage_door" },
+        ],
+        furniture: [],
+        placements: [],
+      },
+    ],
+  };
+  const floor = parseExport(JSON.stringify(plan)).floors[0];
+  const ids = floor.openings.map((o) => o.id);
+  assert.equal(new Set(ids).size, 3);
+  assert.ok(ids.every((id) => typeof id === "string" && id.length > 0));
+  assert.equal(floor.openings[1].id, "o", "the first of a repeated id keeps it");
+  assert.ok(floor.rooms[0].id);
+  assert.ok(floor.openings[0].width > 0 && floor.openings[0].height > 0);
+  assert.equal(floor.openings[2].type, "door", "an unknown kind becomes a door the form can change");
+});
+
+test("the smallest plan in docs/plan-format.md imports", async () => {
+  const { readFileSync } = await import("node:fs");
+  const doc = readFileSync(new URL("../../docs/plan-format.md", import.meta.url), "utf8");
+  const json = doc.split("```json\n")[1].split("```")[0];
+  const b = parseExport(json);
+  assert.equal(b.floors[0].rooms.length, 2);
+  assert.deepEqual(b.floors[0].openings.map((o) => o.type), ["door", "window", "garage"]);
+  assert.equal(b.floors[0].openings[2].width, 2.5);
+  assert.equal(b.floors[0].rooms[0].floor_material, "wood");
+});

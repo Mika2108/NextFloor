@@ -1150,11 +1150,16 @@ export function openingPreset(o: Pick<Opening, "type" | "leaves" | "sill" | "sty
 export function normalizeBuilding(b: Building): Building {
   b.energy = { ...DEFAULT_ENERGY, ...(b.energy ?? {}) };
   b.presence = b.presence ?? [];
+  b.version = 1;
   b.settings = { ...DEFAULT_SETTINGS, ...b.settings, roof: { ...DEFAULT_ROOF, ...(b.settings?.roof ?? {}) } };
+  b.floors.forEach((f, index) => {
+    const blank = newFloor(f.id, f.name ?? `Floor ${index + 1}`, f.elevation ?? index * 2.8);
+    for (const key of Object.keys(blank) as (keyof Floor)[]) if (f[key] === undefined) (f as unknown as Record<string, unknown>)[key] = blank[key];
+  });
   for (const f of b.floors) {
     f.outdoor = f.outdoor ?? [];
     f.walls = f.walls ?? [];
-    f.rooms = f.rooms.map((r) => ({ ...r, panel: r.panel ?? [] }));
+    f.rooms = f.rooms.map((r) => ({ ...r, name: r.name ?? "", area_id: r.area_id ?? null, floor_material: r.floor_material ?? "wood", panel: r.panel ?? [] }));
     f.ha_floor = f.ha_floor ?? null;
     f.placements = f.placements.map((p) => ({ ...p, mount: p.mount ?? null, rotation: p.rotation ?? 0 }));
     f.furniture = f.furniture.map((m) => ({ ...m, entity: m.entity ?? null, power: m.power ?? null }));
@@ -1175,6 +1180,12 @@ export function normalizeBuilding(b: Building): Building {
     }
     f.openings = f.openings.map((o) => ({
       ...o,
+      type: (["door", "window", "garage"] as const).includes(o.type) ? o.type : "door",
+      edge: Number.isInteger(o.edge) ? o.edge : 0,
+      offset: Number.isFinite(o.offset) ? o.offset : 0.5,
+      width: Number.isFinite(o.width) && o.width > 0 ? o.width : o.type === "garage" ? 2.5 : o.type === "window" ? 1.2 : 0.9,
+      height: Number.isFinite(o.height) && o.height > 0 ? o.height : o.type === "window" ? 1.3 : o.type === "garage" ? 2.1 : 2.05,
+      sill: Number.isFinite(o.sill) ? o.sill : o.type === "window" ? 0.9 : 0,
       hinge: o.hinge ?? "left",
       leaves: o.leaves ?? 1,
       swing: o.swing ?? "in",
@@ -1185,7 +1196,27 @@ export function normalizeBuilding(b: Building): Building {
       tilt: o.tilt ?? null,
     }));
   }
+  uniqueIds(b);
   return b;
+}
+
+/** Hand-written or AI-written plans often leave ids out or repeat them; the editor selects by id, so every piece needs its own. */
+function uniqueIds(b: Building): void {
+  const fix = <T extends { id: string }>(list: T[], prefix: string) => {
+    const seen = new Set<string>();
+    for (const item of list) {
+      if (typeof item.id !== "string" || !item.id || seen.has(item.id)) item.id = uid(prefix);
+      seen.add(item.id);
+    }
+  };
+  fix(b.floors, "floor");
+  for (const f of b.floors) {
+    // rooms are referenced by openings and walls, so only missing room ids are filled in
+    for (const r of f.rooms) if (typeof r.id !== "string" || !r.id) r.id = uid("room");
+    fix(f.openings, "op");
+    fix(f.furniture, "furn");
+    fix(f.outdoor, "out");
+  }
 }
 
 export function uid(prefix: string): string {

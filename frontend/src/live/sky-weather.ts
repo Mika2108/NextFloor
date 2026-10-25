@@ -100,13 +100,13 @@ export function readSkyWeather(hass: HomeAssistant, entity: string | null): SkyW
   return w;
 }
 
-/** Keeps only the effects chosen in the settings (null = the default set: all but fog). */
 /** Fewer drops and flakes: rain, hail and snow scaled by a density (0.1 … 1); clouds, fog and lightning stay. */
 export function withDensity(w: SkyWeather, density: number | null | undefined): SkyWeather {
   const d = density == null || !Number.isFinite(density) ? 1 : Math.min(1, Math.max(0.1, density));
   return d === 1 ? w : { ...w, rain: w.rain * d, hail: w.hail * d, snow: w.snow * d };
 }
 
+/** Keeps only the effects chosen in the settings (null = the default set: all but fog). */
 export function chosenEffects(w: SkyWeather, effects: readonly WeatherEffect[] | null | undefined): SkyWeather {
   const on = new Set<string>(effects ?? ["rain", "snow", "clouds", "lightning", "sky"]);
   return {

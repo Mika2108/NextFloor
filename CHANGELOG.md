@@ -2,6 +2,12 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## Unreleased
+
+### Added
+
+- **Less rain and snow on a card** by @Mika2108 (#18): the card option *Amount of rain and snow* (`weather_density`, 15 to 100 %) thins out rain, hail and snow, so a wall tablet still shows the house in heavy weather. Clouds, fog and lightning stay as the weather says.
+
 ## 0.13.0
 
 ### Added

@@ -1993,7 +1993,8 @@ export class NextFloorViewer {
   }
 
   private buildOpenings(fv: FloorView): void {
-    const parts = buildOpeningParts(fv.geo.openings, fv.openings, Math.min(fv.floor.cut_height, fv.floor.height));
+    // the ground in this floor's own heights (it lies just below the ground floor's slab)
+    const parts = buildOpeningParts(fv.geo.openings, fv.openings, Math.min(fv.floor.cut_height, fv.floor.height), -0.2 - fv.floor.elevation);
     fv.frameTris = parts.frameTris;
     fv.glassTris = parts.glassTris;
     fv.blindTris = parts.blindTris;

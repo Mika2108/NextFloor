@@ -399,6 +399,7 @@ export class NfEditor extends LitElement {
       setPreset: (opening, preset) => this.setOpeningPreset(opening, preset),
       remove: () => this.deleteOpening(),
       isExterior: (opening) => this.openingIsExterior(opening),
+      isBelowGround: (opening) => opening.type === "window" && this.openingIsExterior(opening) && (this.floor?.elevation ?? 0) + opening.sill < -0.22,
       lockButton: this.fixButton("opening", this.sel.opening ?? ""),
     };
   }

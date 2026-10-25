@@ -118,6 +118,8 @@ export interface Opening {
   confirm?: boolean;
   cover: EntityRef;
   contact: EntityRef;
+  /** Windows below the ground: their light well (null = by itself when the sill lies below the ground, false = none, true = always). */
+  light_well?: boolean | null;
   /** Windows: false leaves this window out of the rain warning (a window under a roof or an awning). */
   rain_warning?: boolean;
   /** Doors: a smart lock (lock.*). A tap on the door locks or unlocks it after asking; while unlocked, its free edge glows. */

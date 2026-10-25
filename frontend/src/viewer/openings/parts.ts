@@ -8,10 +8,11 @@ import { GeoBuffer } from "../geo.ts";
 import { blind } from "./blinds.ts";
 import type { Ctx } from "./context.ts";
 import { doorFrame, doorLeaves, garageDoor } from "./doors.ts";
+import { lightWell, needsLightWell } from "./light-well.ts";
 import { CLOSED, type OpeningParts, type OpeningState, type TriRange } from "./types.ts";
 import { glassWall, window } from "./windows.ts";
 
-export function buildOpeningParts(infos: readonly OpeningInfo[], states: ReadonlyMap<string, OpeningState>, cut: number): OpeningParts {
+export function buildOpeningParts(infos: readonly OpeningInfo[], states: ReadonlyMap<string, OpeningState>, cut: number, ground = -Infinity): OpeningParts {
   const frames = new GeoBuffer();
   const glass = new GeoBuffer();
   const blinds = new GeoBuffer(true);
@@ -42,6 +43,8 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
     else if (type === "garage") garageDoor(ctx);
     else if (style === "glass_wall") glassWall(ctx);
     else window(ctx);
+    // a cellar window below the ground gets its light well
+    if (needsLightWell(ctx, ground)) lightWell(ctx, ground);
     blind(ctx);
     frameTris.push({ id: info.opening.id, start: starts.frames, end: frames.count });
     glassTris.push({ id: info.opening.id, start: starts.glass, end: glass.count });

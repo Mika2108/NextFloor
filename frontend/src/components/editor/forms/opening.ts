@@ -16,6 +16,8 @@ export interface OpeningActions {
   remove(): void;
   /** Whether the opening is in an outer wall, which decides the automatic style of a door. */
   isExterior(opening: Opening): boolean;
+  /** Whether a window's sill lies below the ground (a cellar window, which gets a light well). */
+  isBelowGround?(opening: Opening): boolean;
   lockButton: TemplateResult | typeof nothing;
 }
 
@@ -178,6 +180,7 @@ export function renderOpeningForm(host: EditorHost, o: Opening, actions: Opening
       ${selectField(host, t("opening_mark"), o.mark === "closed" ? "closed" : "", markChoices, (v) => at({ mark: v === "closed" ? "closed" : null }), { wide: true, title: t("opening_mark_hint") })}
       ${garage ? nothing : selectField(host, t(o.leaves === 2 ? "main_leaf" : "hinge"), o.hinge, hingeChoices, (hinge) => at({ hinge }), { wide: true })}
       ${window ? checkField(host, t("opening_rain_warning"), o.rain_warning !== false, (on) => at({ rain_warning: on ? undefined : false }), { wide: true }) : nothing}
+      ${window && actions.isBelowGround?.(o) ? checkField(host, t("opening_light_well"), o.light_well !== false, (on) => at({ light_well: on ? null : false }), { wide: true }) : nothing}
       ${blindFields(host, o, actions, lists)}
       ${window
         ? html`${o.leaves === 2 ? html`<h4 class="nf-lib-head nf-wide">${t("leaf_main")}</h4>` : nothing}${sashSensors(host, o, 1, actions, lists)}

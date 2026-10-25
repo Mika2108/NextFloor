@@ -417,6 +417,7 @@ export class NextFloorPanel extends LitElement {
           .clock=${p.clock === "none" ? null : p.clock}
           .lockButton=${true}
           .walkButton=${true}
+          .travelButton=${true}
           .accent=${p.accent}
           ?furnish=${this._furnish}
           .selectedFurniture=${this._selFurniture}

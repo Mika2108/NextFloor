@@ -1,5 +1,6 @@
 // Lit wrapper around the lazily loaded 3D viewer.
 
+import { changeMoments, hassAt, loadHistory, replayable, type History } from "../live/time-travel.ts";
 import { backdropStyle } from "../backdrop.ts";
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 import {
@@ -133,6 +134,8 @@ export class NfView3d extends LitElement {
     clock: { attribute: false },
     lockButton: { attribute: false },
     walkButton: { attribute: false },
+    travelButton: { attribute: false },
+    _travel: { state: true },
     _walking: { state: true },
     _stick: { state: true },
     _locked: { state: true },
@@ -232,6 +235,11 @@ export class NfView3d extends LitElement {
   declare lockButton: boolean;
   /** Show the 🚶 button that walks through the house at eye level. */
   declare walkButton: boolean;
+  /** Show the ⏪ button that replays the last day or week. */
+  declare travelButton: boolean;
+  /** Time travel: the loaded history, its span, the moment shown, and whether it plays (null: live). */
+  private declare _travel: { history: History; from: number; to: number; t: number; playing: boolean; speed: number; hours: number; moments: number[]; loading: boolean } | null;
+  private travelTimer: ReturnType<typeof setInterval> | undefined;
   private declare _walking: boolean;
   /** Where the touch stick's knob is (-1 … 1 each way) while a finger holds it. */
   private declare _stick: [number, number] | null;
@@ -371,6 +379,8 @@ export class NfView3d extends LitElement {
     this.clock = null;
     this.lockButton = false;
     this.walkButton = false;
+    this.travelButton = false;
+    this._travel = null;
     this._walking = false;
     this._stick = null;
     this._now = Date.now();
@@ -426,6 +436,8 @@ export class NfView3d extends LitElement {
     this.alertTimer = undefined;
     clearInterval(this.clockTimer);
     this.clockTimer = undefined;
+    clearInterval(this.travelTimer);
+    this.travelTimer = undefined;
     this.live = null;
     this.viewer?.dispose();
     this.viewer = null;
@@ -590,7 +602,9 @@ export class NfView3d extends LitElement {
     const v = this.viewer;
     const b = this.building;
     if (!v || !b || !this.hass) return;
-    const hass = this.hass;
+    // time travel: the same view, fed with the states of the moment shown
+    const travel = this._travel;
+    const hass = travel && !travel.loading ? hassAt(this.hass, travel.history, travel.t) : this.hass;
     if (force || !this.openingLinks || this.linkedRegistry !== hass.entities) {
       this.openingLinks = openingEntities(hass, b.floors);
       this.furnitureLinks = furnitureEntities(hass, b.floors);
@@ -1460,6 +1474,85 @@ export class NfView3d extends LitElement {
     }
   }
 
+  /** Opens time travel over the last `hours` (24 or 168) at its start, or closes it and shows the house live again. */
+  private async openTravel(hours: number | null): Promise<void> {
+    clearInterval(this.travelTimer);
+    this.travelTimer = undefined;
+    if (hours === null || !this.hass) {
+      this._travel = null;
+      this.syncDevices(true);
+      return;
+    }
+    const to = Date.now();
+    const from = to - hours * 3600_000;
+    this._travel = { history: new Map(), from, to, t: from, playing: false, speed: hours > 24 ? 3600 : 600, hours, moments: [], loading: true };
+    try {
+      const history = await loadHistory(this.hass, replayable(this.watched), from, to);
+      if (!this._travel || this._travel.from !== from) return;
+      this._travel = { ...this._travel, history, moments: changeMoments(history, from, to), loading: false };
+    } catch {
+      this._travel = null;
+      this._error = translate(this.hass, "travel_failed");
+      return;
+    }
+    this.syncDevices(true);
+  }
+
+  private travelTo(t: number): void {
+    const tr = this._travel;
+    if (!tr) return;
+    this._travel = { ...tr, t: Math.min(tr.to, Math.max(tr.from, t)) };
+    this.syncDevices(true);
+  }
+
+  private playTravel(on: boolean): void {
+    const tr = this._travel;
+    if (!tr) return;
+    clearInterval(this.travelTimer);
+    this.travelTimer = undefined;
+    this._travel = { ...tr, playing: on, t: on && tr.t >= tr.to ? tr.from : tr.t };
+    if (!on) return;
+    this.travelTimer = setInterval(() => {
+      const now = this._travel;
+      if (!now) return;
+      const t = now.t + 250 * now.speed;
+      if (t >= now.to) this.playTravel(false);
+      this.travelTo(t);
+    }, 250);
+  }
+
+  private renderTravel() {
+    if (!this.hass || this.clean) return nothing;
+    const t = (k: I18nKey) => translate(this.hass, k);
+    const tr = this._travel;
+    if (!tr) {
+      if (!this.travelButton) return nothing;
+      return html`<button class="nf-travel-btn" title=${t("travel")} aria-label=${t("travel")} @click=${() => void this.openTravel(24)}>⏪</button>`;
+    }
+    const locale = this.hass.language ?? navigator.language;
+    const when = new Intl.DateTimeFormat(locale, { weekday: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(tr.t));
+    const span = tr.to - tr.from || 1;
+    const speeds: [number, I18nKey][] = [
+      [60, "travel_speed_min"],
+      [600, "travel_speed_10min"],
+      [3600, "travel_speed_hour"],
+    ];
+    return html`<div class="nf-travel" role="group" aria-label=${t("travel")}>
+      <button class="nf-travel-play" aria-label=${t(tr.playing ? "travel_pause" : "travel_play")} ?disabled=${tr.loading} @click=${() => this.playTravel(!tr.playing)}>${tr.playing ? "⏸" : "▶"}</button>
+      <b class="nf-travel-when">${tr.loading ? t("travel_loading") : when}</b>
+      <div class="nf-travel-track">
+        <svg viewBox="0 0 1000 10" preserveAspectRatio="none" aria-hidden="true">${tr.moments.map((m) => svg`<rect x=${((m - tr.from) / span) * 1000} y="0" width="1.6" height="10" />`)}</svg>
+        <input type="range" min=${tr.from} max=${tr.to} step="60000" .value=${String(tr.t)} ?disabled=${tr.loading} aria-label=${t("travel")} @input=${(e: Event) => this.travelTo(Number((e.target as HTMLInputElement).value))} />
+      </div>
+      <select aria-label=${t("travel_speed")} @change=${(e: Event) => (this._travel = { ...tr, speed: Number((e.target as HTMLSelectElement).value) })}>
+        ${speeds.map(([v, k]) => html`<option value=${v} ?selected=${tr.speed === v}>${t(k)}</option>`)}
+      </select>
+      <button class="nf-travel-span" aria-pressed=${tr.hours === 24} @click=${() => void this.openTravel(24)}>24 h</button>
+      <button class="nf-travel-span" aria-pressed=${tr.hours === 168} @click=${() => void this.openTravel(168)}>7 ${t("travel_days")}</button>
+      <button class="nf-travel-live" @click=${() => void this.openTravel(null)}>● ${t("travel_live")}</button>
+    </div>`;
+  }
+
   private toggleWalk(): void {
     const v = this.viewer;
     if (!v) return;
@@ -1604,6 +1697,8 @@ export class NfView3d extends LitElement {
   private onDeviceTap(entityId: string, x = 0, y = 0): void {
     // lamps without a light are drawn, but nothing of Home Assistant stands behind them
     if (entityId.startsWith("lamp:")) return;
+    // in the past nothing is switched
+    if (this._travel) return;
     if (entityId.startsWith("gang:")) return this.tapPlate(entityId.slice(5), x, y);
     // the street end of the grid cable opens the grid sensor: the balance's, else the meter's (#223)
     if (entityId === "grid") {
@@ -1812,7 +1907,7 @@ export class NfView3d extends LitElement {
     >
       ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()} ${this.renderMapCredit()}
       ${this.renderAlerts()} ${this.clean ? nothing : html`${this.renderThumbs()} ${this.renderScenes()} ${this.renderFind()} ${this.renderCentral()}`} ${this.renderSwipe()}
-      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()} ${this.renderLock()} ${this.renderWalk()} ${this.renderClock()}
+      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()} ${this.renderLock()} ${this.renderWalk()} ${this.renderTravel()} ${this.renderClock()}
       ${this.showStats && this._stats
         ? html`<span class="nf-stats"
             ><b>${this._stats.fps ? translate(this.hass, "stats_fps", { fps: this._stats.fps, ms: this._stats.worstMs }) : translate(this.hass, "stats_idle")}</b>
@@ -2263,6 +2358,93 @@ export class NfView3d extends LitElement {
         backdrop-filter: none;
       }
       /* the eye sits beside the search button; alone in the corner once the view is clean */
+      .nf-travel-btn {
+        position: absolute;
+        left: 188px;
+        bottom: calc(10px + var(--nf-bottom-inset, 0px));
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        border-radius: 50%;
+        border: 1px solid rgba(160, 240, 255, 0.35);
+        background: rgba(8, 16, 34, 0.7);
+        color: var(--nf-text);
+        font-size: 14px;
+        cursor: pointer;
+        z-index: 4;
+      }
+      .nf-travel {
+        position: absolute;
+        left: 50%;
+        bottom: calc(62px + var(--nf-bottom-inset, 0px));
+        transform: translateX(-50%);
+        width: min(860px, calc(100% - 24px));
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 18px;
+        background: rgba(8, 16, 34, 0.82);
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4);
+        color: var(--nf-text);
+        z-index: 5;
+        flex-wrap: wrap;
+      }
+      .nf-travel button,
+      .nf-travel select {
+        min-height: 32px;
+        border: 0;
+        border-radius: 999px;
+        padding: 0 10px;
+        background: rgba(127, 127, 127, 0.16);
+        color: inherit;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .nf-travel select option {
+        color: #111;
+      }
+      .nf-travel .nf-travel-play {
+        width: 36px;
+        padding: 0;
+        background: var(--nf-accent);
+        color: #041018;
+      }
+      .nf-travel-span[aria-pressed="true"] {
+        box-shadow: inset 0 0 0 1px var(--nf-accent);
+        color: var(--nf-accent);
+      }
+      .nf-travel-live {
+        color: #ff5a6b !important;
+      }
+      .nf-travel-when {
+        min-width: 92px;
+        font-variant-numeric: tabular-nums;
+        font-size: 14px;
+      }
+      .nf-travel-track {
+        position: relative;
+        flex: 1 1 220px;
+        height: 28px;
+      }
+      .nf-travel-track svg {
+        position: absolute;
+        inset: 9px 0;
+        width: 100%;
+        height: 10px;
+        fill: var(--nf-accent);
+        opacity: 0.55;
+        pointer-events: none;
+      }
+      .nf-travel-track input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        margin: 0;
+        background: transparent;
+        accent-color: var(--nf-accent);
+      }
       .nf-walk-btn {
         position: absolute;
         left: 144px;

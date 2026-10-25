@@ -37,6 +37,8 @@ export interface CardConfig {
   lock_button?: boolean;
   /** The 🚶 button that walks through the house at eye level (default shown). */
   walk_button?: boolean;
+  /** The ⏪ button that replays the last day or week (default shown). */
+  time_travel?: boolean;
   /** Accent colour for the neon look and the card's chips ("#rrggbb"); leave out for the stock cyan. */
   accent?: string;
   /** Energy values at the top (default true). */

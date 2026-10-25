@@ -255,6 +255,21 @@ const params = new URLSearchParams(location.search);
               revision += 1;
               for (const cb of listeners) cb({ revision });
               return { revision };
+            case "history/history_during_period": {
+              // invented recorder history for the time travel: every light and door changes a few times over the span
+              const from = Date.parse(msg.start_time) / 1000;
+              const to = Date.parse(msg.end_time) / 1000;
+              const out = {};
+              (msg.entity_ids ?? []).forEach((id, k) => {
+                const st = this.states[id];
+                if (!st) return;
+                const rows = [{ s: id.startsWith("light.") || id.startsWith("binary_sensor.") ? "off" : st.state, a: st.attributes, lu: from }];
+                const steps = 6 + (k % 5);
+                for (let i = 1; i <= steps; i++) rows.push({ s: i % 2 ? (id.startsWith("cover.") ? "closed" : "on") : id.startsWith("cover.") ? "open" : "off", lu: from + ((to - from) * (i + (k % 3) / 3)) / (steps + 1) });
+                out[id] = rows;
+              });
+              return out;
+            }
             case "nextfloor/history/list":
               return { snapshots: history.map(({ building: b, ...rest }) => ({ ...rest, floors: b.floors.length, rooms: b.floors.reduce((n, f) => n + f.rooms.length, 0), furniture: b.floors.reduce((n, f) => n + f.furniture.length, 0) })).reverse() };
             case "nextfloor/history/snapshot":

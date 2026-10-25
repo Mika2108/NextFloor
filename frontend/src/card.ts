@@ -296,6 +296,7 @@ export class NextFloorCard extends LitElement {
       .clock=${c?.clock && c.clock !== "none" ? c.clock : null}
       .lockButton=${c?.lock_button !== false}
       .walkButton=${c?.walk_button !== false}
+      .travelButton=${c?.time_travel !== false}
       .accent=${c?.accent ?? null}
       .showEnergy=${c?.energy ?? true}
       .flows=${c?.flows ?? null}

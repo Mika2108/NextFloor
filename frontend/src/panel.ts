@@ -416,6 +416,7 @@ export class NextFloorPanel extends LitElement {
           .theme=${lookNow(p.theme, this.hass?.states["sun.sun"]?.state)}
           .clock=${p.clock === "none" ? null : p.clock}
           .lockButton=${true}
+          .walkButton=${true}
           .accent=${p.accent}
           ?furnish=${this._furnish}
           .selectedFurniture=${this._selFurniture}

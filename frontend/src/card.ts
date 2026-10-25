@@ -295,6 +295,7 @@ export class NextFloorCard extends LitElement {
       .theme=${lookNow(c?.theme, this.hass?.states["sun.sun"]?.state)}
       .clock=${c?.clock && c.clock !== "none" ? c.clock : null}
       .lockButton=${c?.lock_button !== false}
+      .walkButton=${c?.walk_button !== false}
       .accent=${c?.accent ?? null}
       .showEnergy=${c?.energy ?? true}
       .flows=${c?.flows ?? null}

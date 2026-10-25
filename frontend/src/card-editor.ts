@@ -90,6 +90,7 @@ export class NextFloorCardEditor extends LitElement {
     return html`${checkbox(f, on, "card_controls", "card_controls_hint", (checked) => f.set("controls", checked ? true : undefined))}
     ${checkbox(f, f.value.central, "card_central", "card_central_hint", (checked) => f.set("central", checked ? undefined : false))}
     ${checkbox(f, f.value.lock_button !== false, "card_lock_button", undefined, (checked) => f.set("lock_button", checked ? undefined : false))}
+    ${checkbox(f, f.value.walk_button !== false, "card_walk_button", undefined, (checked) => f.set("walk_button", checked ? undefined : false))}
     ${flagOption(f, "marker_names", "card_marker_names", "card_marker_names_hint")} ${flagOption(f, "controls_hidden", "card_controls_hidden", "card_controls_hidden_hint")}
     ${numberChoice(f, "controls_hide_after", "card_controls_hide_after", hideAfter)}
     ${on

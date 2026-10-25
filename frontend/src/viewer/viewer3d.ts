@@ -40,7 +40,7 @@ import {
 } from "three";
 import type { Building, Floor, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
-import { CEILING_TYPES, ceilingOf, centroid, pointInPolygon, openingStyle, WALL_LAMP_Y } from "../model.ts";
+import { CEILING_TYPES, ceilingOf, centroid, pointInPolygon, polygonArea, openingStyle, WALL_LAMP_Y } from "../model.ts";
 import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
 import { centredAt, floorLabelPosition, floorShowsMarkers, LabelPlacer, leftAt, project, stackFloorLabels, type FloorLabel, type ScreenPoint } from "./scene/labels.ts";
 import { easeFloor, fadeMaterials, floorShare, floorTarget } from "./scene/floor-motion.ts";
@@ -266,6 +266,8 @@ const LAMP_SHADE = 0x1d2946;
 /** Lamps that hang from the ceiling (hidden in the cut view). */
 const FLASH_MS = 450;
 const EFFECT_MS = 125;
+/** Eye height above the floor while walking (metres). */
+const EYE_HEIGHT = 1.6;
 /** On the tablet level, decorations (colour effects, rain, robots, the energy flow) come to rest this long after the last touch or change. */
 const REST_AFTER_MS = 30000;
 /** A ceiling fan's blades and the angle between them. */
@@ -629,6 +631,52 @@ export class NextFloorViewer {
     this.rebuild();
     if (first) this.fit(0);
     this.invalidate();
+  }
+
+  /** Walking through the house at eye level (null: orbiting as usual). */
+  get walking(): boolean {
+    return this.controls.walk !== null;
+  }
+
+  /**
+   * Starts walking on the open floor (else the ground floor), in the open room (else the largest), at eye height, looking the way the
+   * camera looked. Walls stand whole while walking. Returns the floor it walks on.
+   */
+  startWalk(): string | null {
+    const floors = this.floors.filter((fv) => fv.floor.rooms.some((r) => r.points.length >= 3));
+    const fv = (this.floorId ? this.floorMap.get(this.floorId) : undefined) ?? [...floors].sort((a, b) => Math.abs(a.floor.elevation) - Math.abs(b.floor.elevation))[0];
+    if (!fv || !fv.bbox) return null;
+    const rooms = fv.floor.rooms.filter((r) => r.points.length >= 3);
+    const room = rooms.find((r) => r.id === this.roomId) ?? [...rooms].sort((a, b) => polygonArea(b.points) - polygonArea(a.points))[0];
+    const [x, z] = room ? centroid(room.points) : [(fv.bbox.x0 + fv.bbox.x1) / 2, (fv.bbox.z0 + fv.bbox.z1) / 2];
+    if (this.floorId !== fv.floor.id) this.setFloor(fv.floor.id, false);
+    const margin = 0.3;
+    this.controls.walk = {
+      eye: new Vector3(x, fv.floor.elevation + fv.ty + EYE_HEIGHT, z),
+      yaw: this.controls.view.theta,
+      pitch: -0.05,
+      stick: [0, 0],
+      keys: new Set(),
+      bounds: { x0: fv.bbox.x0 - margin, x1: fv.bbox.x1 + margin, z0: fv.bbox.z0 - margin, z1: fv.bbox.z1 + margin },
+      last: 0,
+    };
+    this.labelsDirty = true;
+    this.wake();
+    return fv.floor.id;
+  }
+
+  stopWalk(): void {
+    if (!this.controls.walk) return;
+    this.controls.walk = null;
+    this.labelsDirty = true;
+    this.fit(700);
+  }
+
+  /** The touch stick while walking: x turns, y walks (-1 … 1; up is negative like the screen). */
+  setWalkStick(x: number, y: number): void {
+    if (!this.controls.walk) return;
+    this.controls.walk.stick = [x, y];
+    this.wake();
   }
 
   /** Show one floor (null = the whole house). */
@@ -2693,6 +2741,14 @@ export class NextFloorViewer {
    * stay visible); in the cut view every wall is cut at the cut height.
    */
   private updateWalls(): void {
+    if (this.controls.walk) {
+      // walking among the walls: they stand whole, none turns to glass or is cut
+      for (const fv of this.floors) {
+        fv.mask.standing.value = 0xffff;
+        fv.mask.glass.value = 0;
+      }
+      return;
+    }
     const cam = this.camera.position;
     const t = this.controls.view.target;
     const dx = cam.x - t.x;

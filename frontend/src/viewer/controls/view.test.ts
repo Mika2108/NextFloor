@@ -93,3 +93,19 @@ test("panning moves the target sideways, and further when zoomed out", () => {
   assert.ok(forward.target.z < 3 || forward.target.z > 3, "dragging down moves the target along the view direction");
   near(forward.target.x, 1);
 });
+
+test("walking moves the eye along its heading, turns with the stick and stays inside the floor", async () => {
+  const { stepWalk } = await import("./controls.ts");
+  const { Vector3 } = await import("three");
+  const walk = { eye: new Vector3(0, 1.6, 0), yaw: 0, pitch: 0, stick: [0, 0] as [number, number], keys: new Set(["w"]), bounds: { x0: -1, x1: 1, z0: -1, z1: 1 }, last: 0 };
+  assert.ok(stepWalk(walk, 400));
+  assert.equal(Math.round(walk.eye.z * 100) / 100, -0.6, "yaw 0 looks towards -z, 1.5 m/s for 0.4 s");
+  walk.keys = new Set();
+  assert.equal(stepWalk(walk, 400), false, "no key, no stick: no step");
+  walk.stick = [-1, 0];
+  stepWalk(walk, 500);
+  assert.ok(walk.yaw > 0.8, "the stick to the left turns left");
+  walk.stick = [0, -1];
+  for (let i = 0; i < 50; i++) stepWalk(walk, 100);
+  assert.ok(Math.abs(walk.eye.x) <= 1 && Math.abs(walk.eye.z) <= 1, "never leaves the floor");
+});

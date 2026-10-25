@@ -36,12 +36,47 @@ interface PointerInfo {
   button: number;
 }
 
+/** Walking speed (m/s) and turning speed (rad/s). */
+const WALK_SPEED = 1.5;
+const TURN_SPEED = 1.8;
+
+export interface Walk {
+  eye: Vector3;
+  /** Heading like the orbit's theta: the eye looks along (-sin yaw, 0, -cos yaw). */
+  yaw: number;
+  /** Up (+) or down (-) from the horizon, radians. */
+  pitch: number;
+  /** The touch stick: x turns or steps sideways, y walks (-1 … 1 each). */
+  stick: [number, number];
+  keys: Set<string>;
+  bounds: { x0: number; x1: number; z0: number; z1: number };
+  last: number;
+}
+
+/** One step of walking: moves the eye by keys and stick over dt milliseconds, kept in its bounds. Returns whether it moved. */
+export function stepWalk(w: Walk, dt: number): boolean {
+  const k = w.keys;
+  const ahead = (k.has("w") || k.has("arrowup") ? 1 : 0) - (k.has("s") || k.has("arrowdown") ? 1 : 0) - w.stick[1];
+  const side = (k.has("d") ? 1 : 0) - (k.has("a") ? 1 : 0);
+  const turn = (k.has("arrowleft") || k.has("q") ? 1 : 0) - (k.has("arrowright") || k.has("e") ? 1 : 0) - w.stick[0];
+  if (!ahead && !side && !turn) return false;
+  const s = dt / 1000;
+  w.yaw += turn * TURN_SPEED * s;
+  const [fx, fz] = [-Math.sin(w.yaw), -Math.cos(w.yaw)];
+  const [rx, rz] = [Math.cos(w.yaw), -Math.sin(w.yaw)];
+  w.eye.x = clamp(w.eye.x + (fx * ahead + rx * side) * WALK_SPEED * s, w.bounds.x0, w.bounds.x1);
+  w.eye.z = clamp(w.eye.z + (fz * ahead + rz * side) * WALK_SPEED * s, w.bounds.z0, w.bounds.z1);
+  return true;
+}
+
 export class OrbitControls {
   view: OrbitView = { target: new Vector3(), radius: 16, theta: -0.6, phi: 0.85 };
   minRadius = 2;
   maxRadius = 80;
   /** A wall tablet's 3D lock: the camera does not turn, pan or zoom by hand; taps, holds and swipes on devices still work. */
   locked = false;
+  /** Walking at eye level: where the eye is, which way it looks, the stick and keys that move it, and the area it stays in. Null while orbiting. */
+  walk: Walk | null = null;
 
   private readonly pointers = new Map<number, PointerInfo>();
   private velocity = { theta: 0, phi: 0 };
@@ -74,11 +109,29 @@ export class OrbitControls {
     listen("pointercancel", (e) => this.onUp(e));
     listen("wheel", (e) => this.onWheel(e), { passive: false });
     listen("contextmenu", (e) => e.preventDefault());
+    // keys walk while walking (not while typing into a field)
+    const key = (down: boolean) => (e: KeyboardEvent) => {
+      if (!this.walk || (e.target as HTMLElement | null)?.closest?.("input, textarea, select")) return;
+      const name = e.key.toLowerCase();
+      if (!["w", "a", "s", "d", "q", "e", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(name)) return;
+      e.preventDefault();
+      if (down) this.walk.keys.add(name);
+      else this.walk.keys.delete(name);
+      this.events.change();
+    };
+    const keydown = key(true);
+    const keyup = key(false);
+    window.addEventListener("keydown", keydown);
+    window.addEventListener("keyup", keyup);
+    this.listeners.push(["__window_keydown", keydown as EventListener], ["__window_keyup", keyup as EventListener]);
   }
 
   dispose(): void {
     clearTimeout(this.holdTimer);
-    for (const [type, handler] of this.listeners) this.el.removeEventListener(type, handler);
+    for (const [type, handler] of this.listeners) {
+      if (type.startsWith("__window_")) window.removeEventListener(type.slice("__window_".length), handler);
+      else this.el.removeEventListener(type, handler);
+    }
   }
 
   /** A finger or the mouse holds the view, or a flight runs (an automatic orbit waits meanwhile). */
@@ -92,6 +145,17 @@ export class OrbitControls {
 
   /** Applies the view to the camera. Returns true while inertia or a flight is running. */
   update(now: number): boolean {
+    if (this.walk) {
+      const w = this.walk;
+      const moved = stepWalk(w, w.last ? Math.min(100, now - w.last) : 16);
+      w.last = moved ? now : 0;
+      const dir = new Vector3(-Math.sin(w.yaw) * Math.cos(w.pitch), Math.sin(w.pitch), -Math.cos(w.yaw) * Math.cos(w.pitch));
+      // the orbit view follows, so labels and anything that asks for the target still work
+      this.view.target.copy(w.eye).add(dir);
+      this.camera.position.copy(w.eye);
+      this.camera.lookAt(this.view.target);
+      return moved;
+    }
     let moving = false;
     if (this.flight) {
       const { from, to, start, duration } = this.flight;
@@ -178,6 +242,17 @@ export class OrbitControls {
       [pointer.x, pointer.y] = [e.clientX, e.clientY];
       return;
     }
+    if (this.walk) {
+      // walking: a drag looks around
+      if (!(this.press && !this.press.moved) && this.pointers.size === 1) {
+        const h = this.el.clientHeight || 1;
+        this.walk.yaw += (dx / h) * 2.4;
+        this.walk.pitch = clamp(this.walk.pitch + (dy / h) * 1.8, -1.1, 1.1);
+        this.events.change();
+      }
+      [pointer.x, pointer.y] = [e.clientX, e.clientY];
+      return;
+    }
     if (this.pointers.size === 1) {
       if (!(this.press && !this.press.moved)) {
         if (pointer.button === 1 || pointer.button === 2 || e.shiftKey) panView(this.view, dx, dy, this.el.clientHeight, this.camera.fov);
@@ -228,6 +303,15 @@ export class OrbitControls {
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
     if (this.locked) return;
+    if (this.walk) {
+      // the wheel takes a step forward or back
+      const step = clamp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.002), -0.6, 0.6);
+      const w = this.walk;
+      w.eye.x = clamp(w.eye.x - Math.sin(w.yaw) * step, w.bounds.x0, w.bounds.x1);
+      w.eye.z = clamp(w.eye.z - Math.cos(w.yaw) * step, w.bounds.z0, w.bounds.z1);
+      this.events.change();
+      return;
+    }
     this.flight = null;
     this.zoom(Math.exp(e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0015)));
     this.events.change();

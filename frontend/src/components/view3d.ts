@@ -132,6 +132,9 @@ export class NfView3d extends LitElement {
     cleanButton: { attribute: false },
     clock: { attribute: false },
     lockButton: { attribute: false },
+    walkButton: { attribute: false },
+    _walking: { state: true },
+    _stick: { state: true },
     _locked: { state: true },
     _now: { state: true },
     roomLabels: { attribute: false },
@@ -227,6 +230,11 @@ export class NfView3d extends LitElement {
   declare clock: ClockCorner | null;
   /** Show the 🔒 button that locks the camera (a wall tablet nobody should turn by accident). */
   declare lockButton: boolean;
+  /** Show the 🚶 button that walks through the house at eye level. */
+  declare walkButton: boolean;
+  private declare _walking: boolean;
+  /** Where the touch stick's knob is (-1 … 1 each way) while a finger holds it. */
+  private declare _stick: [number, number] | null;
   /** The camera is locked on this device. */
   private declare _locked: boolean;
   /** The time the clock shows, refreshed every few seconds while a clock is shown. */
@@ -362,6 +370,9 @@ export class NfView3d extends LitElement {
     this.cleanButton = false;
     this.clock = null;
     this.lockButton = false;
+    this.walkButton = false;
+    this._walking = false;
+    this._stick = null;
     this._now = Date.now();
     this._locked = (() => {
       try {
@@ -1449,6 +1460,52 @@ export class NfView3d extends LitElement {
     }
   }
 
+  private toggleWalk(): void {
+    const v = this.viewer;
+    if (!v) return;
+    if (this._walking) {
+      v.stopWalk();
+      this._walking = false;
+    } else this._walking = v.startWalk() !== null;
+    this._stick = null;
+  }
+
+  /** The touch stick: drag the knob up to walk, down to step back, sideways to turn. */
+  private stickMove(e: PointerEvent, start = false): void {
+    const pad = e.currentTarget as HTMLElement;
+    if (start) pad.setPointerCapture(e.pointerId);
+    else if (!this._stick) return;
+    const r = pad.getBoundingClientRect();
+    const radius = r.width / 2;
+    let [x, y] = [(e.clientX - r.left - radius) / radius, (e.clientY - r.top - radius) / radius];
+    const l = Math.hypot(x, y);
+    if (l > 1) [x, y] = [x / l, y / l];
+    this._stick = [x, y];
+    this.viewer?.setWalkStick(Math.abs(x) < 0.12 ? 0 : x, Math.abs(y) < 0.12 ? 0 : y);
+  }
+
+  private stickEnd(): void {
+    this._stick = null;
+    this.viewer?.setWalkStick(0, 0);
+  }
+
+  private renderWalk() {
+    if (!this.hass || this.clean || (!this.walkButton && !this._walking)) return nothing;
+    const t = (k: I18nKey) => translate(this.hass, k);
+    const knob = this._stick ?? [0, 0];
+    return html`<button class="nf-walk-btn ${this._walking ? "nf-walk-on" : ""}" title=${t(this._walking ? "walk_stop" : "walk")} aria-label=${t(this._walking ? "walk_stop" : "walk")} aria-pressed=${this._walking} @click=${() => this.toggleWalk()}>
+        ${this._walking
+          ? "✕"
+          : svg`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2" /><path d="M10 21l2-6 3 3v5M9 12l1-4 4 1 3 3M8 9l-2 4" /></svg>`}
+      </button>
+      ${this._walking
+        ? html`<div class="nf-stick" @pointerdown=${(e: PointerEvent) => this.stickMove(e, true)} @pointermove=${(e: PointerEvent) => this.stickMove(e)} @pointerup=${() => this.stickEnd()} @pointercancel=${() => this.stickEnd()}>
+              <span style="transform:translate(${knob[0] * 34}px, ${knob[1] * 34}px)"></span>
+            </div>
+            <p class="nf-walk-hint">${t("walk_hint")}</p>`
+        : nothing}`;
+  }
+
   private renderLock() {
     if (!this.lockButton || !this.hass || this.clean) return nothing;
     const label = translate(this.hass, this._locked ? "lock3d_off" : "lock3d_on");
@@ -1755,7 +1812,7 @@ export class NfView3d extends LitElement {
     >
       ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()} ${this.renderMapCredit()}
       ${this.renderAlerts()} ${this.clean ? nothing : html`${this.renderThumbs()} ${this.renderScenes()} ${this.renderFind()} ${this.renderCentral()}`} ${this.renderSwipe()}
-      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()} ${this.renderLock()} ${this.renderClock()}
+      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()} ${this.renderLock()} ${this.renderWalk()} ${this.renderClock()}
       ${this.showStats && this._stats
         ? html`<span class="nf-stats"
             ><b>${this._stats.fps ? translate(this.hass, "stats_fps", { fps: this._stats.fps, ms: this._stats.worstMs }) : translate(this.hass, "stats_idle")}</b>
@@ -2206,6 +2263,64 @@ export class NfView3d extends LitElement {
         backdrop-filter: none;
       }
       /* the eye sits beside the search button; alone in the corner once the view is clean */
+      .nf-walk-btn {
+        position: absolute;
+        left: 144px;
+        bottom: calc(10px + var(--nf-bottom-inset, 0px));
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border-radius: 50%;
+        border: 1px solid rgba(160, 240, 255, 0.35);
+        background: rgba(8, 16, 34, 0.7);
+        color: var(--nf-text);
+        font-size: 16px;
+        cursor: pointer;
+        z-index: 4;
+      }
+      .nf-walk-on {
+        color: #041018;
+        background: var(--nf-accent);
+        border-color: var(--nf-accent);
+      }
+      .nf-stick {
+        position: absolute;
+        right: 28px;
+        bottom: calc(70px + var(--nf-bottom-inset, 0px));
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: rgba(8, 16, 34, 0.45);
+        border: 1px solid rgba(160, 240, 255, 0.35);
+        display: grid;
+        place-items: center;
+        touch-action: none;
+        z-index: 4;
+      }
+      .nf-stick span {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: var(--nf-accent);
+        opacity: 0.85;
+        pointer-events: none;
+      }
+      .nf-walk-hint {
+        position: absolute;
+        left: 50%;
+        top: 12px;
+        transform: translateX(-50%);
+        margin: 0;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(8, 16, 34, 0.6);
+        color: var(--nf-muted);
+        font-size: 12px;
+        pointer-events: none;
+        z-index: 3;
+      }
       .nf-lock3d {
         position: absolute;
         left: 100px;

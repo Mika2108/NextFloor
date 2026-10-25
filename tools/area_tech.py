@@ -1088,12 +1088,32 @@ def build(bp):
             for i in range(n):
                 cx = -m.w / 2 + 0.043 + 0.071 * i
                 parts.append(m.c(cx, m.d / 2 - 0.002, 0.05, 0.004, 0.018, 0.05, "#dfe4ec", axis="z", gang=i))
-                parts += [m.c(cx + sx, m.d / 2 - 0.001, 0.008, 0.002, 0.039, 0.008, "dark", axis="z") for sx in (-0.01, 0.01)]
+                parts += [
+                    m.c(cx + sx, m.d / 2 - 0.001, 0.008, 0.002, 0.039, 0.008, "dark", axis="z") for sx in (-0.01, 0.01)
+                ]
             return parts
 
         word = {1: "1-fach", 2: "2-fach", 3: "3-fach", 4: "4-fach"}[n]
-        S(f"light_switch_{n}", f"Lichtschalter {word}", f"Light switch, {n} gang", (width, 0.012, 0.086), switch, mount="wall", wall_y=1.05, gangs=n)
-        S(f"socket_{n}", f"Steckdose {word}", f"Socket, {n} gang", (width, 0.012, 0.086), socket, mount="wall", wall_y=0.3, gangs=n)
+        S(
+            f"light_switch_{n}",
+            f"Lichtschalter {word}",
+            f"Light switch, {n} gang",
+            (width, 0.012, 0.086),
+            switch,
+            mount="wall",
+            wall_y=1.05,
+            gangs=n,
+        )
+        S(
+            f"socket_{n}",
+            f"Steckdose {word}",
+            f"Socket, {n} gang",
+            (width, 0.012, 0.086),
+            socket,
+            mount="wall",
+            wall_y=0.3,
+            gangs=n,
+        )
     S(
         "socket_outdoor",
         "Steckdose außen (mit Deckel)",

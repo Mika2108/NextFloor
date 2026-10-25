@@ -13,6 +13,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
+from .assist import async_register_assist
 from .card_resource import async_remove_card_resource, async_schedule_card_resource
 from .const import (
     DOMAIN,
@@ -36,6 +37,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register the websocket commands once."""
     async_register_commands(hass)
     async_register_mesh_view(hass)
+    async_register_assist(hass)
     return True
 
 

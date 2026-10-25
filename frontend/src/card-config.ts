@@ -39,6 +39,8 @@ export interface CardConfig {
   walk_button?: boolean;
   /** The ⏪ button that replays the last day or week (default shown). */
   time_travel?: boolean;
+  /** The 🎙 button to ask the house by voice or typing (default off). */
+  voice?: boolean;
   /** Accent colour for the neon look and the card's chips ("#rrggbb"); leave out for the stock cyan. */
   accent?: string;
   /** Energy values at the top (default true). */

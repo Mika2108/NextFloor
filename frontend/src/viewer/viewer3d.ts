@@ -1189,7 +1189,7 @@ export class NextFloorViewer {
     this.resizeObserver.disconnect();
     this.intersection?.disconnect();
     document.removeEventListener("visibilitychange", this.onVisibility);
-    this.host.removeEventListener("pointerdown", this.onTouch);
+    this.host?.removeEventListener("pointerdown", this.onTouch);
     this.controls.dispose();
     this.clear();
     this.building = null;

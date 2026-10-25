@@ -1,6 +1,9 @@
 // Lit wrapper around the lazily loaded 3D viewer.
 
 import { changeMoments, hassAt, loadHistory, replayable, type History } from "../live/time-travel.ts";
+import { canListen, listen, type Listening } from "../voice/assist-audio.ts";
+import { lightsOn, openThings, planLights } from "../voice/answers.ts";
+import { parseCommand, spokenList } from "../voice/commands.ts";
 import { backdropStyle } from "../backdrop.ts";
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 import {
@@ -135,6 +138,8 @@ export class NfView3d extends LitElement {
     lockButton: { attribute: false },
     walkButton: { attribute: false },
     travelButton: { attribute: false },
+    voice: { attribute: false },
+    _ask: { state: true },
     _travel: { state: true },
     _walking: { state: true },
     _stick: { state: true },
@@ -237,6 +242,13 @@ export class NfView3d extends LitElement {
   declare walkButton: boolean;
   /** Show the ⏪ button that replays the last day or week. */
   declare travelButton: boolean;
+  /** Show the 🎙 button: ask the house by voice or typing ("show the kitchen", "what's open?"). */
+  declare voice: boolean;
+  /** The ask bar: what was said, the answer, and whether it listens right now (null: closed). */
+  private declare _ask: { text: string; answer: string; listening: boolean; level: number } | null;
+  private listening: Listening | null = null;
+  /** The subscription to "show" requests from Assist and the nextfloor.ask service. */
+  private showSub: Promise<(() => Promise<void>) | null> | null = null;
   /** Time travel: the loaded history, its span, the moment shown, and whether it plays (null: live). */
   private declare _travel: { history: History; from: number; to: number; t: number; playing: boolean; speed: number; hours: number; moments: number[]; loading: boolean } | null;
   private travelTimer: ReturnType<typeof setInterval> | undefined;
@@ -380,6 +392,8 @@ export class NfView3d extends LitElement {
     this.lockButton = false;
     this.walkButton = false;
     this.travelButton = false;
+    this.voice = false;
+    this._ask = null;
     this._travel = null;
     this._walking = false;
     this._stick = null;
@@ -424,6 +438,16 @@ export class NfView3d extends LitElement {
       this.observeStage();
       if (!this.viewer) void this.start();
     }
+    this.subscribeShow();
+  }
+
+  /** Flies to the room Assist or an automation asked NextFloor to show ("show the kitchen"). */
+  private subscribeShow(): void {
+    const conn = (this.hass as unknown as { connection?: { subscribeMessage<T>(cb: (e: T) => void, msg: Record<string, unknown>): Promise<() => Promise<void>> } } | undefined)?.connection;
+    if (this.showSub || !conn) return;
+    this.showSub = conn
+      .subscribeMessage<{ floor_id?: string; room_id?: string }>((e) => e.floor_id && e.room_id && this.openRoom(e.floor_id, e.room_id), { type: "nextfloor/show/subscribe" })
+      .catch(() => null);
   }
 
   disconnectedCallback(): void {
@@ -438,6 +462,8 @@ export class NfView3d extends LitElement {
     this.clockTimer = undefined;
     clearInterval(this.travelTimer);
     this.travelTimer = undefined;
+    void this.showSub?.then((unsubscribe) => unsubscribe?.());
+    this.showSub = null;
     this.live = null;
     this.viewer?.dispose();
     this.viewer = null;
@@ -560,6 +586,7 @@ export class NfView3d extends LitElement {
     if (changed.has("building") || changed.has("theme") || changed.has("floorThumbs") || changed.has("packs")) this.scheduleThumbs();
     const forced = this.pluginsDirty || ["building", "markerMode", "heatMode", "flows", "alerts", "dimmed"].some((k) => changed.has(k));
     this.pluginsDirty = false;
+    if (changed.has("hass")) this.subscribeShow();
     if (forced || changed.has("hass")) this.syncDevices(forced);
     if (changed.has("autoOrbit")) v.setAutoOrbit(this.autoOrbit ? 0.06 : 0);
     if (changed.has("_thumbs") || changed.has("_narrowStage")) v.setLabelInset(this._thumbs.length ? (this.narrowThumbs ? 136 : 184) : 0);
@@ -1291,10 +1318,19 @@ export class NfView3d extends LitElement {
   }
 
   /** Fly to a search result: rooms are selected, devices shown on their floor and flashing. */
+  /** Opens a room, on another floor too: the floor first, then the room (the host opens one step per tap). */
+  private openRoom(floorId: string, roomId: string): void {
+    if (this.floorId === floorId && this.roomId === roomId) return;
+    if (this.floorId !== floorId) {
+      this.fire("floor-tap", { floorId });
+      setTimeout(() => this.fire("room-tap", { floorId, roomId }), 60);
+    } else this.fire("room-tap", { floorId, roomId });
+  }
+
   private goTo(item: SearchItem): void {
     this._find = null;
     if (item.kind === "room") {
-      this.fire("room-tap", { floorId: item.floorId, roomId: item.roomId });
+      if (item.roomId) this.openRoom(item.floorId, item.roomId);
       return;
     }
     if (this.floorId !== item.floorId) this.fire("floor-tap", { floorId: item.floorId });
@@ -1472,6 +1508,105 @@ export class NfView3d extends LitElement {
     } catch {
       // without storage the lock lasts until the page reloads
     }
+  }
+
+  /** Answers a question or carries out a command: NextFloor's own first (show, where, what's open, lights), else Home Assistant's Assist. */
+  private async ask(sentence: string, spoken: boolean): Promise<void> {
+    const hass = this.hass;
+    const b = this.building;
+    if (!hass || !b || !sentence.trim()) return;
+    const t = (k: I18nKey, vars?: Record<string, string | number>) => translate(hass, k, vars);
+    const and = t("voice_and");
+    const cmd = parseCommand(sentence);
+    let answer = "";
+    if (cmd?.kind === "show" || cmd?.kind === "where") {
+      const [hit] = searchItems((this.findIndex ??= searchIndex(hass, b)), cmd.what, 1);
+      if (hit) {
+        this.goTo(hit);
+        answer = cmd.kind === "show" || !hit.where ? t("voice_here", { name: hit.name }) : t("voice_is_in", { name: hit.name, where: hit.where });
+      } else answer = t("voice_not_found", { name: cmd.what });
+    } else if (cmd?.kind === "open") {
+      const open = openThings(hass, b, this.openingLinks ?? new Map(), { window: t("voice_window"), door: t("voice_door"), garage: t("voice_garage") });
+      answer = open.length ? t("voice_open_list", { list: spokenList(open.map((o) => `${o.room} (${o.name})`), and) }) : t("voice_all_closed");
+      const first = open[0];
+      if (first?.roomId) this.openRoom(first.floorId, first.roomId);
+    } else if (cmd?.kind === "lights_on" || cmd?.kind === "all_off") {
+      const on = lightsOn(hass, b, this.furnitureLinks);
+      if (cmd.kind === "all_off") {
+        const ids = [...planLights(hass, b, this.furnitureLinks).keys()].filter((id) => hass.states[id]?.state === "on" && !this.confirmSet.has(id));
+        if (ids.length) void hass.callService("light", "turn_off", { entity_id: ids });
+        answer = ids.length ? t("voice_lights_off", { n: ids.length }) : t("voice_no_lights_on");
+      } else {
+        const rooms = [...new Set(on.map((l) => l.room).filter(Boolean))];
+        answer = on.length ? t(on.length === 1 ? "voice_light_on" : "voice_lights_on", { n: on.length, list: spokenList(rooms, and) }) : t("voice_no_lights_on");
+      }
+    } else {
+      // anything else: Home Assistant's own Assist answers (and may switch things)
+      try {
+        const res = await hass.callWS<{ response?: { speech?: { plain?: { speech?: string } } } }>({ type: "conversation/process", text: sentence, language: hass.language });
+        answer = res.response?.speech?.plain?.speech ?? "";
+      } catch {
+        answer = t("voice_failed");
+      }
+    }
+    this._ask = { text: sentence, answer, listening: false, level: 0 };
+    if (spoken && answer && "speechSynthesis" in window) {
+      const say = new SpeechSynthesisUtterance(answer);
+      say.lang = hass.language;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(say);
+    }
+  }
+
+  private async startListening(): Promise<void> {
+    if (!this.hass || this.listening) return;
+    this._ask = { text: "", answer: "", listening: true, level: 0 };
+    const l = listen(this.hass, (level) => this._ask && (this._ask = { ...this._ask, level }));
+    this.listening = l;
+    try {
+      const text = await l.text;
+      this.listening = null;
+      if (!text) {
+        this._ask = { text: "", answer: translate(this.hass, "voice_not_heard"), listening: false, level: 0 };
+        return;
+      }
+      await this.ask(text, true);
+    } catch (e) {
+      this.listening = null;
+      this._ask = { text: "", answer: `${translate(this.hass, "voice_no_assist")} (${e instanceof Error ? e.message : String(e)})`, listening: false, level: 0 };
+    }
+  }
+
+  private renderAsk() {
+    if (!this.hass || this.clean || !this.voice) return nothing;
+    const t = (k: I18nKey) => translate(this.hass, k);
+    const a = this._ask;
+    const mic = canListen();
+    if (!a) {
+      return html`<button class="nf-ask-btn" title=${t("voice")} aria-label=${t("voice")} @click=${() => (mic ? void this.startListening() : (this._ask = { text: "", answer: "", listening: false, level: 0 }))}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
+      </button>`;
+    }
+    return html`<div class="nf-ask" role="dialog" aria-label=${t("voice")}>
+      <form
+        @submit=${(e: Event) => {
+          e.preventDefault();
+          const input = (e.currentTarget as HTMLFormElement).querySelector("input")!;
+          void this.ask(input.value, false);
+          input.value = "";
+        }}
+      >
+        ${mic
+          ? html`<button type="button" class="nf-ask-mic ${a.listening ? "nf-ask-live" : ""}" style="--lvl:${Math.min(1, a.level * 4)}" aria-label=${t("voice")} @click=${() => (a.listening ? this.listening?.stop() : void this.startListening())}>🎙</button>`
+          : nothing}
+        <input type="text" placeholder=${a.listening ? t("voice_listening") : t("voice_placeholder")} enterkeyhint="send" />
+        <button type="button" aria-label=${t("close")} @click=${() => {
+          this.listening?.stop();
+          this._ask = null;
+        }}>✕</button>
+      </form>
+      ${a.text ? html`<p class="nf-ask-q">„${a.text}“</p>` : nothing} ${a.answer ? html`<p class="nf-ask-a">${a.answer}</p>` : nothing}
+    </div>`;
   }
 
   /** Opens time travel over the last `hours` (24 or 168) at its start, or closes it and shows the house live again. */
@@ -1907,7 +2042,7 @@ export class NfView3d extends LitElement {
     >
       ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()} ${this.renderMapCredit()}
       ${this.renderAlerts()} ${this.clean ? nothing : html`${this.renderThumbs()} ${this.renderScenes()} ${this.renderFind()} ${this.renderCentral()}`} ${this.renderSwipe()}
-      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()} ${this.renderLock()} ${this.renderWalk()} ${this.renderTravel()} ${this.renderClock()}
+      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()} ${this.renderLock()} ${this.renderWalk()} ${this.renderTravel()} ${this.renderAsk()} ${this.renderClock()}
       ${this.showStats && this._stats
         ? html`<span class="nf-stats"
             ><b>${this._stats.fps ? translate(this.hass, "stats_fps", { fps: this._stats.fps, ms: this._stats.worstMs }) : translate(this.hass, "stats_idle")}</b>
@@ -2358,6 +2493,71 @@ export class NfView3d extends LitElement {
         backdrop-filter: none;
       }
       /* the eye sits beside the search button; alone in the corner once the view is clean */
+      .nf-ask-btn {
+        position: absolute;
+        left: 232px;
+        bottom: calc(10px + var(--nf-bottom-inset, 0px));
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border-radius: 50%;
+        border: 1px solid rgba(160, 240, 255, 0.35);
+        background: rgba(8, 16, 34, 0.7);
+        color: var(--nf-text);
+        cursor: pointer;
+        z-index: 4;
+      }
+      .nf-ask {
+        position: absolute;
+        left: 12px;
+        bottom: calc(56px + var(--nf-bottom-inset, 0px));
+        width: min(420px, calc(100% - 24px));
+        padding: 10px;
+        border-radius: 18px;
+        background: rgba(8, 16, 34, 0.88);
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+        color: var(--nf-text);
+        z-index: 6;
+      }
+      .nf-ask form {
+        display: flex;
+        gap: 6px;
+      }
+      .nf-ask input {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(160, 240, 255, 0.3);
+        background: rgba(0, 0, 0, 0.25);
+        color: inherit;
+        font: inherit;
+      }
+      .nf-ask button {
+        width: 38px;
+        height: 38px;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(127, 127, 127, 0.18);
+        color: inherit;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .nf-ask .nf-ask-live {
+        background: var(--nf-accent);
+        box-shadow: 0 0 0 calc(var(--lvl, 0) * 10px) rgba(55, 224, 255, 0.35);
+      }
+      .nf-ask-q {
+        margin: 8px 4px 0;
+        color: var(--nf-muted);
+        font-size: 13px;
+      }
+      .nf-ask-a {
+        margin: 6px 4px 0;
+        font-size: 15px;
+      }
       .nf-travel-btn {
         position: absolute;
         left: 188px;

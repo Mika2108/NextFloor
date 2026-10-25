@@ -136,6 +136,8 @@ const shots = [
   { name: "dev-wall-view", dev: true, query: "", width: 1400, height: 900, editor: true, editorScript: "e._wallView = { roomId: \"kueche\", edge: 0 };", settle: 800 },
   { name: "dev-walk", dev: true, query: "", width: 1400, height: 850, click: "Erdgeschoss", settle: 2500, viewScript: "v.toggleWalk(); const w = v.viewer.controls.walk; w.yaw = 2.6; w.pitch = -0.12; v.viewer.invalidate();" },
   { name: "dev-travel", dev: true, query: "", width: 1400, height: 850, settle: 2500, viewScript: "v.openTravel(24).then(() => v.travelTo(v._travel.from + (v._travel.to - v._travel.from) * 0.42));" },
+  { name: "dev-ask-open", dev: true, query: "", width: 1400, height: 850, settle: 1500, viewScript: "v.ask(\"Was ist offen?\", false);" },
+  { name: "dev-ask-show", dev: true, query: "", width: 1400, height: 850, settle: 2500, viewScript: "v.ask(\"Zeig mir die Küche\", false);" },
   { name: "dev-pool-cut", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: POOL_SCRIPT, then3d: "Erdgeschoss" },
   { name: "view-room-light", query: "", ha: "light", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
   { name: "card-light", query: "?card", ha: "light", width: 1400, height: 820 },

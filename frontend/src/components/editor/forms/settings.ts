@@ -36,6 +36,26 @@ function backdropFields(host: EditorHost, b: Backdrop | null, onChange: (b: Back
       : nothing}`;
 }
 
+/** Writes the Assist sentences ("show the kitchen", "what's open?") so voice satellites can ask the house too. */
+function assistSentences(host: EditorHost): TemplateResult {
+  const t = host.t;
+  const write = async (e: Event) => {
+    const button = e.currentTarget as HTMLButtonElement;
+    button.disabled = true;
+    try {
+      const lang = (host.hass?.language ?? "en").startsWith("de") ? ["de", "en"] : ["en"];
+      await host.hass!.callWS({ type: "nextfloor/assist/sentences", languages: lang });
+      button.textContent = `✓ ${t("assist_sentences_done")}`;
+    } catch {
+      button.textContent = t("assist_sentences_failed");
+      button.disabled = false;
+    }
+  };
+  return html`<div class="nf-sub nf-wide">${t("assist_sentences")}</div>
+    <div class="nf-actions nf-wide"><button class="nf-btn" @click=${write}>🎙 ${t("assist_sentences_write")}</button></div>
+    ${hint(t("assist_sentences_hint"), "nf-wide")}`;
+}
+
 /** Wall thickness, grid, north, roof shape, the weather source and its effects. */
 export function renderSettings(host: EditorHost, actions: SettingsActions): TemplateResult {
   const t = host.t;
@@ -68,6 +88,7 @@ export function renderSettings(host: EditorHost, actions: SettingsActions): Temp
         : nothing}
       ${host.hass ? entityField(host, t("outage_sensor"), s.outage_sensor ?? null, undefined, entityOptions(host.hass, (id) => /^(binary_sensor|sensor)\./.test(id)), (v) => set({ outage_sensor: v === "none" ? null : v })) : nothing}
       ${hint(t("outage_hint"), "nf-wide")}
+      ${host.admin && host.hass ? assistSentences(host) : nothing}
       ${checkField(host, t("sun_patches"), s.sun_patches !== false, (on) => set({ sun_patches: on }), { title: t("sun_patches_hint") })}
       ${backdropFields(host, s.backdrop ?? null, (backdrop) => set({ backdrop }))}
     </div>

@@ -11,6 +11,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.loader import async_get_integration
 import voluptuous as vol
 
+from .assist import SENTENCES, SIGNAL_SHOW, async_write_sentences
 from .const import DOMAIN, SIGNAL_BUILDING_UPDATED
 from .packs import MAX_PACK_SIZE, PackError, parse_pack, validate_payload
 from .schema import BUILDING_SCHEMA, IMAGE_DATA
@@ -37,6 +38,8 @@ def async_register_commands(hass: HomeAssistant) -> None:
         ws_packs_remove,
         ws_backup_export,
         ws_backup_import,
+        ws_show_subscribe,
+        ws_assist_sentences,
     ):
         websocket_api.async_register_command(hass, command)
 
@@ -299,3 +302,29 @@ async def ws_backup_import(
             "skipped": skipped,
         },
     )
+
+
+@websocket_api.websocket_command({vol.Required("type"): "nextfloor/show/subscribe"})
+@callback
+def ws_show_subscribe(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Send the room to fly to whenever the house is asked to show one (Assist or the nextfloor.ask service)."""
+
+    @callback
+    def forward(target: dict[str, Any]) -> None:
+        connection.send_message(websocket_api.event_message(msg["id"], target))
+
+    connection.subscriptions[msg["id"]] = async_dispatcher_connect(hass, SIGNAL_SHOW, forward)
+    connection.send_result(msg["id"])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): "nextfloor/assist/sentences", vol.Required("languages"): [vol.In(list(SENTENCES))]}
+)
+@websocket_api.async_response
+async def ws_assist_sentences(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Write the Assist sentences for NextFloor's questions (only on an administrator's request)."""
+    paths = await async_write_sentences(hass, msg["languages"])
+    connection.send_result(msg["id"], {"written": paths})

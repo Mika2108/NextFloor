@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { newFloor, type Furniture } from "./model.ts";
-import { furnitureSize, getPacks, hasMesh, isElectric, isClimateFurniture, isPackType, markMeshReady, mountBase, packDisplay, packItem, packItemName, packName, packScreen, packsVersion, packType, setPacks, type PackItem, type PackPart } from "./packs.ts";
+import { fittedParts, furnitureSize, getPacks, hasMesh, isElectric, isClimateFurniture, isPackType, markMeshReady, mountBase, packDisplay, packItem, packItemName, packName, packScreen, packsVersion, packType, setPacks, type PackItem, type PackPart } from "./packs.ts";
 
 const part = (extra: Partial<PackPart> = {}): PackPart => ({ shape: "box", x: 0, z: 0, w: 1, d: 1, y: 0, h: 1, color: "body", ...extra });
 const item = (id: string, extra: Partial<PackItem> = {}): PackItem => ({ id, name: { en: id }, size: [1, 1, 1], parts: [part()], ...extra });
@@ -98,4 +98,49 @@ test("a model counts only after it has loaded", () => {
   markMeshReady("m1");
   assert.equal(hasMesh("pack:demo.pack:modelled"), true);
   assert.equal(hasMesh("pack:demo.pack:plain"), false);
+});
+
+test("a resized pack item keeps its arms, legs and plates at their size; the middle stretches", () => {
+  const sofa = item("sofa", {
+    size: [2, 0.9, 0.8],
+    parts: [
+      part({ x: -0.45, w: 0.1, h: 0.75 }), // left arm, 20 cm
+      part({ x: 0.45, w: 0.1, h: 0.75 }), // right arm
+      part({ x: 0, w: 0.8, y: 0.3, h: 0.2 }), // seat between the arms
+      part({ x: -0.47, z: -0.4, w: 0.03, d: 0.05, y: 0, h: 0.1, shape: "cyl" }), // a leg, 6 cm
+    ],
+  });
+  const [armL, armR, seat, leg] = fittedParts(sofa, 3, 0.9, 0.8);
+  const m = (frac: number, size: number) => Math.round(frac * size * 1000) / 1000;
+  assert.equal(m(armL.w, 3), 0.2, "the arm stays 20 cm wide");
+  assert.equal(m(armL.x - armL.w / 2, 3), -1.5, "and sits at the left end");
+  assert.equal(m(armR.x + armR.w / 2, 3), 1.5);
+  assert.equal(m(seat.w, 3), 2.6, "the seat fills the rest");
+  assert.equal(m(leg.w, 3), 0.06, "the leg keeps its size");
+  assert.equal(m(leg.x - leg.w / 2, 3), -1.47, "and its 3 cm from the end");
+});
+
+test("a taller table gets longer legs but keeps its top plate", () => {
+  const table = item("table", { size: [1.2, 0.8, 0.75], parts: [part({ y: 0.95, h: 0.05 }), part({ x: -0.45, w: 0.05, d: 0.05, y: 0, h: 0.95 })] });
+  const [top, legPart] = fittedParts(table, 1.2, 0.8, 1.05);
+  const cm = (frac: number) => Math.round(frac * 1.05 * 1000) / 10;
+  assert.equal(cm(top.h), 3.8, "the plate stays 3.75 cm thick");
+  assert.equal(cm(top.y + top.h), 105);
+  assert.equal(cm(legPart.h), 101.3, "the legs reach up to the plate");
+});
+
+test("unchanged sizes, vehicles and items marked stretch scale as before", () => {
+  const plain = item("p", { size: [1, 1, 1] });
+  assert.equal(fittedParts(plain, 1, 1, 1), plain.parts);
+  const car = item("car", { vehicle: true });
+  assert.equal(fittedParts(car, 2, 2, 2), car.parts);
+  const even = item("even", { stretch: true });
+  assert.equal(fittedParts(even, 2, 2, 2), even.parts);
+});
+
+test("a much smaller item falls back to even scaling instead of folding its parts over", () => {
+  const box = item("box", { size: [1, 1, 1], parts: [part({ x: -0.4, w: 0.2 }), part({ x: 0.4, w: 0.2 })] });
+  const [a, b] = fittedParts(box, 0.3, 1, 1);
+  assert.ok(a.x + a.w / 2 <= b.x - b.w / 2 + 1e-9, "parts stay side by side");
+  assert.equal(Math.round(a.w * 1000) / 1000, 0.2);
 });

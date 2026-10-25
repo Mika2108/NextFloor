@@ -1,7 +1,7 @@
 // Where the screen of a TV or monitor is, for the glow shown while the linked device is on.
 
 import { builtinBase, type Floor, type Furniture } from "../../model.ts";
-import { mountBase, packScreen } from "../../packs.ts";
+import { fittedParts, mountBase, packItem } from "../../packs.ts";
 import { RADIATOR_Y } from "./kitchen.ts";
 
 export interface ScreenRect {
@@ -47,7 +47,8 @@ function builtInScreen(f: Furniture, w: number, d: number, h: number, floor?: Fl
 
 function unmirrored(f: Furniture, floor?: Floor): ScreenRect | null {
   const [w, d, h] = [Math.max(0.05, f.w), Math.max(0.05, f.d), Math.max(0.005, f.h)];
-  const part = packScreen(f.type);
+  const item = packItem(f.type);
+  const part = item && fittedParts(item, w, d, h).find((p) => p.screen);
   if (part) {
     // the screen part's front face, at the item's mount height
     const base = floor ? mountBase(floor, f) : 0;

@@ -69,6 +69,8 @@ export interface PackItem {
   mesh?: string;
   /** A vehicle; offered for parking spots. */
   vehicle?: boolean;
+  /** Scale every part evenly when the item is resized, instead of keeping legs, arms and plates at their size. */
+  stretch?: boolean;
   /** Stairs: cut a stairwell into the floor above where they reach it. */
   hole?: boolean;
   /** A lamp: the way its light spreads. */
@@ -128,6 +130,68 @@ export function packItem(type: string): PackItem | undefined {
 }
 
 // ---------------------------------------------------------------- what an item is
+
+// ---------------------------------------------------------------- resizing
+
+/** How far from each end of an axis parts keep their real size (legs, arms, plates, handles), at most a third of the axis. */
+const KEEP = 0.22;
+
+/**
+ * Where a coordinate of the item's standard size `from` lands in a resized item of size `to`, along one axis that runs from `lo`
+ * to `lo + from` (x and z are centred, y starts at 0). Near either end it keeps its distance from that end; in the middle it stretches.
+ */
+function fitAxis(u: number, lo: number, from: number, to: number): number {
+  const keep = Math.min(KEEP, from / 3);
+  if (to <= keep * 2.4 || Math.abs(to - from) < 1e-6) return lo * (to / from) + (u - lo) * (to / from);
+  const newLo = lo * (to / from);
+  const t = u - lo;
+  if (t <= keep) return newLo + t;
+  if (t >= from - keep) return newLo + to - (from - t);
+  return newLo + keep + ((t - keep) * (to - 2 * keep)) / (from - 2 * keep);
+}
+
+/** A part's extent [a, b] (fractions of `from`) on a resized axis, as fractions of `to`. */
+function fitSpan(a: number, b: number, lo: number, from: number, to: number): [number, number] {
+  return [fitAxis(a * from, lo * from, from, to) / to, fitAxis(b * from, lo * from, from, to) / to];
+}
+
+const fitted = new WeakMap<PackItem, Map<string, PackPart[]>>();
+
+/**
+ * The parts of an item resized to w × d × h, with what should stay staying: within 22 cm of each end of an axis a part keeps its real
+ * size and its distance from that end (a sofa's 20 cm arms, a table's legs and its top plate), the middle stretches. Turned parts keep
+ * their own size and only move; vehicles and items marked `stretch` scale evenly.
+ */
+export function fittedParts(item: PackItem, w: number, d: number, h: number): PackPart[] {
+  const [sw, sd, sh] = item.size;
+  if (item.vehicle || item.stretch || (Math.abs(w - sw) < 1e-4 && Math.abs(d - sd) < 1e-4 && Math.abs(h - sh) < 1e-4)) return item.parts;
+  const key = `${w.toFixed(4)}|${d.toFixed(4)}|${h.toFixed(4)}`;
+  let cache = fitted.get(item);
+  const known = cache?.get(key);
+  if (known) return known;
+  const parts = item.parts.map((p): PackPart => {
+    if (p.shape === "sweep") return p;
+    const [x0, x1] = fitSpan(p.x - p.w / 2, p.x + p.w / 2, -0.5, sw, w);
+    const [z0, z1] = fitSpan(p.z - p.d / 2, p.z + p.d / 2, -0.5, sd, d);
+    const [y0, y1] = fitSpan(p.y, p.y + p.h, 0, sh, h);
+    if (p.rot) {
+      // a turned part keeps its own size: only its centre moves
+      return { ...p, x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: (p.w * sw) / w, d: (p.d * sd) / d, y: y0, h: y1 - y0 };
+    }
+    const next: PackPart = { ...p, x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: x1 - x0, d: z1 - z0, y: y0, h: y1 - y0 };
+    if (p.shape === "loft") {
+      const [tx, tz, tw, td] = [p.tx ?? p.x, p.tz ?? p.z, p.tw ?? p.w, p.td ?? p.d];
+      const [ta, tb] = fitSpan(tx - tw / 2, tx + tw / 2, -0.5, sw, w);
+      const [tc, te] = fitSpan(tz - td / 2, tz + td / 2, -0.5, sd, d);
+      Object.assign(next, { tx: (ta + tb) / 2, tz: (tc + te) / 2, tw: tb - ta, td: te - tc });
+    }
+    return next;
+  });
+  if (!cache) fitted.set(item, (cache = new Map()));
+  if (cache.size > 32) cache.clear();
+  cache.set(key, parts);
+  return parts;
+}
 
 /** The screen part of an item, if it has one. */
 export const packScreen = (type: string): PackPart | undefined => packItem(type)?.parts.find((part) => part.screen);

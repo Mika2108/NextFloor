@@ -122,6 +122,8 @@ ITEM_SCHEMA = vol.Schema(
         vol.Optional("mesh"): vol.All(str, vol.Match(r"^[a-z0-9_]{1,48}$")),
         # a vehicle: offered for parking spots
         vol.Optional("vehicle", default=False): bool,
+        # scale every part evenly when resized, instead of keeping legs, arms and plates at their size
+        vol.Optional("stretch", default=False): bool,
         # stairs: when it reaches the floor above, it cuts a stairwell opening into that floor
         vol.Optional("hole", default=False): bool,
         # a lamp: how its light spreads (like the built-in lamp of that kind)

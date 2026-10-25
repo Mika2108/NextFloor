@@ -1,7 +1,7 @@
 // Furniture from packs: the parts of a pack item scaled to the item's size, as lamps with glowing parts, and as glow layers.
 
 import type { Furniture } from "../../model.ts";
-import { type PackItem, type PackPart } from "../../packs.ts";
+import { fittedParts, type PackItem, type PackPart } from "../../packs.ts";
 import { DEG, EDGE_TOP, LineBuffer, shade, type GeoBuffer } from "../geo.ts";
 import { Builder, type Plan } from "./builder.ts";
 import { C, EDGE_FAINT, EDGE_FURN, material } from "./palette.ts";
@@ -18,7 +18,7 @@ function partColor(value: string | undefined, top: boolean): number | null {
 export function packModel(b: Builder, item: PackItem, w: number, d: number, h: number, base: number, glow: number | null, only: ((p: PackPart) => boolean) | null = null, variant: string | null = null): void {
   // the colour picked for the item (its first by default), for the parts that carry paint
   const paint = item.colors?.length ? (item.colors.find((c) => c.id === variant) ?? item.colors[0]).hex : null;
-  for (const raw of item.parts) {
+  for (const raw of fittedParts(item, w, d, h)) {
     if (only && !only(raw)) continue;
     // selected parts (the glowing ones of a speaker, a car's windows) come out a hair larger, so they cover the item's own
     const part = only ? { ...raw, glow: true, w: raw.w + 0.006 / w, d: raw.d + 0.006 / d, y: Math.max(0, raw.y - 0.002 / h), h: raw.h + 0.004 / h } : raw;

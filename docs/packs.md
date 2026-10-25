@@ -49,7 +49,9 @@ entfernen, und ein importiertes Pack darf nicht dieselbe ID haben.
 ```
 
 - `size`: Standardgröße in Metern (Breite, Tiefe, Höhe). Im Plan lässt sich jedes Möbel danach frei
-  skalieren; alle Teile wachsen mit.
+  skalieren. Dabei behalten Teile bis 22 cm vor jedem Ende ihre echte Größe und ihren Abstand zum Rand
+  (Armlehnen, Beine, Platten, Griffe), nur die Mitte wird gestreckt. `"stretch": true` am Möbel lässt
+  stattdessen alle Teile gleichmäßig mitwachsen; Fahrzeuge wachsen immer gleichmäßig.
 - `parts` (max. 60): `box`, `cyl`, `loft` oder `sweep`. Alle Maße sind **Anteile der Möbelgröße**: `x`/`z`
   Mitte (−0,5 … 0,5, vorne ist +z), `w`/`d` Breite/Tiefe (0 … 1), `y` Unterkante und `h` Höhe (0 … 1
   der Höhe). Ein Zylinder hat den kleineren Wert von `w` und `d` als Durchmesser; mit `axis: "x"` oder

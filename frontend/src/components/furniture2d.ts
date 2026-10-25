@@ -2,7 +2,7 @@
 // The editor places them with translate/rotate/scale; strokes keep their width on screen.
 
 import { nothing, svg, type SVGTemplateResult } from "lit";
-import { packItem, type PackItem } from "../packs.ts";
+import { fittedParts, packItem, type PackItem } from "../packs.ts";
 
 type Part = SVGTemplateResult;
 
@@ -200,7 +200,8 @@ function packSymbol(item: PackItem, w: number, d: number): Part[] {
           : line(s.x1 * w, s.z1 * d, s.x2 * w, s.z2 * d),
     );
   }
-  return item.parts
+  // seen from above, so the height does not matter: the parts as they sit in the resized item
+  return fittedParts(item, w, d, item.size[2])
     .filter((p) => p.shape === "sweep" || p.w < 0.98 || p.d < 0.98)
     .map((p) =>
       p.shape === "sweep" && p.stations?.length

@@ -2582,10 +2582,60 @@ const en: Record<Key, string> = {
 
 export type I18nKey = Key;
 
+// Further languages come as lang/<code>.json beside the bundles. Only a Home Assistant running in such a
+// language fetches its file; a key the file lacks stays English. The build tells the bundles which files
+// exist, each with a hash of its content for the URL.
+declare const __NF_LANGS__: Record<string, string> | undefined;
+const langFiles = (): Record<string, string> => (typeof __NF_LANGS__ === "object" && __NF_LANGS__) || {};
+
+type Texts = Record<string, string>;
+// keyed by language code: the texts, or the fetch still on its way; on globalThis, so the main bundle,
+// the editor and the card editor share one fetch
+const shared = globalThis as { __nextfloorTexts?: Map<string, Texts | Promise<void>> };
+const fetched = (shared.__nextfloorTexts ??= new Map());
+
+/** The language file a Home Assistant language reads, or undefined (German, English, or no file for it). */
+function fileOf(language: string): string | undefined {
+  const code = language.toLowerCase().split("-")[0];
+  return code !== "de" && code !== "en" && code in langFiles() ? code : undefined;
+}
+
+function textsOf(language: string): Texts | undefined {
+  const code = fileOf(language);
+  const entry = code === undefined ? undefined : fetched.get(code);
+  return entry instanceof Promise ? undefined : entry;
+}
+
+/**
+ * True while an element still waits for the texts of its language: the first call fetches the file, and the
+ * element renders again once it has arrived. A file that cannot be read leaves the element in English.
+ */
+export function awaitingLanguage(hass: HomeAssistant | undefined, element: { requestUpdate(): void }): boolean {
+  const code = fileOf(hass?.language ?? navigator.language);
+  if (code === undefined) return false;
+  let entry = fetched.get(code);
+  if (entry === undefined) {
+    entry = fetch(new URL(`./lang/${code}.json?v=${langFiles()[code]}`, import.meta.url))
+      .then((response) => (response.ok ? response.json() : {}))
+      .catch(() => ({}))
+      .then((texts: unknown) => void fetched.set(code, texts && typeof texts === "object" ? (texts as Texts) : {}));
+    fetched.set(code, entry);
+  }
+  if (!(entry instanceof Promise)) return false;
+  void entry.then(() => element.requestUpdate());
+  return true;
+}
+
+/** A text of the language file by its own key (names of pack items and paint colours), if it has one. */
+export function languageText(language: string, key: string): string | undefined {
+  return textsOf(language)?.[key];
+}
+
 export function translate(hass: HomeAssistant | undefined, key: Key, vars: Record<string, string | number> = {}): string {
-  // German in German, English for every other language
-  const german = (hass?.language ?? navigator.language).startsWith("de");
-  let s: string = (german ? de : en)[key] ?? en[key] ?? de[key] ?? key;
+  // German in German, a language file's text in its language, English otherwise
+  const language = hass?.language ?? navigator.language;
+  const german = language.startsWith("de");
+  let s: string = (german ? undefined : textsOf(language)?.[key]) ?? (german ? de : en)[key] ?? en[key] ?? de[key] ?? key;
   for (const [k, v] of Object.entries(vars)) s = s.replace(`{${k}}`, String(v));
   return s;
 }

@@ -6,9 +6,9 @@
 import { html, nothing, type TemplateResult } from "lit";
 import { iconPath } from "../../../icons.ts";
 import { FURNITURE_GROUPS, FURNITURE_SIZE, LAMP_MODEL, isLamp, type FurnitureType } from "../../../model.ts";
-import { furnitureName } from "../../../furniture-names.ts";
+import { furnitureName, packItemLabel, packLabel } from "../../../furniture-names.ts";
 import { translate, type I18nKey } from "../../../i18n.ts";
-import { furnitureSize, isElectric, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
+import { furnitureSize, isElectric, packType, type FurniturePack } from "../../../packs.ts";
 import { load3d } from "../../../load3d.ts";
 import type { EditorHost } from "../host.ts";
 import { CATEGORIES, cardsOf, isOutdoorCategory, mainCategory, roomCategories, sizeLabel, withRecent, type CatalogCard, type CatalogEntry, type Category } from "../ops/catalog.ts";
@@ -161,18 +161,18 @@ function catalogue(host: EditorHost, packs: readonly FurniturePack[]): Shown[] {
     ...builtIn.map((type) => ({ type, source: "builtin", id: type, size: FURNITURE_SIZE[type as FurnitureType], lamp: isLamp(type), electric: isElectric(type) })),
     ...packs.flatMap((pack) => pack.items.map((item) => ({ type: packType(pack.id, item.id), source: pack.id, id: item.id, size: item.size, lamp: !!item.light, electric: !!item.electric, vehicle: !!item.vehicle, climate: !!item.climate }))),
   ];
-  const packTitle = new Map(packs.map((p) => [p.id, packName(p, language)]));
+  const packTitle = new Map(packs.map((p) => [p.id, packLabel(p, language)]));
   const itemNames = new Map(packs.flatMap((p) => p.items.map((it) => [packType(p.id, it.id), it] as const)));
   return cardsOf(entries).map((card) => {
     const first = card.entries[0];
     const item = itemNames.get(first.type);
     // a card with several sizes is named without the size ("Vanity unit 60 cm" -> "Vanity unit")
-    const name = item ? packItemName(item, language) : host.t(`furn_${first.type}` as I18nKey);
+    const name = item ? packItemLabel(item, first.type, language) : host.t(`furn_${first.type}` as I18nKey);
     const label = card.entries.length > 1 ? name.replace(/\s*\(?\d+([.,]\d+)?\s*(cm|x\s*\d+|×\s*\d+)?\)?\s*$/i, "").trim() || name : name;
     const search = card.entries
       .map((e) => {
         const it = itemNames.get(e.type);
-        return it ? Object.values(it.name).join(" ") : translate(ENGLISH, `furn_${e.type}` as I18nKey);
+        return it ? [...Object.values(it.name), packItemLabel(it, e.type, language)].join(" ") : translate(ENGLISH, `furn_${e.type}` as I18nKey);
       })
       .join(" ");
     return { card, label, search: `${search} ${host.t(`lib_cat_${card.category}` as I18nKey)}`, from: packTitle.get(first.source) ?? "NextFloor" };

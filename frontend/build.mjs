@@ -2,7 +2,7 @@
 
 import { build, context } from "esbuild";
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
 
 const out = "../custom_components/nextfloor/frontend";
 const watch = process.argv.includes("--watch");
@@ -20,16 +20,23 @@ const common = {
   logLevel: "info",
 };
 
+const hashOf = (file) => createHash("sha256").update(readFileSync(file)).digest("hex").slice(0, 12);
+
+// Further languages: each lang/<code>.json ships beside the bundles, and the bundles that show texts know
+// which ones there are, with a hash of each (so a changed file is never taken from the browser cache).
+const langFiles = readdirSync("lang").filter((f) => /^[a-z]{2}\.json$/.test(f));
+const langs = JSON.stringify(Object.fromEntries(langFiles.map((f) => [f.slice(0, 2), hashOf(`lang/${f}`)])));
+
 const viewerConfig = { ...common, entryPoints: ["src/viewer/viewer3d.ts"], outfile: `${out}/nextfloor-3d.js` };
 // the card's visual editor only loads in the dashboard's card dialog
-const cardEditorConfig = { ...common, entryPoints: ["src/card-editor.ts"], outfile: `${out}/nextfloor-card-editor.js` };
+const cardEditorConfig = { ...common, entryPoints: ["src/card-editor.ts"], outfile: `${out}/nextfloor-card-editor.js`, define: { __NF_LANGS__: langs } };
 // the editor is only needed by admins who open it, so it is a bundle of its own as well
 // (it draws furniture previews with the 3D bundle, so it knows that bundle's hash too)
 const editorConfig = (viewerHash) => ({
   ...common,
   entryPoints: ["src/components/editor.ts"],
   outfile: `${out}/nextfloor-editor.js`,
-  define: { __NF_VIEWER_HASH__: JSON.stringify(viewerHash) },
+  define: { __NF_VIEWER_HASH__: JSON.stringify(viewerHash), __NF_LANGS__: langs },
 });
 // The main bundle loads the 3D bundle with a hash of its content in the URL, so a new 3D bundle is
 // never taken from the browser cache (the integration version only changes after a restart).
@@ -44,13 +51,15 @@ const mainConfig = (viewerHash, editorHash, cardEditorHash) => ({
     __NF_EDITOR_HASH__: JSON.stringify(editorHash),
     __NF_CARD_EDITOR_HASH__: JSON.stringify(cardEditorHash),
     __NF_VERSION__: JSON.stringify(version),
+    __NF_LANGS__: langs,
   },
 });
-const hashOf = (file) => createHash("sha256").update(readFileSync(file)).digest("hex").slice(0, 12);
 
 function copyAssets() {
   // the integration folder is what HACS ships as a zip, so the licences have to be inside it
   for (const f of ["LICENSE", "THIRD_PARTY_NOTICES.md"]) copyFileSync(`../${f}`, `../custom_components/nextfloor/${f}`);
+  mkdirSync(`${out}/lang`, { recursive: true });
+  for (const f of langFiles) copyFileSync(`lang/${f}`, `${out}/lang/${f}`);
 }
 
 // Size budgets, small enough for old wall tablets.

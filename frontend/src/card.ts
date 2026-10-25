@@ -9,7 +9,7 @@ import { cardStyles } from "./card/styles.ts";
 import "./components/room-panel.ts";
 import "./components/view3d.ts";
 import { confirmEntities } from "./devices.ts";
-import { translate } from "./i18n.ts";
+import { awaitingLanguage, translate } from "./i18n.ts";
 import { nightActive } from "./kiosk.ts";
 import { loadCardEditor } from "./load-card-editor.ts";
 import { colorSchemeOf, controls, tokens } from "./styles.ts";
@@ -160,7 +160,6 @@ export class NextFloorCard extends LitElement {
     if (changed.has("hass")) this.style.colorScheme = colorSchemeOf(this.hass);
     if (!changed.has("hass") || !this.hass) return;
     this.data.setHass(this.hass);
-    // a language beyond German and English: its texts are fetched first, and then everything renders
     const night = nightActive(this._config?.night, this.hass);
     if (night !== this._night) this._night = night;
   }
@@ -345,6 +344,8 @@ export class NextFloorCard extends LitElement {
   }
 
   protected render() {
+    // a language beyond German and English: its texts are fetched first, and then everything renders
+    if (this.hass && awaitingLanguage(this.hass, this)) return nothing;
     const b = this.data.building;
     const c = this._config;
     // the configured room opens once, when the building is there; the kiosk return brings it back

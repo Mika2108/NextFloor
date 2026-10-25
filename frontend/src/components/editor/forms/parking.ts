@@ -4,7 +4,8 @@
 import { html, nothing, type TemplateResult } from "lit";
 import { formatNumber } from "../../../i18n.ts";
 import { pointInPolygon, type Furniture } from "../../../model.ts";
-import { packItem, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
+import { packItemLabel, packLabel } from "../../../furniture-names.ts";
+import { packItem, packType, type FurniturePack } from "../../../packs.ts";
 import { entityOptions } from "../entities.ts";
 import { entityField, hint, numberField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
@@ -21,7 +22,7 @@ interface Vehicle {
 
 /** The vehicles of the packs, named with their pack. */
 const vehiclesOf = (packs: readonly FurniturePack[], language: string): Vehicle[] =>
-  packs.flatMap((pack) => pack.items.filter((item) => item.vehicle).map((item) => ({ id: packType(pack.id, item.id), label: `${packItemName(item, language)} · ${packName(pack, language)}` })));
+  packs.flatMap((pack) => pack.items.filter((item) => item.vehicle).map((item) => ({ id: packType(pack.id, item.id), label: `${packItemLabel(item, packType(pack.id, item.id), language)} · ${packLabel(pack, language)}` })));
 
 /** GPS trackers (a car's own integration, a phone) come before the many network trackers of a router. */
 function presenceRank(host: EditorHost, id: string): number {

@@ -54,8 +54,8 @@ import { createDevicePin, type PinHooks } from "./scene/pins.ts";
 import { buildFloorGeometry, SLAB, stairHoles, type FloorGeometry } from "./build.ts";
 import { OrbitControls, type OrbitView } from "./controls.ts";
 import { type FoldMasks } from "./fold.ts";
-import { pushPackGlow, pushPackLamp, screenRect, pushFridgeDoors } from "./furniture.ts";
-import { hasMesh, mountBase, packItem, setMeshSource, setPacks, type FurniturePack, type MeshSource } from "../packs.ts";
+import { pushPackGlow, pushPackLamp, pushPackMoving, screenRect, pushFridgeDoors } from "./furniture.ts";
+import { coverReach, hasMesh, hasMovingParts, mountBase, packItem, setMeshSource, setPacks, type FurniturePack, type MeshSource } from "../packs.ts";
 import { withVehicles } from "../parking.ts";
 import { buildRoof, type RoofWindowState } from "./roof.ts";
 import { GROUND, groundFace, groundFloor, wallFaces } from "../solar.ts";
@@ -357,6 +357,8 @@ export class NextFloorViewer {
   private openingTargets = new Map<string, OpeningState>();
   /** Smart fridge doors: how far each stands open (0…1) and where it is going. */
   private fridges = new Map<string, { l: number; r: number; tl: number; tr: number }>();
+  /** Pack items with moving parts (curtains, roller screens, awnings, gates): how far out they are now and where they are going. */
+  private covers = new Map<string, { k: number; t: number }>();
   private screens = new Map<string, ScreenState>();
   /** Entities behind furniture (TV, …) and openings (blind, contact), for tapping them in 3D. */
   private pickFurniture = new Map<string, string>();
@@ -991,6 +993,41 @@ export class NextFloorViewer {
     this.invalidate();
   }
 
+  /** How far the moving parts of pack items should be out (0 … 1, by furniture id); they travel there over a few seconds. */
+  setCovers(reach: Map<string, number>): void {
+    let changed = false;
+    for (const [id, t] of reach) {
+      const st = this.covers.get(id);
+      if (!st) {
+        // a cover seen for the first time starts where it is, without travelling there
+        this.covers.set(id, { k: t, t });
+        changed = true;
+      } else if (st.t !== t) {
+        st.t = t;
+        changed = true;
+      }
+    }
+    for (const id of [...this.covers.keys()]) if (!reach.has(id)) this.covers.delete(id);
+    if (changed) {
+      for (const fv of this.floors) this.buildFridges(fv);
+      this.invalidate();
+    }
+  }
+
+  private stepCovers(dt: number): boolean {
+    // a slow, even travel like a motor: the whole way in about four seconds
+    const step = Math.min(1, dt / 4000);
+    let moving = false;
+    for (const st of this.covers.values()) {
+      if (st.k === st.t) continue;
+      const d = st.t - st.k;
+      st.k = Math.abs(d) <= step ? st.t : st.k + Math.sign(d) * step;
+      moving = true;
+    }
+    if (moving) for (const fv of this.floors) this.buildFridges(fv);
+    return moving;
+  }
+
   private stepFridges(dt: number): boolean {
     const k = stepShare(dt);
     const touched = new Set<string>();
@@ -1016,6 +1053,11 @@ export class NextFloorViewer {
   private buildFridges(fv: FloorView): void {
     const buf = new GeoBuffer();
     for (const f of fv.floor.furniture) {
+      const item = packItem(f.type);
+      if (item && hasMovingParts(item)) {
+        pushPackMoving(buf, item, f, mountBase(fv.floor, f), this.covers.get(f.id)?.k ?? coverReach(item, null));
+        continue;
+      }
       if (f.type !== "fridge_smart") continue;
       const st = this.fridges.get(f.id);
       pushFridgeDoors(buf, f, mountBase(fv.floor, f), st?.l ?? 0, st?.r ?? 0);
@@ -2540,7 +2582,9 @@ export class NextFloorViewer {
     } else this.orbitLast = 0;
     const cameraMoving = this.controls.update(now);
     const floorsMoving = this.stepFloors(dt);
-    const openingsMoving = this.stepOpenings(dt) || this.stepFridges(dt);
+    // all three step every frame: a door swinging must not hold up a curtain
+    const steps = [this.stepOpenings(dt), this.stepFridges(dt), this.stepCovers(dt)];
+    const openingsMoving = steps.some(Boolean);
     let flashing = false;
     if (this.flashes.size) {
       // only the floors with a flashing lamp are recoloured (an expired flash needs one last pass)

@@ -454,6 +454,55 @@ def build(bp):
         ],
         trunk_h=0.4,
     )
+    # awnings over a terrace: the cassette stays on the wall, the striped cloth, the arms and the front bar reach out with the cover
+    for width in (3.0, 4.0, 5.0):
+
+        def awning(m):
+            strips = 7
+            parts = [m.b(0, -m.d / 2 + 0.11, m.w, 0.22, m.h - 0.22, 0.22, "#d8dde6", edges="faint")]
+            for i in range(strips):
+                depth = (m.d - 0.22) / strips
+                z = -m.d / 2 + 0.22 + depth * (i + 0.5)
+                y = m.h - 0.26 - i * 0.045
+                parts.append(
+                    m.b(0, z, m.w - 0.06, depth + 0.01, y, 0.025, "#c9553f" if i % 2 else "#ece4d6", move="out")
+                )
+            for sx in (-1, 1):
+                parts.append(m.b(sx * (m.w / 2 - 0.12), 0, 0.04, m.d - 0.3, m.h - 0.5, 0.03, "metal", move="out"))
+            parts.append(m.b(0, m.d / 2 - 0.04, m.w, 0.08, m.h - 0.26 - strips * 0.045, 0.12, "#d8dde6", move="out"))
+            return parts
+
+        add(
+            f"awning_{round(width * 100)}",
+            f"Markise {width:g} m".replace(".", ","),
+            f"Awning {width:g} m",
+            (width, 2.5, 0.6),
+            awning,
+            mount="wall",
+            wall_y=2.2,
+            cover="extends",
+            cover_rest=0,
+        )
+    # a sliding gate: the posts stay, the gate slides away along the fence as the cover opens
+    add(
+        "sliding_gate",
+        "Schiebetor",
+        "Sliding gate",
+        (4.0, 0.12, 1.4),
+        lambda m: [
+            m.b(-m.w / 2 + 0.06, 0, 0.12, 0.12, 0, m.h, "dark", edges="faint"),
+            m.b(m.w / 2 - 0.06, 0, 0.12, 0.12, 0, m.h, "dark", edges="faint"),
+            m.b(0, 0, m.w - 0.24, 0.05, 0.06, 0.06, "metal", move="slide_left"),
+            m.b(0, 0, m.w - 0.24, 0.05, m.h - 0.12, 0.06, "metal", move="slide_left"),
+            *[
+                m.b(-m.w / 2 + 0.2 + 0.12 * i, 0, 0.03, 0.03, 0.12, m.h - 0.24, "metal", move="slide_left")
+                for i in range(30)
+            ],
+        ],
+        cover="retracts",
+        cover_rest=1,
+    )
+
     return [
         (
             "nextfloor.a_garten",

@@ -1,9 +1,9 @@
 // Furniture from packs: the parts of a pack item scaled to the item's size, as lamps with glowing parts, and as glow layers.
 
 import type { Furniture } from "../../model.ts";
-import { fittedParts, type PackItem, type PackPart } from "../../packs.ts";
+import { fittedParts, movedParts, type PackItem, type PackPart } from "../../packs.ts";
 import { DEG, EDGE_TOP, LineBuffer, shade, type GeoBuffer } from "../geo.ts";
-import { Builder, type Plan } from "./builder.ts";
+import { Builder, flipWinding, type Plan } from "./builder.ts";
 import { C, EDGE_FAINT, EDGE_FURN, material } from "./palette.ts";
 
 /** The colour of a pack part: a palette role (so packs follow the look) or "#rrggbb". */
@@ -15,10 +15,13 @@ function partColor(value: string | undefined, top: boolean): number | null {
 }
 
 /** The model of a pack item: its parts scaled to the item's size. Glowing parts take `glow` (a lit lamp). */
-export function packModel(b: Builder, item: PackItem, w: number, d: number, h: number, base: number, glow: number | null, only: ((p: PackPart) => boolean) | null = null, variant: string | null = null): void {
+export function packModel(b: Builder, item: PackItem, w: number, d: number, h: number, base: number, glow: number | null, only: ((p: PackPart) => boolean) | null = null, variant: string | null = null, reach: number | null = null): void {
   // the colour picked for the item (its first by default), for the parts that carry paint
   const paint = item.colors?.length ? (item.colors.find((c) => c.id === variant) ?? item.colors[0]).hex : null;
-  for (const raw of fittedParts(item, w, d, h)) {
+  // moving parts (a curtain, an awning) are drawn apart, at their reach; the item itself leaves them out
+  const fitted = fittedParts(item, w, d, h);
+  for (const raw of reach === null ? fitted : movedParts(fitted, reach)) {
+    if (reach === null && raw.move) continue;
     if (only && !only(raw)) continue;
     // selected parts (the glowing ones of a speaker, a car's windows) come out a hair larger, so they cover the item's own
     const part = only ? { ...raw, glow: true, w: raw.w + 0.006 / w, d: raw.d + 0.006 / d, y: Math.max(0, raw.y - 0.002 / h), h: raw.h + 0.004 / h } : raw;
@@ -63,6 +66,13 @@ const sizeOf = (f: Placed): [number, number, number] => [Math.max(0.05, f.w), Ma
 /** The glowing parts of a pack item that is no lamp (a smart speaker's light ring) in `color`, for the screen layer. */
 export function pushPackGlow(buf: GeoBuffer, item: PackItem, f: Placed, base: number, color: number, pick: (p: PackPart) => boolean = (p) => !!p.glow): void {
   packModel(new Builder(buf, new LineBuffer(), placement(f)), item, ...sizeOf(f), base, color, pick);
+}
+
+/** The moving parts of a pack item (curtain, roller screen, awning, gate) at their reach (0 drawn in … 1 out). */
+export function pushPackMoving(buf: GeoBuffer, item: PackItem, f: Placed & { variant?: string | null }, base: number, reach: number): void {
+  const first = buf.p.length;
+  packModel(new Builder(buf, new LineBuffer(), placement(f)), item, ...sizeOf(f), base, null, null, f.variant ?? null, reach);
+  if (f.mirror) flipWinding(buf, first);
 }
 
 /** A pack lamp into the lamp buffer: glowing parts in the light's colour (`glow`), or dark when off. Lamps have no outlines. */

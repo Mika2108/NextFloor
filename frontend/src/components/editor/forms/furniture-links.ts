@@ -88,6 +88,15 @@ function subMeterLinks(host: EditorHost, item: Furniture, actions: FurnitureLink
   );
 }
 
+/** A curtain, roller screen, awning or gate: the cover entity its moving parts follow. */
+export function coverLink(host: EditorHost, item: Furniture, actions: FurnitureLinkActions): TemplateResult {
+  const t = host.t;
+  return html`<div class="nf-form nf-links">
+    ${entityField(host, t("furn_cover_entity"), item.cover_entity ?? null, undefined, entityOptions(host.hass, (id) => id.startsWith("cover.")), (v) => actions.update({ cover_entity: noneAsNull(v) }))}
+    ${hint(t("furn_cover_hint"), "nf-wide")}
+  </div>`;
+}
+
 /** A light switch or socket: one entity per button or socket, in order from the left. */
 export function gangLinks(host: EditorHost, item: Furniture, gangs: number, actions: FurnitureLinkActions): TemplateResult {
   const t = host.t;

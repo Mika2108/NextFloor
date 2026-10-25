@@ -31,11 +31,13 @@ def build(bp):
         (2.4, 0.12, 1.8),
         lambda m: [
             m.b(0, 0, m.w, 0.1, m.h - 0.1, 0.1, "dark"),
-            m.b(0, 0.03, m.w - 0.06, 0.01, 0.1, m.h - 0.2, "white", screen=True),
-            m.b(0, 0.03, m.w - 0.06, 0.03, 0.06, 0.04, "dark"),
+            m.b(0, 0.03, m.w - 0.06, 0.01, 0.1, m.h - 0.2, "white", screen=True, move="down"),
+            m.b(0, 0.03, m.w - 0.06, 0.03, 0.06, 0.04, "dark", move="down"),
         ],
         mount="ceiling",
         electric=True,
+        cover="retracts",
+        cover_rest=1,
     )
     C(
         "projector_ceiling",

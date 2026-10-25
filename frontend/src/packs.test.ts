@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import { newFloor, type Furniture } from "./model.ts";
-import { fittedParts, furnitureSize, getPacks, hasMesh, isElectric, isClimateFurniture, isPackType, markMeshReady, mountBase, packDisplay, packItem, packItemName, packName, packScreen, packsVersion, packType, setPacks, type PackItem, type PackPart } from "./packs.ts";
+import { coverReach, fittedParts, furnitureSize, hasMovingParts, movedParts, getPacks, hasMesh, isElectric, isClimateFurniture, isPackType, markMeshReady, mountBase, packDisplay, packItem, packItemName, packName, packScreen, packsVersion, packType, setPacks, type PackItem, type PackPart } from "./packs.ts";
 
 const part = (extra: Partial<PackPart> = {}): PackPart => ({ shape: "box", x: 0, z: 0, w: 1, d: 1, y: 0, h: 1, color: "body", ...extra });
 const item = (id: string, extra: Partial<PackItem> = {}): PackItem => ({ id, name: { en: id }, size: [1, 1, 1], parts: [part()], ...extra });
@@ -143,4 +143,33 @@ test("a much smaller item falls back to even scaling instead of folding its part
   const [a, b] = fittedParts(box, 0.3, 1, 1);
   assert.ok(a.x + a.w / 2 <= b.x - b.w / 2 + 1e-9, "parts stay side by side");
   assert.equal(Math.round(a.w * 1000) / 1000, 0.2);
+});
+
+test("moving parts roll up, gather to a side, reach out or slide with the cover", () => {
+  const cloth = part({ x: 0, w: 1, y: 0, h: 1, move: "down" });
+  const [rolled] = movedParts([cloth, part()], 0.25);
+  assert.equal(rolled.y, 0.75, "rolled up three quarters: hangs from the top");
+  assert.equal(rolled.h, 0.25);
+  const [left] = movedParts([part({ x: 0, w: 1, move: "left" })], 0.5);
+  assert.equal(left.x - left.w / 2, -0.5, "gathers at the left end");
+  assert.equal(left.w, 0.5);
+  const [out] = movedParts([part({ z: 0, d: 1, move: "out" })], 0.4);
+  assert.equal(Math.round((out.z - out.d / 2) * 100) / 100, -0.5, "reaches out from the back");
+  assert.equal(Math.round(out.d * 100) / 100, 0.4);
+  const [gate] = movedParts([part({ x: 0, w: 0.8, move: "slide_left" })], 0);
+  assert.equal(Math.round(gate.x * 100) / 100, -0.8, "an open gate has slid its whole width");
+  assert.deepEqual(movedParts([part({ move: "down" })], 0), [], "a fully rolled-up part is gone");
+});
+
+test("a cover's open position pulls a curtain in and an awning out; without an entity the parts rest", () => {
+  const curtain = item("curtain", { cover: "retracts", cover_rest: 0.25 });
+  const awning = item("awning", { cover: "extends", cover_rest: 0 });
+  assert.equal(coverReach(curtain, 100), 0);
+  assert.equal(coverReach(curtain, 0), 1);
+  assert.equal(coverReach(awning, 100), 1);
+  assert.equal(coverReach(awning, 30), 0.3);
+  assert.equal(coverReach(curtain, null), 0.25);
+  assert.equal(coverReach(item("plain"), null), 1);
+  assert.ok(hasMovingParts(item("m", { parts: [part({ move: "left" })] })));
+  assert.ok(!hasMovingParts(item("plain")));
 });

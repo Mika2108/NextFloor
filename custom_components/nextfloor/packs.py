@@ -61,6 +61,8 @@ PART_SCHEMA = vol.Schema(
         vol.Optional("screen", default=False): bool,
         # a button or socket of a switch plate (0 = the first): glows while the entity of that gang is on
         vol.Optional("gang"): vol.All(vol.Coerce(int), vol.Range(min=0, max=7)),
+        # moves with the item's cover entity: rolls up ("down"), gathers to a side, reaches out ("out") or slides away
+        vol.Optional("move"): vol.In(["down", "left", "right", "out", "slide_left", "slide_right"]),
         # loft: centre and extent of the top rectangle (default: the same as the bottom)
         vol.Optional("tx"): _FRACTION,
         vol.Optional("tz"): _FRACTION,
@@ -124,6 +126,9 @@ ITEM_SCHEMA = vol.Schema(
         vol.Optional("mesh"): vol.All(str, vol.Match(r"^[a-z0-9_]{1,48}$")),
         # a vehicle: offered for parking spots
         vol.Optional("vehicle", default=False): bool,
+        # moving parts: an open cover pulls them in ("retracts") or out ("extends", an awning); where they rest without one
+        vol.Optional("cover"): vol.In(["retracts", "extends"]),
+        vol.Optional("cover_rest"): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
         # light switches and sockets: how many buttons (gangs) the item has, each linked to its own entity
         vol.Optional("gangs"): vol.All(vol.Coerce(int), vol.Range(min=1, max=8)),
         # scale every part evenly when resized, instead of keeping legs, arms and plates at their size

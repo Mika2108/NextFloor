@@ -310,9 +310,14 @@ def fitout(bp):
         (2.0, 0.2, 2.5),
         lambda m: [
             m.b(0, -0.06, 2.1, 0.06, 2.4, 0.08, "metal"),
-            *[m.b(-0.9 + 0.08 * i, 0.0, 0.05, 0.1 + 0.02 * (i % 2), 0.05, 2.35, "#c9c1b2") for i in range(23)],
+            *[
+                m.b(-0.9 + 0.08 * i, 0.0, 0.05, 0.1 + 0.02 * (i % 2), 0.05, 2.35, "#c9c1b2", move="left")
+                for i in range(23)
+            ],
         ],
         electric=True,
+        cover="retracts",
+        cover_rest=0.3,
     )
     W(
         "niche_shelf",
@@ -379,6 +384,41 @@ def fitout(bp):
             *[m.b(x, m.d / 2, 0.76, 0.012, 0.04, 0.3, "#e8ecf2") for x in (-0.4, 0.4)],
         ],
         surface=True,
+    )
+    # a curtain on a track that opens to both sides, and a roller blind inside the window: both follow a cover entity
+    W(
+        "curtain_pair",
+        "Vorhang (zweiseitig)",
+        "Curtain (opens to both sides)",
+        (2.4, 0.18, 2.5),
+        lambda m: [
+            m.b(0, -0.06, m.w + 0.1, 0.05, 2.42, 0.06, "metal"),
+            *[
+                m.b(-m.w / 2 + 0.05 + 0.1 * i, 0.0, 0.07, 0.1 + 0.03 * (i % 2), 0.04, 2.36, "#d6cbb8", move="left")
+                for i in range(12)
+            ],
+            *[
+                m.b(m.w / 2 - 0.05 - 0.1 * i, 0.0, 0.07, 0.1 + 0.03 * (i % 2), 0.04, 2.36, "#d6cbb8", move="right")
+                for i in range(12)
+            ],
+        ],
+        cover="retracts",
+        cover_rest=0.25,
+    )
+    W(
+        "roller_blind_inside",
+        "Rollo (innen)",
+        "Roller blind (inside)",
+        (1.2, 0.07, 1.5),
+        lambda m: [
+            m.c(0, 0, m.w, 0.06, m.h - 0.07, 0.07, "#e8ecf2", axis="x", edges="faint"),
+            m.b(0, 0.01, m.w - 0.04, 0.008, 0.03, m.h - 0.1, "#cfc6b6", move="down"),
+            m.b(0, 0.01, m.w - 0.02, 0.025, 0.0, 0.03, "#9aa4b2", move="down"),
+        ],
+        mount="wall",
+        wall_y=0.85,
+        cover="retracts",
+        cover_rest=0,
     )
     return items
 

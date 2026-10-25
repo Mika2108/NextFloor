@@ -5,10 +5,10 @@ import { furnitureName } from "../../../furniture-names.ts";
 import { holeInRoom } from "../../../geometry/holes.ts";
 import type { I18nKey } from "../../../i18n.ts";
 import { canLift, CEILING_TYPES, ceilingAt, ceilingOf, FURNITURE_TYPES, furnitureFootprint, isLamp, type Furniture } from "../../../model.ts";
-import { isElectric, mountBase, packItem, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
+import { hasMovingParts, isElectric, mountBase, packItem, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
 import { checkField, hint, numberField, selectField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
-import { furnitureLinks, gangLinks, stateLinks, type FurnitureLinkActions } from "./furniture-links.ts";
+import { coverLink, furnitureLinks, gangLinks, stateLinks, type FurnitureLinkActions } from "./furniture-links.ts";
 import { parkingForm } from "./parking.ts";
 
 export interface FurnitureActions extends FurnitureLinkActions {
@@ -145,7 +145,7 @@ export function renderFurnitureForm(host: EditorHost, item: Furniture, actions: 
     <div class="nf-h3row"><h3>${item.name || host.t("furniture")}</h3>${actions.lockButton}</div>
     <div class="nf-form">${nameFields(host, item, actions)} ${kindField(host, item, actions.packs, actions)} ${geometryFields(host, item, actions)}</div>
     ${typeNotes(host, item)} ${variantField(host, item, actions)} ${paintField(host, item, actions)}
-    ${links} ${item.type === "parking" ? parkingForm(host, item, actions.packs, actions) : nothing}
+    ${links} ${hasMovingParts(packItem(item.type)) ? coverLink(host, item, actions) : nothing} ${item.type === "parking" ? parkingForm(host, item, actions.packs, actions) : nothing}
     ${item.type.startsWith("pack:nextfloor.fahrzeuge:") && host.admin
       ? html`<section>${hint(host.t("vehicle_to_spot_hint"))}<div class="nf-actions"><button class="nf-btn nf-primary" @click=${() => actions.toSpot(item)}>🅿 ${host.t("vehicle_to_spot")}</button></div></section>`
       : nothing}

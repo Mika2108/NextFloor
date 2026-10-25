@@ -8,6 +8,7 @@ import {
   entityName,
   furnitureEntities,
   isActive,
+  coverReaches,
   gangGlows,
   gangEntities,
   isUnavailable,
@@ -45,7 +46,7 @@ import { STAGE, type Theme } from "../themes.ts";
 import { HEAT_SCALES, heatColor, heatGradient, roomValues, type HeatMode } from "../heatmap.ts";
 import { furnitureName } from "../furniture-names.ts";
 import { formatNumber, translate, type I18nKey } from "../i18n.ts";
-import { getPacks, mountBase, packItem, packsVersion } from "../packs.ts";
+import { getPacks, hasMovingParts, mountBase, packItem, packsVersion } from "../packs.ts";
 import { parkedVehicle, parkedVehicles, vehicleFurniture } from "../parking.ts";
 import { weatherEntity } from "../weather.ts";
 import { chosenEffects, readSkyWeather, withDensity } from "../live/sky-weather.ts";
@@ -587,6 +588,7 @@ export class NfView3d extends LitElement {
     v.setPickTargets(furniture.targets, this.openingTargets());
     v.setScreens(furniture.screens);
     v.setFridgeDoors(fridgeDoors(hass, b.floors));
+    v.setCovers(coverReaches(hass, b));
     v.setRobots(this.robotInfos(hass, b));
     // roof windows: sash and blind follow their contact and cover like windows do
     v.setRoofWindows(roofWindowStates(hass, b));
@@ -791,6 +793,8 @@ export class NfView3d extends LitElement {
         if (faces.length) screens.set(f.id, { color: faces[0].color, level: faces[0].level, faces });
         // a light switch or socket: each button glows with its own entity; a tap switches it (or asks which, with several)
         const plate = packItem(f.type);
+        // a curtain, roller screen, awning or gate: a tap opens the menu of the cover it follows
+        if (f.cover_entity && hasMovingParts(plate)) targets.set(f.id, f.cover_entity);
         if (plate?.gangs) {
           const gangs = gangGlows(hass, (f.gang_entities ?? []).slice(0, plate.gangs), /socket/.test(f.type));
           if (gangs.length) screens.set(f.id, { color: gangs[0].color, level: gangs[0].level, gangs });

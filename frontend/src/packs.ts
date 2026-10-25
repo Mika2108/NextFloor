@@ -6,6 +6,8 @@ import { builtinBase, ceilingAt, ceilingOf, ELECTRIC_FURNITURE, FURNITURE_SIZE, 
 import type { LampModel } from "./viewer/viewer3d.ts";
 
 /** One building block of an item. Positions and extents are fractions of the item's own size. */
+export type PartMove = "down" | "left" | "right" | "out" | "slide_left" | "slide_right";
+
 export interface PackPart {
   /** box, cylinder, loft (a box whose top face is a different rectangle) or sweep (a smooth body along z). */
   shape: "box" | "cyl" | "loft" | "sweep";
@@ -29,6 +31,11 @@ export interface PackPart {
   screen?: boolean;
   /** A button or socket of a switch plate (0 = the first): glows while the entity of that gang is on. */
   gang?: number;
+  /**
+   * Moves with the item's cover entity: "down" rolls towards the item's top (a blind, a screen), "left"/"right" gather towards that side
+   * (a curtain), "out" reaches out from the back (an awning), "slide_left"/"slide_right" slide the part away (a gate).
+   */
+  move?: PartMove;
   /** Loft: centre and size of the top rectangle (default: same as the base). */
   tx?: number;
   tz?: number;
@@ -73,6 +80,10 @@ export interface PackItem {
   vehicle?: boolean;
   /** Light switches and sockets: how many buttons (gangs) it has, each linked to its own entity. */
   gangs?: number;
+  /** Items with moving parts: an open cover pulls them in ("retracts": curtain, screen, gate) or out ("extends": an awning). */
+  cover?: "retracts" | "extends";
+  /** Where the moving parts rest without a cover entity: 0 drawn in … 1 all the way out (default 1). */
+  cover_rest?: number;
   /** Scale every part evenly when the item is resized, instead of keeping legs, arms and plates at their size. */
   stretch?: boolean;
   /** Stairs: cut a stairwell into the floor above where they reach it. */
@@ -195,6 +206,52 @@ export function fittedParts(item: PackItem, w: number, d: number, h: number): Pa
   if (cache.size > 32) cache.clear();
   cache.set(key, parts);
   return parts;
+}
+
+/** Whether an item has parts that move with a cover entity. */
+export const hasMovingParts = (item: PackItem | undefined): boolean => !!item?.parts.some((p) => p.move);
+
+/** How far the moving parts are out (0 … 1) for a cover at `position` percent open (null: no entity, they rest). */
+export function coverReach(item: PackItem, position: number | null): number {
+  if (position === null) return Math.min(1, Math.max(0, item.cover_rest ?? 1));
+  const open = Math.min(1, Math.max(0, position / 100));
+  return item.cover === "extends" ? open : 1 - open;
+}
+
+/** Moving parts placed for a reach k (0 drawn in … 1 out); parts that have all but vanished are left out. */
+export function movedParts(parts: readonly PackPart[], k: number): PackPart[] {
+  const out: PackPart[] = [];
+  for (const p of parts) {
+    if (!p.move) continue;
+    const q: PackPart = { ...p };
+    // an edge at `v` gathered towards the anchor `a` of the item (fractions): it keeps k of its distance
+    const toward = (v: number, a: number) => a + (v - a) * k;
+    if (p.move === "down") {
+      const [lo, hi] = [toward(p.y, 1), toward(p.y + p.h, 1)];
+      Object.assign(q, { y: lo, h: hi - lo });
+    } else if (p.move === "left" || p.move === "right") {
+      const a = p.move === "left" ? -0.5 : 0.5;
+      const [x0, x1] = [toward(p.x - p.w / 2, a), toward(p.x + p.w / 2, a)];
+      Object.assign(q, { x: (x0 + x1) / 2, w: Math.abs(x1 - x0) });
+      if (p.tx !== undefined || p.tw !== undefined) {
+        const [t0, t1] = [toward((p.tx ?? p.x) - (p.tw ?? p.w) / 2, a), toward((p.tx ?? p.x) + (p.tw ?? p.w) / 2, a)];
+        Object.assign(q, { tx: (t0 + t1) / 2, tw: Math.abs(t1 - t0) });
+      }
+    } else if (p.move === "out") {
+      const [z0, z1] = [toward(p.z - p.d / 2, -0.5), toward(p.z + p.d / 2, -0.5)];
+      Object.assign(q, { z: (z0 + z1) / 2, d: z1 - z0 });
+      if (p.tz !== undefined || p.td !== undefined) {
+        const [t0, t1] = [toward((p.tz ?? p.z) - (p.td ?? p.d) / 2, -0.5), toward((p.tz ?? p.z) + (p.td ?? p.d) / 2, -0.5)];
+        Object.assign(q, { tz: (t0 + t1) / 2, td: t1 - t0 });
+      }
+    } else {
+      // a sliding part moves by its own width times how far it is open
+      const shift = (1 - k) * p.w * (p.move === "slide_left" ? -1 : 1);
+      Object.assign(q, { x: p.x + shift, ...(p.tx !== undefined ? { tx: p.tx + shift } : {}) });
+    }
+    if (q.w > 0.002 && q.d > 0.002 && q.h > 0.002) out.push(q);
+  }
+  return out;
 }
 
 /** The screen part of an item, if it has one. */

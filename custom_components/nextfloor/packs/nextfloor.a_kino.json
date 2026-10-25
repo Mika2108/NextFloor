@@ -76,7 +76,8 @@
      "y": 0.0556,
      "h": 0.8889,
      "color": "white",
-     "screen": true
+     "screen": true,
+     "move": "down"
     },
     {
      "shape": "box",
@@ -86,11 +87,14 @@
      "d": 0.25,
      "y": 0.0333,
      "h": 0.0222,
-     "color": "dark"
+     "color": "dark",
+     "move": "down"
     }
    ],
    "mount": "ceiling",
-   "electric": true
+   "electric": true,
+   "cover": "retracts",
+   "cover_rest": 1
   },
   {
    "id": "projector_ceiling",

@@ -42,6 +42,7 @@ function choices(host: EditorHost) {
       return isNumeric(id) && (windowPosition(stateOf(id)) !== null || HANDLE_NAME.test(`${id} ${entityName(hass, id)}`));
     }),
     numbers: entityOptions(hass, isNumeric),
+    locks: entityOptions(hass, (id) => id.startsWith("lock.")),
   };
 }
 
@@ -145,7 +146,8 @@ function doorContacts(host: EditorHost, o: Opening, actions: OpeningActions, lis
   const two = o.leaves === 2;
   return html`${entityField(host, t(two ? "contact_main" : "contact_entity"), o.contact, automaticLink(host, o, "contact"), lists.contacts, (v) => actions.update({ contact: v }))}
     ${two && o.type !== "garage" ? entityField(host, t("contact_second"), o.contact2, undefined, lists.contacts, (v) => actions.update({ contact2: noneAsNull(v) })) : nothing}
-    ${o.type === "door" ? checkField(host, t("door_shut"), !!o.shut, (on) => actions.update({ shut: on }), { title: t("door_shut_hint") }) : nothing}`;
+    ${o.type === "door" ? checkField(host, t("door_shut"), !!o.shut, (on) => actions.update({ shut: on }), { title: t("door_shut_hint") }) : nothing}
+    ${o.type === "door" ? html`${entityField(host, t("opening_lock"), o.lock ?? null, undefined, lists.locks, (v) => actions.update({ lock: noneAsNull(v) }))}${hint(t("opening_lock_hint"), "nf-wide")}` : nothing}`;
 }
 
 /** The form of the selected opening. */

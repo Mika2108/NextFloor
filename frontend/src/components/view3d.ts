@@ -13,6 +13,7 @@ import {
   lightGlow,
   openingEntities,
   openingState,
+  isUnlocked,
   TOGGLE_KINDS,
   type FurnitureLinks,
   type OpeningEntities,
@@ -1079,7 +1080,8 @@ export class NfView3d extends LitElement {
   private openingTargets(): Map<string, string> {
     const out = new Map<string, string>();
     for (const [id, e] of this.openingLinks ?? []) {
-      const target = e.cover ?? e.contact ?? e.tilt;
+      // a door with a smart lock is tapped to lock or unlock it
+      const target = e.lock ?? e.cover ?? e.contact ?? e.tilt;
       if (target) out.set(id, target);
     }
     return out;
@@ -1445,6 +1447,13 @@ export class NfView3d extends LitElement {
     // blinds have no single on/off: a tap opens their quick menu (up, positions, stop, down)
     if (kind === "cover") {
       this._menu = { entity: entityId, x, y };
+      return;
+    }
+    // a smart lock always asks first, whichever way it goes
+    if (kind === "lock") {
+      const unlocked = isUnlocked(this.hass, entityId);
+      const name = entityName(this.hass, entityId);
+      if (confirm(translate(this.hass, unlocked ? "lock_confirm_lock" : "lock_confirm_unlock", { name }))) void this.hass.callService("lock", unlocked ? "lock" : "unlock", { entity_id: entityId });
       return;
     }
     if (kind && TOGGLE_KINDS.has(kind)) {

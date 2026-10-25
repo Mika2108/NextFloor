@@ -13,6 +13,8 @@ export const LEAF = 0x1c2c4d;
 export const LEAF_TOP = 0x27406b;
 export const LEAF_FRONT = 0x111a30;
 export const LEAF_FRONT_TOP = 0x1c2a47;
+/** The free edge of a door whose smart lock is unlocked: the stock cyan, which the neon look turns into the user's accent. */
+export const UNLOCKED = 0x37e0ff;
 export const HANDLE = 0x5b7cff;
 export const HANDLE_TOP = 0x8aa2ff;
 export const GLASS = shade(0x37e0ff, 0.08);

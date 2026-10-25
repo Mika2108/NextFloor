@@ -22,6 +22,8 @@ export interface OpeningEntities {
   tiltInvert?: boolean;
   /** A door without a sensor is drawn closed. */
   shut?: boolean;
+  /** A door's smart lock. */
+  lock?: string | null;
 }
 
 const BLIND_CLASSES = new Set([undefined, "shutter", "blind", "awning", "shade", "curtain", "window"]);
@@ -82,6 +84,7 @@ export function openingEntities(hass: HomeAssistant, floors: readonly Floor[]): 
           tiltOffset: o.tilt_offset ?? null,
           tiltInvert: !!o.tilt_invert,
           shut: !!o.shut,
+          lock: o.type === "door" ? unlessNone(o.lock) : null,
         });
       }
     }
@@ -139,6 +142,12 @@ function blindClosedFraction(hass: HomeAssistant, e: OpeningEntities): number | 
   return e.cover ? 0 : null;
 }
 
+/** A smart lock that stands unlocked or open (unlocking counts once it has happened, jammed and unknown do not). */
+export function isUnlocked(hass: HomeAssistant, lock: string | null | undefined): boolean {
+  const state = lock ? hass.states[lock]?.state : undefined;
+  return state === "unlocked" || state === "open" || state === "opening";
+}
+
 export interface OpeningState {
   open: number;
   open2: number;
@@ -146,6 +155,8 @@ export interface OpeningState {
   tilt2: number;
   cover: number | null;
   sensed: boolean;
+  /** A door whose smart lock is unlocked (or open). */
+  unlocked?: boolean;
 }
 
 /**
@@ -162,7 +173,7 @@ export function openingState(hass: HomeAssistant, e: OpeningEntities, type: Open
     // a door with a roller shutter (front door, patio door): the blind comes down over it
     const leaf = positionOf(e.contact);
     const open = leaf === null ? (e.shut ? 0 : DOOR_DEFAULT_OPEN) : leaf === "closed" ? 0 : 1;
-    return { open, open2: positionOf(e.contact2) === "open" ? 1 : 0, tilt: 0, tilt2: 0, cover, sensed: leaf !== null || cover !== null };
+    return { open, open2: positionOf(e.contact2) === "open" ? 1 : 0, tilt: 0, tilt2: 0, cover, sensed: leaf !== null || cover !== null, unlocked: isUnlocked(hass, e.lock) };
   }
   if (type === "garage") {
     // a garage door without a cover shows its contact: open or closed

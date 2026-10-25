@@ -195,6 +195,7 @@ const DEVICES = [
   entity("binary_sensor.wohnzimmer_kamera_bewegung", "wohnzimmer", "on", { friendly_name: "Wohnzimmer Kamera Bewegung", device_class: "motion" }),
   entity("binary_sensor.wohnzimmer_kamera_person", "wohnzimmer", "on", { friendly_name: "Wohnzimmer Kamera Person", device_class: "occupancy" }),
   entity("binary_sensor.haustuer", "flur", "off", { friendly_name: "Haustür", device_class: "door" }),
+  entity("lock.haustuer", "flur", "unlocked", { friendly_name: "Haustür Schloss" }),
   entity("binary_sensor.bett_links", "schlafzimmer", "on", { friendly_name: "Bett links belegt", device_class: "occupancy" }),
   entity("binary_sensor.bett_rechts", "schlafzimmer", "off", { friendly_name: "Bett rechts belegt", device_class: "occupancy" }),
   entity("cover.garagentor", "garage", "open", { friendly_name: "Garagentor", device_class: "garage", current_position: 60, supported_features: 15 }),
@@ -333,7 +334,7 @@ DEMO_BUILDING.floors[0].openings = [
   hole("window", "schlafen", 3, 1.7, 1.0, { contact: "none" }),
   hole("window", "bad", 2, 1.2, 0.8, { sill: 1.3, height: 0.8 }),
   hole("door", "bad", 1, 1.2, 0.8),
-  hole("door", "flur", 4, 0.8, 1.4, { swing: "out", style: "sidelight" }),
+  hole("door", "flur", 4, 0.8, 1.4, { swing: "out", style: "sidelight", lock: "lock.haustuer" }),
 ];
 DEMO_BUILDING.floors[1].openings = [
   hole("window", "kind", 0, 2.2, 1.2),

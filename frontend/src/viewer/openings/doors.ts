@@ -4,7 +4,7 @@ import { Color } from "three";
 import { isFrontDoor, openingStyle, sidelightLayout } from "../../model.ts";
 import { ALWAYS, shade } from "../geo.ts";
 import type { Ctx } from "./context.ts";
-import { DOOR_ANGLE, FRAME, FRAME_TOP, GLASS, HANDLE, HANDLE_TOP, LEAF, LEAF_FRONT, LEAF_FRONT_TOP, LEAF_TOP, OPEN_WARM, SILL } from "./palette.ts";
+import { DOOR_ANGLE, FRAME, FRAME_TOP, GLASS, HANDLE, HANDLE_TOP, LEAF, LEAF_FRONT, LEAF_FRONT_TOP, LEAF_TOP, OPEN_WARM, SILL, UNLOCKED } from "./palette.ts";
 import { flatPanel, panel, splitBox, type Frame } from "./primitives.ts";
 
 /** The frame (Zarge) around a door or garage opening, covering the reveal on both faces. An open garage door glows warm. */
@@ -93,6 +93,11 @@ export function doorLeaves(c: Ctx): void {
     const handle = (na: number, nb: number) => splitBox(c.frames, leafFrame, { x0: hx0, x1: hx1, n0: na, n1: nb, y0: height - half, y1: height + half }, new Color(HANDLE), new Color(HANDLE_TOP), leafFold);
     handle(0.004, 0.05);
     handle(-thickness - 0.05, -thickness - 0.004);
+    // an unlocked smart lock: the leaf's free edge glows in the accent (cyan follows the user's accent colour)
+    if (state.unlocked) {
+      const glow = new Color(UNLOCKED);
+      splitBox(c.frames, leafFrame, { x0: leafWidth - 0.012, x1: leafWidth + 0.004, n0: -thickness - 0.004, n1: 0.004, y0: 0.06, y1: T - 0.06 }, glow, glow, { cut: fold.cut, bucket: ALWAYS });
+    }
   }
 }
 

@@ -118,6 +118,8 @@ export interface Opening {
   confirm?: boolean;
   cover: EntityRef;
   contact: EntityRef;
+  /** Doors: a smart lock (lock.*). A tap on the door locks or unlocks it after asking; while unlocked, its free edge glows. */
+  lock?: string | null;
   tilt: EntityRef;
 }
 

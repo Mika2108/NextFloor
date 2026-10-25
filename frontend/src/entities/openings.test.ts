@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { box, entity, floorWith, hassOf, opening } from "./fixtures.ts";
-import { DOOR_DEFAULT_OPEN, openingEntities, openingState, windowPosition } from "./openings.ts";
+import { DOOR_DEFAULT_OPEN, isUnlocked, openingEntities, openingState, windowPosition } from "./openings.ts";
 
 const sensors = [
   entity("cover.blind", "open", { device_class: "shutter" }),
@@ -138,4 +138,19 @@ test("'sensed' says whether any sensor answered", () => {
   assert.equal(openingState(hass, plain({ contact: "binary_sensor.c" })).sensed, false);
   assert.equal(openingState(hass, plain({ contact: "binary_sensor.d" })).sensed, true);
   assert.equal(openingState(hass, plain()).sensed, false);
+});
+
+test("a door's smart lock is linked by hand and says when it stands unlocked", () => {
+  const locks = [entity("lock.front", "unlocked"), entity("lock.back", "locked"), entity("lock.side", "jammed")];
+  const hass = hassOf([...sensors, ...locks], registry);
+  const floor = floorWith([box("r", 0, 0, 5, 4, "a")], {
+    openings: [opening("d", "r", "door", { lock: "lock.front" }), opening("e", "r", "door", { lock: "lock.back" }), opening("w", "r", "window", { lock: "lock.front" })],
+  });
+  const links = openingEntities(hass, [floor]);
+  assert.equal(links.get("d")?.lock, "lock.front");
+  assert.equal(links.get("w")?.lock, null, "only doors take a lock");
+  assert.equal(openingState(hass, links.get("d")!, "door").unlocked, true);
+  assert.equal(openingState(hass, links.get("e")!, "door").unlocked, false);
+  assert.equal(isUnlocked(hass, "lock.side"), false, "a jammed lock does not glow");
+  assert.equal(isUnlocked(hass, null), false);
 });

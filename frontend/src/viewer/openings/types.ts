@@ -13,6 +13,8 @@ export interface OpeningState {
   cover: number | null;
   /** A sensor reports the state (contact, tilt sensor or cover); without one "closed" is a guess. */
   sensed?: boolean;
+  /** A door with a smart lock that stands unlocked: its free edge glows. */
+  unlocked?: boolean;
 }
 
 export const CLOSED: OpeningState = { open: 0, open2: 0, tilt: 0, tilt2: 0, cover: null };

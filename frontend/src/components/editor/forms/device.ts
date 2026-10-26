@@ -5,7 +5,8 @@ import { defaultHeight, entityName, hasScreen, kindOf, TOGGLE_KINDS } from "../.
 import type { I18nKey } from "../../../i18n.ts";
 import { iconPath } from "../../../icons.ts";
 import { ceilingAt, FURNITURE_TYPES, isLamp, type LampMount, type Placement } from "../../../model.ts";
-import { isClimateFurniture, isElectric, isPackType, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
+import { packItemLabel, packLabel } from "../../../furniture-names.ts";
+import { isClimateFurniture, isElectric, isPackType, packType, type FurniturePack } from "../../../packs.ts";
 import { checkField, glowField, iconField, markerField, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { lightEffectFields } from "../light-effect-fields.ts";
@@ -27,7 +28,7 @@ export function furnitureFor(host: EditorHost, entityId: string, packs: readonly
   const language = host.hass?.language ?? "en";
   const all = [
     ...FURNITURE_TYPES.map((type) => ({ type: type as string, label: host.t(`furn_${type}` as I18nKey) })),
-    ...packs.flatMap((pack) => pack.items.map((item) => ({ type: packType(pack.id, item.id), label: `${packItemName(item, language)} · ${packName(pack, language)}` }))),
+    ...packs.flatMap((pack) => pack.items.map((item) => ({ type: packType(pack.id, item.id), label: `${packItemLabel(item, packType(pack.id, item.id), language)} · ${packLabel(pack, language)}` }))),
   ];
   const fits = (type: string): boolean => {
     if (kind === "light") return isLamp(type);

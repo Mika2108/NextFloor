@@ -6,7 +6,7 @@ import { fetchBuilding } from "./api.ts";
 import { CARD_CONTROLS, type CardConfig, type CardControl } from "./card-config.ts";
 import { checkbox, choice, DEFAULTS, flagOption, followOrForce, numberChoice, switchOption, textField, type FormContext } from "./card-editor/form.ts";
 import { editorStyles } from "./card-editor/styles.ts";
-import { translate, type I18nKey } from "./i18n.ts";
+import { awaitingLanguage, translate, type I18nKey } from "./i18n.ts";
 import type { HomeAssistant } from "./types.ts";
 
 export class NextFloorCardEditor extends LitElement {
@@ -43,7 +43,6 @@ export class NextFloorCardEditor extends LitElement {
 
   protected willUpdate(): void {
     if (!this.hass) return;
-    // a language beyond German and English: its texts are fetched first, and then everything renders
     // the floors of the plan, for the floor choice
     if (!this.loading && this._floors.length === 0) {
       this.loading = true;
@@ -237,6 +236,8 @@ export class NextFloorCardEditor extends LitElement {
   }
 
   protected render() {
+    // a language beyond German and English: its texts are fetched first, and then everything renders
+    if (this.hass && awaitingLanguage(this.hass, this)) return nothing;
     return html`${this.viewSection()} ${this.showSection()} ${this.featuresSection()} ${this.kioskSection()}`;
   }
 

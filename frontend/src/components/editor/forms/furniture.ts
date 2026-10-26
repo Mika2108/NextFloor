@@ -1,11 +1,11 @@
 // The form of a piece of furniture: its name and kind, size and place, looks (paint, shape), and the entities it is linked to.
 
 import { html, nothing, type TemplateResult } from "lit";
-import { furnitureName } from "../../../furniture-names.ts";
+import { colourLabel, furnitureName, packItemLabel, packLabel } from "../../../furniture-names.ts";
 import { holeInRoom } from "../../../geometry/holes.ts";
 import type { I18nKey } from "../../../i18n.ts";
 import { canLift, CEILING_TYPES, ceilingAt, ceilingOf, FURNITURE_TYPES, furnitureFootprint, isLamp, type Furniture } from "../../../model.ts";
-import { hasMovingParts, householdKind, isElectric, mountBase, packItem, packItemName, packName, packType, type FurniturePack } from "../../../packs.ts";
+import { hasMovingParts, householdKind, isElectric, mountBase, packItem, packType, type FurniturePack } from "../../../packs.ts";
 import { checkField, hint, numberField, selectField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { careLink, coverLink, furnitureLinks, gangLinks, stateLinks, type FurnitureLinkActions } from "./furniture-links.ts";
@@ -42,8 +42,8 @@ function kindField(host: EditorHost, item: Furniture, packs: readonly FurnitureP
     <select ?disabled=${!host.admin} @change=${(e: Event) => actions.update({ type: (e.target as HTMLSelectElement).value })}>
       ${FURNITURE_TYPES.map((type) => html`<option value=${type} ?selected=${type === item.type}>${host.t(`furn_${type}` as I18nKey)}</option>`)}
       ${packs.map(
-        (pack) => html`<optgroup label=${packName(pack, host.hass?.language ?? "de")}>
-          ${pack.items.map((it) => html`<option value=${packType(pack.id, it.id)} ?selected=${packType(pack.id, it.id) === item.type}>${packItemName(it, language)}</option>`)}
+        (pack) => html`<optgroup label=${packLabel(pack, host.hass?.language ?? "de")}>
+          ${pack.items.map((it) => html`<option value=${packType(pack.id, it.id)} ?selected=${packType(pack.id, it.id) === item.type}>${packItemLabel(it, packType(pack.id, it.id), language)}</option>`)}
         </optgroup>`,
       )}
       ${item.type.startsWith("pack:") && !known ? html`<option value=${item.type} selected>${furnitureName(host.hass, item.type)}</option>` : nothing}
@@ -57,7 +57,7 @@ function paintField(host: EditorHost, item: Furniture, actions: FurnitureActions
   if (!colours?.length) return nothing;
   const language = host.hass?.language ?? "en";
   const current = colours.find((c) => c.id === item.variant) ?? colours[0];
-  const nameOf = (c: (typeof colours)[number]) => c.name[language] ?? c.name.en ?? Object.values(c.name)[0];
+  const nameOf = (c: (typeof colours)[number]) => colourLabel(c, language);
   return html`<div class="nf-form">
     <div class="nf-field nf-wide">
       <span>${host.t("paint_colour")}: ${nameOf(current)}</span>

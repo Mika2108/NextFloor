@@ -6,7 +6,8 @@ import { css, html, LitElement, nothing } from "lit";
 import { importPack, removePack } from "../api.ts";
 import { REPO_URL } from "../features.ts";
 import { translate, type I18nKey } from "../i18n.ts";
-import { packName, type FurniturePack } from "../packs.ts";
+import { packLabel } from "../furniture-names.ts";
+import type { FurniturePack } from "../packs.ts";
 import { controls, tokens } from "../styles.ts";
 import type { HomeAssistant } from "../types.ts";
 
@@ -86,7 +87,7 @@ export class PackManager extends LitElement {
   }
 
   private async deletePack(pack: FurniturePack): Promise<void> {
-    if (!this.hass || !confirm(this.t("pack_remove_confirm", { name: packName(pack, this.hass.language ?? "de") }))) return;
+    if (!this.hass || !confirm(this.t("pack_remove_confirm", { name: packLabel(pack, this.hass.language ?? "de") }))) return;
     try {
       await removePack(this.hass, pack.id);
       this._msg = null;
@@ -108,7 +109,7 @@ export class PackManager extends LitElement {
             ${own.map(
               (p) => html`<li>
                 <div class="nf-pack-main">
-                  <strong>${packName(p, language)}</strong>
+                  <strong>${packLabel(p, language)}</strong>
                   <span class="nf-detail">${p.id} · ${this.t("pack_by", { publisher: p.publisher, n: p.items.length })}</span>
                   ${p.description ? html`<span class="nf-detail">${p.description}</span>` : nothing}
                 </div>

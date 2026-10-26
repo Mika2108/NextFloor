@@ -1,7 +1,8 @@
 // The 3D models a user can add: which items of the packs name one, where it lives on Home Assistant, and what the answers of the
 // upload mean in words.
 
-import { packItemName, packName, type FurniturePack } from "./packs.ts";
+import { packItemLabel, packLabel } from "./furniture-names.ts";
+import { packType, type FurniturePack } from "./packs.ts";
 
 /** Where a model lives on the user's Home Assistant. */
 export const meshPath = (id: string): string => `/api/nextfloor/mesh/${encodeURIComponent(id)}`;
@@ -23,7 +24,7 @@ export function modelSlots(packs: readonly FurniturePack[], language: string): M
     for (const item of pack.items) {
       if (!item.mesh) continue;
       const names = byId.get(item.mesh) ?? [];
-      byId.set(item.mesh, [...names, `${packItemName(item, language)} · ${packName(pack, language)}`]);
+      byId.set(item.mesh, [...names, `${packItemLabel(item, packType(pack.id, item.id), language)} · ${packLabel(pack, language)}`]);
     }
   }
   return [...byId].map(([id, items]) => ({ id, items })).sort((a, b) => a.items[0].localeCompare(b.items[0]));

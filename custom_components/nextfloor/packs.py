@@ -129,6 +129,8 @@ ITEM_SCHEMA = vol.Schema(
         # moving parts: an open cover pulls them in ("retracts") or out ("extends", an awning), and their rest
         vol.Optional("cover"): vol.In(["retracts", "extends"]),
         vol.Optional("cover_rest"): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
+        # an animal that roams its room in 3D
+        vol.Optional("pet", default=False): bool,
         # the household: a waste bin (pickup day), a mailbox (post) or a plant (soil moisture), shown from a sensor
         vol.Optional("household"): vol.In(["bin", "mail", "plant"]),
         # light switches and sockets: how many buttons (gangs) the item has, each linked to its own entity

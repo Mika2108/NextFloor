@@ -188,6 +188,8 @@ function drawBuiltIn(b: Builder, f: Furniture, w: number, d: number, h: number, 
         b.block({ x: [-w / 2, w / 2], y: [0, h], z: [-d / 2, d / 2] }, M.body, EDGE_FURN);
         return "yes";
       }
+      // a pet is drawn by the view's own layer, where it walks around
+      if (item.pet) return "no";
       packModel(b, item, w, d, h, base, null, null, f.variant ?? null);
       // items on furniture, walls or ceilings cast no shadow on the floor
       return base > 0.05 ? "no" : "yes";

@@ -369,6 +369,9 @@ DEMO_BUILDING.floors[0].furniture = [
   item("table", 8.0, 2.9, 1.3, 0.85, 0.75),
   { ...item("lamp_pendant", 8.0, 2.9, 0.3, 0.3, 0.95), entity: "light.esstisch", variant: "globe" },
   { ...item("radiator", 0.08, 2.3, 1.0, 0.1, 0.6, 270), entity: "climate.wohnzimmer" },
+  // pets that roam their room
+  item("pack:nextfloor.a_haustiere:pet_cat", 1.6, 1.4, 0.2, 0.5, 0.3, 30),
+  item("pack:nextfloor.a_haustiere:pet_dog", 9.0, 2.0, 0.3, 0.75, 0.55, 200),
   // a two-gang light switch by the kitchen door and a double socket over the worktop (smart home pack)
   { ...item("pack:nextfloor.a_smart:light_switch_2", 10.05, 0.006, 0.157, 0.012, 0.086), gang_entities: ["light.kueche_links", "light.kueche_rechts"] },
   { ...item("pack:nextfloor.a_smart:socket_2", 7.75, 0.006, 0.157, 0.012, 0.086), mount_y: 1.02, gang_entities: ["switch.kaffeemaschine", null] },

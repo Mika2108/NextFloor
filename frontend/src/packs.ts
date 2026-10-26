@@ -78,6 +78,8 @@ export interface PackItem {
   mesh?: string;
   /** A vehicle; offered for parking spots. */
   vehicle?: boolean;
+  /** An animal that roams its room in 3D (drawn apart from the furniture and walked around by the view). */
+  pet?: boolean;
   /** The household: a waste bin (pickup day), a mailbox (post) or a plant (soil moisture), shown from a sensor of the item. */
   household?: "bin" | "mail" | "plant";
   /** Light switches and sockets: how many buttons (gangs) it has, each linked to its own entity. */

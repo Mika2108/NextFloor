@@ -5,6 +5,9 @@
 // flight into it). Each floor is a group with its own materials so its height and opacity can be
 // animated independently.
 
+import { packModel, placement } from "./furniture/packs.ts";
+import { Builder } from "./furniture/builder.ts";
+import { seededRandom, stepPet, type PetMotion, type PetRoom } from "./pets.ts";
 import { isLowEnd } from "../hardware.ts";
 import {
   AdditiveBlending,
@@ -40,7 +43,7 @@ import {
 } from "three";
 import type { Building, Floor, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
-import { CEILING_TYPES, ceilingOf, centroid, pointInPolygon, polygonArea, openingStyle, WALL_LAMP_Y } from "../model.ts";
+import { CEILING_TYPES, ceilingOf, centroid, furnitureFootprint, pointInPolygon, polygonArea, openingStyle, WALL_LAMP_Y } from "../model.ts";
 import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
 import { centredAt, floorLabelPosition, floorShowsMarkers, LabelPlacer, leftAt, project, stackFloorLabels, type FloorLabel, type ScreenPoint } from "./scene/labels.ts";
 import { easeFloor, fadeMaterials, floorShare, floorTarget } from "./scene/floor-motion.ts";
@@ -422,6 +425,10 @@ export class NextFloorViewer {
   private keepRoof = false;
   /** Robot vacuums: their info from Home Assistant, how they move, and their meshes. */
   private robots = new Map<string, { info: RobotInfo; motion: RobotMotion; group: Group; led: MeshBasicMaterial }>();
+  /** Pets roaming their rooms: their motion, the room they keep to, and the group that carries their model. */
+  private pets = new Map<string, { motion: PetMotion; room: PetRoom; random: () => number; group: Group; floorId: string }>();
+  private petMat: MeshBasicMaterial | null = null;
+  private petTimer: ReturnType<typeof setTimeout> | undefined;
   private robotGeo: BufferGeometry | null = null;
   private robotMat: MeshBasicMaterial | null = null;
   private robotLedGeo: BufferGeometry | null = null;
@@ -1190,6 +1197,7 @@ export class NextFloorViewer {
     this.intersection?.disconnect();
     document.removeEventListener("visibilitychange", this.onVisibility);
     this.host?.removeEventListener("pointerdown", this.onTouch);
+    clearTimeout(this.petTimer);
     this.controls.dispose();
     this.clear();
     this.building = null;
@@ -1580,6 +1588,7 @@ export class NextFloorViewer {
       });
     }
     this.floorMap = new Map(this.floors.map((f) => [f.floor.id, f]));
+    this.buildPets();
     for (const fv of this.floors) this.buildFridges(fv);
     this.labelsDirty = true;
     if (this.floorId && !b.floors.some((f) => f.id === this.floorId)) this.floorId = null;
@@ -2614,12 +2623,60 @@ export class NextFloorViewer {
     return { info, motion: { pos: [...info.rest] as [number, number], heading: info.restHeading, path: [], next: 0 }, group, led: ledMat };
   }
 
+  /** The pets of the plan: a model each, standing where it was placed, ready to roam its room. */
+  private buildPets(): void {
+    const keep = new Map(this.pets);
+    this.pets.clear();
+    this.petMat ??= new MeshBasicMaterial({ vertexColors: true });
+    for (const fv of this.floors) {
+      for (const f of fv.floor.furniture) {
+        const item = packItem(f.type);
+        if (!item?.pet) continue;
+        const room = fv.floor.rooms.find((r) => r.points.length >= 3 && pointInPolygon([f.x, f.z], r.points));
+        const old = keep.get(f.id);
+        const buf = new GeoBuffer();
+        packModel(new Builder(buf, new LineBuffer(), placement({ x: 0, z: 0, rotation: 0, mirror: f.mirror })), item, Math.max(0.05, f.w), Math.max(0.05, f.d), Math.max(0.05, f.h), 0, null, null, f.variant ?? null);
+        old?.group.removeFromParent();
+        const group = new Group();
+        group.add(new Mesh(buf.geometry(), this.petMat));
+        // the furniture of the room is what it walks round (not rugs, lamps on the ceiling or things on the walls)
+        const obstacles = room ? fv.floor.furniture.filter((o) => o.id !== f.id && !packItem(o.type)?.pet && o.type !== "rug" && mountBase(fv.floor, o) < 0.5 && pointInPolygon([o.x, o.z], room.points)).map((o) => furnitureFootprint(o)) : [];
+        const petRoom: PetRoom = { points: room?.points ?? [[f.x - 0.5, f.z - 0.5], [f.x + 0.5, f.z - 0.5], [f.x + 0.5, f.z + 0.5], [f.x - 0.5, f.z + 0.5]], obstacles, speed: f.type.endsWith(":pet_dog") ? 0.7 : 0.45 };
+        const motion: PetMotion = old && room && pointInPolygon(old.motion.pos, room.points) ? old.motion : { pos: [f.x, f.z], heading: (f.rotation * Math.PI) / 180, target: null, rest: 1 };
+        this.pets.set(f.id, { motion, room: petRoom, random: seededRandom(f.id), group, floorId: fv.floor.id });
+      }
+    }
+    for (const [id, old] of keep) if (!this.pets.has(id)) old.group.removeFromParent();
+  }
+
   /** Move the robots; true while one of them drives. */
   private stepRobots(now: number): boolean {
-    if (!this.robots.size) return false;
+    if (!this.robots.size && !this.pets.size) return false;
     const dt = this.robotLast ? Math.min(0.2, (now - this.robotLast) / 1000) : 0;
     this.robotLast = now;
     let active = false;
+    // the pets roam with the robots (same frames, and they rest with them on the tablet level); while every pet sits, no frames
+    // are drawn and a timer wakes the view when the first one walks on
+    let nextWalk = Infinity;
+    for (const p of this.pets.values()) {
+      const fv = this.floorMap.get(p.floorId);
+      if (!fv) continue;
+      if (p.group.parent !== fv.group) fv.group.add(p.group);
+      const walking = stepPet(p.motion, p.room, dt, p.random) || !!p.motion.target;
+      if (walking) active = true;
+      else nextWalk = Math.min(nextWalk, Math.max(0, p.motion.rest));
+      p.group.position.set(p.motion.pos[0], 0, p.motion.pos[1]);
+      p.group.rotation.y = p.motion.heading;
+    }
+    clearTimeout(this.petTimer);
+    if (!active && Number.isFinite(nextWalk)) {
+      const slept = performance.now();
+      this.petTimer = setTimeout(() => {
+        const gone = (performance.now() - slept) / 1000;
+        for (const p of this.pets.values()) if (!p.motion.target) p.motion.rest -= gone;
+        this.invalidate();
+      }, nextWalk * 1000 + 50);
+    }
     for (const r of this.robots.values()) {
       const fv = this.floorMap.get(r.info.floorId);
       if (!fv) continue;

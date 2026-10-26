@@ -1100,6 +1100,60 @@ def build(bp):
         light="table",
     )
 
+    # animals that roam their room (pet: true): drawn apart and walked around by the 3D view
+    def animal(body, legs_h, coat, belly, ears, tail, nose="#2b2f36"):
+        def fn(m):
+            bw, bl, bh = body
+            parts = [
+                m.b(0, -0.02, bw, bl, legs_h, bh, coat, edges="faint"),
+                m.b(
+                    0,
+                    bl / 2 + 0.02,
+                    bw * 0.75,
+                    m.d - bl - 0.02,
+                    legs_h + bh * 0.55,
+                    m.h - legs_h - bh * 0.55 - 0.02,
+                    coat,
+                    edges="faint",
+                ),
+                m.b(0, m.d / 2 - 0.01, bw * 0.3, 0.02, legs_h + bh * 0.62, bw * 0.2, nose),
+            ]
+            for sx in (-1, 1):
+                for sz in (-1, 1):
+                    parts.append(
+                        m.b(sx * bw * 0.32, -0.02 + sz * bl * 0.36, bw * 0.22, bw * 0.22, 0, legs_h + 0.01, belly)
+                    )
+                parts.append(m.b(sx * bw * 0.25, bl / 2 + 0.03, ears[0], ears[1], m.h - ears[2], ears[2], coat))
+            parts.append(m.b(0, -bl / 2 - tail[1] / 2 - 0.02, tail[0], tail[1], legs_h + bh * tail[2], tail[3], coat))
+            return parts
+
+        return fn
+
+    P(
+        "pet_cat",
+        "Katze (läuft herum)",
+        "Cat (roams around)",
+        (0.2, 0.5, 0.3),
+        animal((0.18, 0.32, 0.13), 0.1, "#d98a3a", "#f1e1c8", (0.05, 0.03, 0.05), (0.04, 0.2, 0.7, 0.03)),
+        pet=True,
+    )
+    P(
+        "pet_dog",
+        "Hund (läuft herum)",
+        "Dog (roams around)",
+        (0.3, 0.75, 0.55),
+        animal((0.26, 0.46, 0.22), 0.24, "#8a5a32", "#d8c3a0", (0.07, 0.04, 0.09), (0.05, 0.18, 0.6, 0.05)),
+        pet=True,
+    )
+    P(
+        "pet_rabbit",
+        "Kaninchen (hoppelt herum)",
+        "Rabbit (hops around)",
+        (0.18, 0.34, 0.3),
+        animal((0.16, 0.22, 0.13), 0.04, "#c9c3b8", "#efe9df", (0.03, 0.02, 0.12), (0.06, 0.05, 0.5, 0.05)),
+        pet=True,
+    )
+
     return [
         (
             "nextfloor.a_kinderzimmer",

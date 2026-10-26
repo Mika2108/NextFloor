@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { appColor, defaultHeight, domainOf, entityName, fromCelsius, isActive, isPlaceable, isStatusSensor, isUnavailable, kelvinToRgb, kindOf, lightGlow, tempUnit, toCelsius } from "./kinds.ts";
+import { appColor, assumedCover, defaultHeight, domainOf, entityName, fromCelsius, isActive, isPlaceable, isStatusSensor, isUnavailable, kelvinToRgb, kindOf, lightGlow, tempUnit, toCelsius } from "./kinds.ts";
 import { entity, hassOf } from "./fixtures.ts";
 
 test("the domain decides the kind; unknown domains have none", () => {
@@ -99,4 +99,12 @@ test("temperature units convert both ways", () => {
   assert.equal(fromCelsius(us, 100), 212);
   assert.equal(tempUnit(hassOf([])), "°C");
   assert.equal(fromCelsius(hassOf([]), 20), 20);
+});
+
+test("a cover that only sends commands stays unknown but still counts as usable", () => {
+  assert.equal(assumedCover(entity("cover.garage", "unknown", { assumed_state: true })), true);
+  assert.equal(assumedCover(entity("cover.garage", "unknown")), false);
+  assert.equal(assumedCover(entity("cover.garage", "unavailable", { assumed_state: true })), false);
+  assert.equal(assumedCover(entity("switch.x", "unknown", { assumed_state: true })), false);
+  assert.equal(assumedCover(undefined), false);
 });

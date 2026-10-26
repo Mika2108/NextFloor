@@ -196,6 +196,12 @@ const DEVICES = [
   entity("binary_sensor.wohnzimmer_kamera_person", "wohnzimmer", "on", { friendly_name: "Wohnzimmer Kamera Person", device_class: "occupancy" }),
   entity("binary_sensor.haustuer", "flur", "off", { friendly_name: "Haustür", device_class: "door" }),
   entity("lock.haustuer", "flur", "unlocked", { friendly_name: "Haustür Schloss" }),
+  // household: bins with their next pickup, the mailbox, a plant's soil moisture
+  entity("sensor.restmuell", null, "morgen", { friendly_name: "Restmüll" }),
+  entity("sensor.papier", null, "5", { friendly_name: "Papier", unit_of_measurement: "Tage" }),
+  entity("sensor.gelbe_tonne", null, "heute", { friendly_name: "Gelbe Tonne" }),
+  entity("binary_sensor.post", null, "on", { friendly_name: "Briefkasten" }),
+  entity("sensor.monstera_feuchte", null, "14", { friendly_name: "Monstera Feuchte", unit_of_measurement: "%" }),
   entity("binary_sensor.bett_links", "schlafzimmer", "on", { friendly_name: "Bett links belegt", device_class: "occupancy" }),
   entity("binary_sensor.bett_rechts", "schlafzimmer", "off", { friendly_name: "Bett rechts belegt", device_class: "occupancy" }),
   entity("cover.garagentor", "garage", "open", { friendly_name: "Garagentor", device_class: "garage", current_position: 60, supported_features: 15 }),

@@ -78,6 +78,8 @@ export interface PackItem {
   mesh?: string;
   /** A vehicle; offered for parking spots. */
   vehicle?: boolean;
+  /** The household: a waste bin (pickup day), a mailbox (post) or a plant (soil moisture), shown from a sensor of the item. */
+  household?: "bin" | "mail" | "plant";
   /** Light switches and sockets: how many buttons (gangs) it has, each linked to its own entity. */
   gangs?: number;
   /** Items with moving parts: an open cover pulls them in ("retracts": curtain, screen, gate) or out ("extends": an awning). */
@@ -367,4 +369,13 @@ export const markMeshReady = (id: string): void => void loadedMeshes.add(id);
 export function hasMesh(type: string): boolean {
   const id = byType.get(type)?.mesh;
   return id !== undefined && loadedMeshes.has(id);
+}
+
+/** The household kind of a piece of furniture: the pack's flag, else the built-in plant, else a pack plant by its id. */
+export function householdKind(type: string): "bin" | "mail" | "plant" | null {
+  if (type === "plant") return "plant";
+  const item = packItem(type);
+  if (!item) return null;
+  if (item.household) return item.household;
+  return /monstera|plant|herb_garden|flower_pots|bonsai|ficus|cactus|kaktus/.test(item.id) ? "plant" : null;
 }

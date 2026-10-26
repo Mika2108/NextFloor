@@ -11,6 +11,12 @@ import {
   furnitureEntities,
   isActive,
   coverReaches,
+  deviceSiblings,
+  hasPost,
+  minutesText,
+  pickupDays,
+  plantThirst,
+  remainingMinutes,
   gangGlows,
   gangEntities,
   isUnavailable,
@@ -48,7 +54,7 @@ import { STAGE, type Theme } from "../themes.ts";
 import { HEAT_SCALES, heatColor, heatGradient, roomValues, type HeatMode } from "../heatmap.ts";
 import { furnitureName } from "../furniture-names.ts";
 import { formatNumber, translate, type I18nKey } from "../i18n.ts";
-import { getPacks, hasMovingParts, mountBase, packItem, packsVersion } from "../packs.ts";
+import { getPacks, hasMovingParts, householdKind, mountBase, packItem, packsVersion } from "../packs.ts";
 import { parkedVehicle, parkedVehicles, vehicleFurniture } from "../parking.ts";
 import { weatherEntity } from "../weather.ts";
 import { chosenEffects, readSkyWeather, withDensity } from "../live/sky-weather.ts";
@@ -841,8 +847,8 @@ export class NfView3d extends LitElement {
     b: Building,
     taken: Set<string>,
     consumerSensors: Set<string>,
-  ): { markers: (DeviceMarker & { fromFurniture: boolean; energyDevice?: boolean })[]; consumers: Consumer[]; screens: Map<string, ScreenState>; targets: Map<string, string> } {
-    const markers: (DeviceMarker & { fromFurniture: boolean; energyDevice?: boolean })[] = [];
+  ): { markers: (DeviceMarker & { fromFurniture: boolean; energyDevice?: boolean; care?: boolean })[]; consumers: Consumer[]; screens: Map<string, ScreenState>; targets: Map<string, string> } {
+    const markers: (DeviceMarker & { fromFurniture: boolean; energyDevice?: boolean; care?: boolean })[] = [];
     const consumers: Consumer[] = [];
     const screens = new Map<string, ScreenState>();
     const targets = new Map<string, string>();
@@ -855,6 +861,17 @@ export class NfView3d extends LitElement {
         const faces = this.stateFaces(hass, f);
         if (faces.length) screens.set(f.id, { color: faces[0].color, level: faces[0].level, faces });
         // a light switch or socket: each button glows with its own entity; a tap switches it (or asks which, with several)
+        // the household: a bin's pickup, post in the mailbox, a thirsty plant
+        const care = householdKind(f.type);
+        if (care && f.care_entity) {
+          const marker = this.careMarker(hass, floor, f, care, f.care_entity);
+          if (marker) {
+            markers.push(marker.marker);
+            if (marker.glow) screens.set(f.id, { color: marker.glow, level: 0.9, faces: [{ part: "all", color: marker.glow, level: 0.9 }] });
+            targets.set(f.id, f.care_entity);
+          }
+          continue;
+        }
         const plate = packItem(f.type);
         // a curtain, roller screen, awning or gate: a tap opens the menu of the cover it follows
         if (f.cover_entity && hasMovingParts(plate)) targets.set(f.id, f.cover_entity);
@@ -944,7 +961,9 @@ export class NfView3d extends LitElement {
                   ? sub
                     ? (power === null ? "" : formatPower(hass, power))
                     : this.meterText(hass, power)
-                  : st
+                  : st && (f.type === "washer" || f.type === "dryer" || f.type === "dishwasher") && running && remainingMinutes(hass, deviceSiblings(hass, link.entity ?? link.power)) !== null
+                    ? translate(hass, "care_time_left", { time: minutesText(remainingMinutes(hass, deviceSiblings(hass, link.entity ?? link.power))!) })
+                    : st
                     ? stateText(hass, st)
                     : power !== null
                       ? formatPower(hass, Math.max(0, power))
@@ -1062,6 +1081,55 @@ export class NfView3d extends LitElement {
     return out;
   }
 
+  /** The pin of a household item: when the bin is collected, whether there is post, how dry a plant is; and its glow when it is due. */
+  private careMarker(hass: HomeAssistant, floor: Building["floors"][number], f: Furniture, care: "bin" | "mail" | "plant", entity: string): { marker: DeviceMarker & { fromFurniture: boolean; care: boolean }; glow: [number, number, number] | null } | null {
+    const st = hass.states[entity];
+    if (!st) return null;
+    let text = "";
+    let due = false;
+    let glow: [number, number, number] | null = null;
+    if (care === "bin") {
+      const days = pickupDays(st);
+      text = days === null ? stateText(hass, st) : days === 0 ? translate(hass, "care_bin_today") : days === 1 ? translate(hass, "care_bin_tomorrow") : translate(hass, "care_bin_days", { n: days });
+      due = days !== null && days <= 1;
+      if (due) glow = [1, 0.72, 0.28];
+    } else if (care === "mail") {
+      due = hasPost(st);
+      text = translate(hass, due ? "care_mail_yes" : "care_mail_no");
+      if (due) glow = [1, 0.85, 0.3];
+    } else {
+      const thirst = plantThirst(st, f.thirsty_below ?? 20);
+      due = !!thirst?.thirsty;
+      text = thirst ? (Number.isFinite(thirst.moisture) ? `${translate(hass, due ? "care_plant_thirsty" : "care_plant_ok")} · ${Math.round(thirst.moisture)} %` : translate(hass, due ? "care_plant_thirsty" : "care_plant_ok")) : stateText(hass, st);
+      if (due) glow = [1, 0.45, 0.3];
+    }
+    const room = floor.rooms.find((r) => r.points.length >= 3 && pointInPolygon([f.x, f.z], r.points));
+    const icon = { bin: "mdi:trash-can-outline", mail: "mdi:mailbox-outline", plant: "mdi:sprout-outline" }[care];
+    return {
+      glow,
+      marker: {
+        id: entity,
+        floorId: floor.id,
+        roomId: room?.id ?? null,
+        x: f.x,
+        z: f.z,
+        y: markerHeight(f) + mountBase(floor, f),
+        icon: f.icon ? mdiIcon(f.icon) : mdiIcon(icon),
+        name: f.name || furnitureName(hass, f.type),
+        ownName: f.name || undefined,
+        showName: !!f.show_name,
+        text,
+        active: due,
+        unavailable: isUnavailable(st),
+        glow: null,
+        furnitureId: f.id,
+        show: f.marker ?? undefined,
+        fromFurniture: true,
+        care: true,
+      },
+    };
+  }
+
   /** A lamp: its 3D model glows with the linked light and is tapped directly. */
   private lampMarker(hass: HomeAssistant, floor: Building["floors"][number], f: Furniture, entity: string | null): DeviceMarker & { fromFurniture: boolean } {
     const st = entity ? hass.states[entity] : undefined;
@@ -1142,7 +1210,7 @@ export class NfView3d extends LitElement {
    * Marker rule: "important" leaves out devices that their 3D object stands for (lamps, a TV that is
    * off) and keeps devices without an object (sensors, heating, switches) and values (watts, the app).
    */
-  private showPin(m: DeviceMarker & { fromFurniture?: boolean; energyDevice?: boolean }): boolean {
+  private showPin(m: DeviceMarker & { fromFurniture?: boolean; energyDevice?: boolean; care?: boolean }): boolean {
     // while furnishing every placed device has a pin to grab it by
     if (this.furnish && !m.fromFurniture) return true;
     // the device's own setting wins over the marker mode (except "none", which hides every marker)
@@ -1153,6 +1221,8 @@ export class NfView3d extends LitElement {
     if (kind === "light") return false;
     // a ceiling fan's pin is how it is switched (its blades belong to the light kit)
     if (m.fromFurniture && kind === "fan") return true;
+    // a bin to put out, post in the box, a thirsty plant: important while it is due
+    if (m.care) return m.active;
     if (m.fromFurniture) return (m.power ?? 0) >= 1 || (kind === "media" && m.active) || (!!m.energyDevice && !!m.text);
     return true;
   }

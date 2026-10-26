@@ -7,4 +7,5 @@ export * from "./entities/furniture-links.ts";
 export * from "./entities/car.ts";
 export * from "./entities/misc.ts";
 export * from "./entities/gangs.ts";
+export * from "./entities/household.ts";
 export * from "./entities/covers.ts";

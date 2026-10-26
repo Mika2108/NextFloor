@@ -2,7 +2,7 @@
 // everything it shows: devices and their power sensors, openings and their contacts, energy, presence, heat, weather, and so on.
 
 import { alertEntities, type AlertSources } from "../../alerts.ts";
-import { areaEntities, carWatched, kindOf, robotRoomSensor, type FurnitureLinks, type OpeningEntities } from "../../devices.ts";
+import { areaEntities, carWatched, deviceSiblings, kindOf, robotRoomSensor, type FurnitureLinks, type OpeningEntities } from "../../devices.ts";
 import { powerSensorFor } from "../../energy.ts";
 import { placedEntities } from "../../markers.ts";
 import type { Building } from "../../model.ts";
@@ -38,7 +38,9 @@ function furnitureIds(inputs: WatchInputs): MaybeId[] {
   const pieces = furnitureOf(building);
   return [
     ...[...furnitureLinks.values()].flatMap((l) => [l.entity, l.power]),
-    ...pieces.flatMap((m) => [m.state_entity, m.state_entity2, m.color_entity, ...(m.gang_entities ?? []), m.cover_entity]),
+    ...pieces.flatMap((m) => [m.state_entity, m.state_entity2, m.color_entity, ...(m.gang_entities ?? []), m.cover_entity, m.care_entity]),
+    // a washer's, dryer's or dishwasher's time left comes from a sensor next to its switch
+    ...pieces.filter((m) => m.type === "washer" || m.type === "dryer" || m.type === "dishwasher").flatMap((m) => deviceSiblings(hass, furnitureLinks.get(m.id)?.entity ?? furnitureLinks.get(m.id)?.power).filter((id) => id.startsWith("sensor."))),
     ...pieces.flatMap((m) => [m.door_left, m.door_right, m.soc, m.status, m.charge, m.export]),
     ...pieces.filter((m) => m.type === "robot_vacuum").map((m) => robotRoomSensor(hass, furnitureLinks.get(m.id)?.entity ?? null, m.room_sensor)),
     ...pieces.flatMap((m) => (m.pictures ?? []).flatMap((rule) => [rule.entity, ...(rule.image.startsWith("camera:") ? [rule.image.slice("camera:".length)] : [])])),

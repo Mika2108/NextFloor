@@ -20,6 +20,7 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 - **Different end at each end of a roof**: gable, hip and half-hip sections can take their own shape at the start and at the end of the ridge (a hip at one end, an upright gable at the other).
 - **Sill and board per window**: automatic, none, inside only or outside only.
 - **Import from Sweet Home 3D**: *Backup → Import* also takes a `.sh3d` file (Sweet Home 3D 5.3 and newer): levels become floors, rooms become rooms (moved onto the walls' centre lines, so neighbours share one wall), doors and windows go into the walls they stand in, and walls without a room become free walls. Its furniture stays behind; before taking it over NextFloor says what it found.
+- **Household**: waste bins (residual, organic, paper, recycling; 120 and 240 l) and mailboxes in the garden pack. A bin shows its next pickup from a sensor (days, a date, "today"/"tomorrow" or Waste Collection Schedule) and glows the day before and on the day; a mailbox glows while there is post; a plant (the built-in one and the pack plants) shows its soil moisture and glows when it is thirsty. Their pins come up while something is due. Washers, dryers and dishwashers show the time they have left when their device has a remaining-time sensor.
 - **Plan format and AI import**: [docs/plan-format.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/plan-format.md) describes the plan file, with a ready prompt that lets an AI turn a picture of your floor plan into a plan for *Backup → Import*.
 
 ### Fixed

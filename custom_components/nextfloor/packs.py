@@ -129,6 +129,8 @@ ITEM_SCHEMA = vol.Schema(
         # moving parts: an open cover pulls them in ("retracts") or out ("extends", an awning), and their rest
         vol.Optional("cover"): vol.In(["retracts", "extends"]),
         vol.Optional("cover_rest"): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
+        # the household: a waste bin (pickup day), a mailbox (post) or a plant (soil moisture), shown from a sensor
+        vol.Optional("household"): vol.In(["bin", "mail", "plant"]),
         # light switches and sockets: how many buttons (gangs) the item has, each linked to its own entity
         vol.Optional("gangs"): vol.All(vol.Coerce(int), vol.Range(min=1, max=8)),
         # scale every part evenly when resized, instead of keeping legs, arms and plates at their size

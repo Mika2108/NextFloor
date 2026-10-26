@@ -140,6 +140,8 @@ const shots = [
   { name: "dev-light-well", dev: true, query: "?state=/preview/screenshots/cellar.json&noshowcase", width: 1400, height: 850, click: "Keller", settle: 1500, viewScript: "document.querySelector(\"nextfloor-panel\")._clean = true; const w = v.viewer.getView(); w.target.set(3, -1.2, 2); w.theta = 0.6; w.phi = 0.95; w.radius = 9; v.viewer.flyTo(w, 1);" },
   // ../preview/screenshots/sh3d.json: the Sweet Home 3D example home, imported
   { name: "dev-sh3d", dev: true, query: "?state=/preview/screenshots/sh3d.json&noshowcase", width: 1400, height: 850, settle: 1500 },
+  // ../preview/screenshots/household.json: bins with pickups, a mailbox with post, a thirsty plant
+  { name: "dev-household", dev: true, query: "?state=/preview/screenshots/household.json&noshowcase", width: 1400, height: 850, settle: 1500, viewScript: "const w = v.viewer.getView(); w.target.set(4, 0.5, 1.8); w.theta = -0.2; w.phi = 1.0; w.radius = 7.5; v.viewer.flyTo(w, 1);" },
   { name: "dev-pool-cut", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: POOL_SCRIPT, then3d: "Erdgeschoss" },
   { name: "view-room-light", query: "", ha: "light", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
   { name: "card-light", query: "?card", ha: "light", width: 1400, height: 820 },

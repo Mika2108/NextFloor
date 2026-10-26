@@ -7,7 +7,7 @@ import type { I18nKey } from "../../../i18n.ts";
 import { ENERGY_DEVICES, isLamp, type Furniture } from "../../../model.ts";
 import { isClimateFurniture, isPackType, packDisplay } from "../../../packs.ts";
 import { entityOptions, isBinary, isNumeric, isPowerSensor } from "../entities.ts";
-import { checkField, entityField, glowField, hint, iconField, markerField, selectField } from "../fields.ts";
+import { checkField, entityField, glowField, hint, iconField, markerField, numberField, selectField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { lightEffectFields } from "../light-effect-fields.ts";
 import { lightEffectSource } from "../../../light-effects.ts";
@@ -86,6 +86,17 @@ function subMeterLinks(host: EditorHost, item: Furniture, actions: FurnitureLink
     sub ? html`<div class="nf-sub nf-wide">${t("meter_floors")}</div>${doc.floors.map((floor) => checkField(host, floor.name, fed.includes(floor.id), (on) => feed(floor.id, on)))}` : nothing,
     hint(t("meter_sub_hint"), "nf-wide"),
   );
+}
+
+/** A waste bin, a mailbox or a plant: the sensor it shows (and for a plant, when it counts as thirsty). */
+export function careLink(host: EditorHost, item: Furniture, kind: "bin" | "mail" | "plant", actions: FurnitureLinkActions): TemplateResult {
+  const t = host.t;
+  const accept = kind === "mail" ? (id: string) => /^(binary_sensor|sensor|input_boolean)\./.test(id) : (id: string) => /^(sensor|binary_sensor|calendar)\./.test(id);
+  return html`<div class="nf-form nf-links">
+    ${entityField(host, t(`care_entity_${kind}` as I18nKey), item.care_entity ?? null, undefined, entityOptions(host.hass, accept), (v) => actions.update({ care_entity: noneAsNull(v) }))}
+    ${kind === "plant" ? numberField(host, t("care_thirsty_below"), item.thirsty_below ?? 20, (v) => actions.update({ thirsty_below: Math.min(90, Math.max(1, Math.round(v))) }), 1, 1) : nothing}
+    ${hint(t(`care_hint_${kind}` as I18nKey), "nf-wide")}
+  </div>`;
 }
 
 /** A curtain, roller screen, awning or gate: the cover entity its moving parts follow. */

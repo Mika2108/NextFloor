@@ -199,6 +199,10 @@ export interface Furniture extends LightEffectConfig {
   /** A second state entity for the other half: left/right (a double bed) or bottom/top (a bunk bed). */
   state_entity2?: EntityRef;
   state_split?: "left_right" | "top_bottom" | null;
+  /** Household items: the sensor they show – a bin's pickup, a mailbox's post, a plant's soil moisture (null = none). */
+  care_entity?: string | null;
+  /** Plants: the soil moisture below which they are thirsty (%, default 20). */
+  thirsty_below?: number | null;
   /** Light switches and sockets: the entity of each button or socket, in order (null = none). */
   /** Items with moving parts (curtain, roller screen, awning, gate): the cover entity they follow (null = none, they rest). */
   cover_entity?: string | null;

@@ -454,6 +454,55 @@ def build(bp):
         ],
         trunk_h=0.4,
     )
+    # waste bins in the usual colours, 120 and 240 litres: they show their next pickup (household: bin)
+    bins = [
+        ("rest", "Restmüll", "Residual waste", "#2b2f36"),
+        ("bio", "Biotonne", "Organic waste", "#6b4a32"),
+        ("paper", "Papier", "Paper", "#2f5ea8"),
+        ("yellow", "Gelbe Tonne", "Recycling", "#e4c32a"),
+    ]
+    for key, de, en, lid in bins:
+        for litres, size in ((120, (0.48, 0.55, 0.93)), (240, (0.58, 0.73, 1.07))):
+
+            def bin_(m, lid=lid):
+                return [
+                    m.l(
+                        0, 0.01, m.w * 0.9, m.d * 0.9, 0.05, m.h - 0.1, "#2b2f36", tw=m.w, td=m.d - 0.02, edges="faint"
+                    ),
+                    m.b(0, 0, m.w + 0.01, m.d + 0.01, m.h - 0.05, 0.05, lid, edges="faint"),
+                    m.b(0, -m.d / 2 + 0.02, m.w * 0.8, 0.04, m.h - 0.12, 0.04, "dark"),
+                    m.c(-m.w / 2 + 0.06, -m.d / 2 + 0.05, 0.1, 0.06, 0.0, 0.1, "dark", axis="x"),
+                    m.c(m.w / 2 - 0.06, -m.d / 2 + 0.05, 0.1, 0.06, 0.0, 0.1, "dark", axis="x"),
+                ]
+
+            add(f"bin_{key}_{litres}", f"{de} {litres} l", f"{en} bin {litres} l", size, bin_, household="bin")
+    add(
+        "mailbox",
+        "Briefkasten",
+        "Mailbox",
+        (0.38, 0.14, 0.34),
+        lambda m: [
+            m.b(0, 0, m.w, m.d, 0, m.h, "#3a3f4a", edges="faint"),
+            m.b(0, m.d / 2, m.w - 0.06, 0.006, m.h - 0.1, 0.04, "dark"),
+            m.b(0, m.d / 2, 0.12, 0.006, 0.12, 0.05, "#c9d1dc"),
+        ],
+        mount="wall",
+        wall_y=1.1,
+        household="mail",
+    )
+    add(
+        "mailbox_post",
+        "Briefkasten (Standsäule)",
+        "Mailbox on a post",
+        (0.38, 0.3, 1.25),
+        lambda m: [
+            m.b(0, 0, 0.08, 0.08, 0, 0.9, "metal"),
+            m.b(0, 0, m.w, m.d, 0.9, 0.35, "#3a3f4a", edges="faint"),
+            m.b(0, m.d / 2, m.w - 0.06, 0.006, 1.12, 0.04, "dark"),
+        ],
+        household="mail",
+    )
+
     # awnings over a terrace: the cassette stays on the wall, the striped cloth, the arms and the front bar reach out with the cover
     for width in (3.0, 4.0, 5.0):
 

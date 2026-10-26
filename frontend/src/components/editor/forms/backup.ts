@@ -4,10 +4,10 @@ import { actions, hint } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 
 /** A button that opens a file chooser and hands the chosen file on; the input is emptied so the same file can be chosen again. */
-const filePicker = (label: string, onFile: (file: File | undefined) => void) => html`<label class="nf-btn nf-upload"
+const filePicker = (label: string, onFile: (file: File | undefined) => void, accept = "application/json,.json") => html`<label class="nf-btn nf-upload"
   >${label}<input
     type="file"
-    accept="application/json,.json"
+    accept=${accept}
     @change=${(e: Event) => {
       const input = e.target as HTMLInputElement;
       const file = input.files?.[0];
@@ -42,9 +42,9 @@ export function renderBackup(host: EditorHost, service: BackupService): Template
     ${actions(
       html`<button class="nf-btn" @click=${() => service.exportPlan(false)}>${t("backup_export")}</button>`,
       html`<button class="nf-btn" title=${t("backup_export_share_hint")} @click=${() => service.exportPlan(true)}>${t("backup_export_share")}</button>`,
-      filePicker(t("backup_import"), (file) => void service.importPlan(file)),
+      filePicker(t("backup_import"), (file) => void service.importPlan(file), "application/json,.json,.sh3d"),
     )}
-    ${hint(t("backup_hint"))}
+    ${hint(t("backup_hint"))} ${hint(t("import_other_hint"))}
     <h4 class="nf-lib-head">${t("backup_full")}</h4>
     ${actions(
       html`<button class="nf-btn" ?disabled=${service.busy} @click=${() => service.exportFull()}>${service.busy ? "…" : t("backup_full_export")}</button>`,

@@ -19,6 +19,7 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 - **Light wells**: an outer window whose sill lies below the ground (a cellar window) gets a concrete light well with a grating at ground level by itself; *Light well in front* in the window's form switches it off.
 - **Different end at each end of a roof**: gable, hip and half-hip sections can take their own shape at the start and at the end of the ridge (a hip at one end, an upright gable at the other).
 - **Sill and board per window**: automatic, none, inside only or outside only.
+- **Import from Sweet Home 3D**: *Backup → Import* also takes a `.sh3d` file (Sweet Home 3D 5.3 and newer): levels become floors, rooms become rooms (moved onto the walls' centre lines, so neighbours share one wall), doors and windows go into the walls they stand in, and walls without a room become free walls. Its furniture stays behind; before taking it over NextFloor says what it found.
 - **Plan format and AI import**: [docs/plan-format.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/plan-format.md) describes the plan file, with a ready prompt that lets an AI turn a picture of your floor plan into a plan for *Backup → Import*.
 
 ### Fixed

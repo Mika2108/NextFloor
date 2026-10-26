@@ -4,6 +4,7 @@
 import { fetchBackup, fetchImage, listHistory, restoreBackup, restoreSnapshot, storeImage, takeSnapshot, type BackupFile, type Snapshot } from "../../api.ts";
 import type { I18nKey } from "../../i18n.ts";
 import { normalizeBuilding, type Building } from "../../model.ts";
+import { importSweetHome } from "../../import/sweethome.ts";
 import { download, exportFile, parseExport, storedImageIds } from "../../transfer.ts";
 import type { HomeAssistant } from "../../types.ts";
 
@@ -90,14 +91,21 @@ export class BackupService {
     const { hass, t } = this.host;
     if (!file || !hass) return;
     let building: Building;
+    let question = t("backup_import_confirm");
     try {
-      building = parseExport(await file.text());
+      if (/\.sh3d$/i.test(file.name)) {
+        // a plan from Sweet Home 3D: rooms, doors, windows and free walls; its furniture stays behind
+        const result = await importSweetHome(new Uint8Array(await file.arrayBuffer()));
+        building = result.building;
+        question = `${t("import_sh3d_found", { ...result.report })}\n\n${question}`;
+      } else building = parseExport(await file.text());
     } catch (err) {
       const code = (err as Error).message;
-      this.deps.alert(code === "not_json" ? t("import_error_not_json") : code === "not_plan" ? t("import_error_not_plan") : t("backup_import_error", { error: code }));
+      const known: Record<string, string> = { not_json: "import_error_not_json", not_plan: "import_error_not_plan", not_zip: "import_error_sh3d", sh3d_no_xml: "import_error_sh3d", sh3d_empty: "import_error_sh3d_empty" };
+      this.deps.alert(known[code] ? t(known[code] as I18nKey) : t("backup_import_error", { error: code }));
       return;
     }
-    if (!this.deps.confirm(t("backup_import_confirm"))) return;
+    if (!this.deps.confirm(question)) return;
     await this.deps.api.takeSnapshot(hass).catch(() => undefined);
     this.host.adopt(building);
     this.host.say(t("backup_imported"));

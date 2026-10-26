@@ -2,6 +2,8 @@
 
 This guide follows the way you actually work: install, draw, furnish, connect, then use. A video that walks through the whole setup from an empty page is linked in the [README](../README.md); its transcript is in the releases. German version: [anleitung.md](anleitung.md).
 
+NextFloor is free and open source, every part of it, and it will stay that way. That belief is why the project exists: a live 3D home in Home Assistant should belong to everyone.
+
 **Jump to:** [Install](#install) · [Draw the house](#draw-the-house) · [Furnish](#furnish) · [Connect devices](#connect-devices) · [Outside, roof and energy](#outside-roof-and-energy) · [Compass and map](#compass-and-map) · [Use the 3D view](#use-the-3d-view) · [Live features](#live-features) · [Dashboard card](#dashboard-card) · [Wall tablet](#wall-tablet) · [Own models and packs](#own-models-and-packs) · [Backup](#backup) · [Troubleshooting](#troubleshooting)
 
 ---

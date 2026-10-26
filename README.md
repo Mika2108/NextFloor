@@ -43,6 +43,10 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 | 🧩 **Dashboard card** | `custom:nextfloor-card` with a visual editor. |
 | 📦 **Own 3D models** | Upload a `.glb` of your own on the Extensions page; NextFloor prepares it for you. |
 
+## 💚 Free and open, for good
+
+I believe in open source: software that anyone may read, change and share, and that every home can use without paying a cent. That conviction is the reason NextFloor exists. It began as a fork of NeonPlan 3D, carried by one simple promise: every feature, every model pack and every update belongs to everyone, free and open, and it will stay that way. No paywall, no account, no subscription, just your home drawn by you and coming alive in 3D, shaped together by the people who use it.
+
 ## 🖼️ Gallery
 
 <table>
@@ -155,7 +159,7 @@ npm run screenshot  # renders preview/index.html (invented demo data) with a loc
 
 ## 🙏 Credits
 
-NextFloor started as a fork of [NeonPlan 3D](https://github.com/Mastershort/neonplan3d) by Mastershort (Torsten). The idea of a live 3D home right inside Home Assistant, and the groundwork NextFloor grew from, are his. Thank you, Torsten!
+NextFloor started as a fork of [NeonPlan 3D](https://github.com/Mastershort/neonplan3d) by Mastershort (Torsten). The idea of a live 3D home right inside Home Assistant, and the groundwork NextFloor grew from, are his. NextFloor carries that idea on in its own direction: entirely free and open source, for everyone. Thank you, Torsten!
 
 ## Licence
 

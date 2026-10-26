@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for looking. NextFloor is a small project and is built with AI assistance (see the README), so contributions are welcome the same way: written by you, with a tool, or both. Please just say in the pull request if an AI wrote a good part of it, and make sure you have understood and run what you send.
+Thanks for looking. NextFloor is free and open source out of conviction, and every contribution keeps it that way: whatever you add belongs to everyone, under the MIT licence. It is a small project and is built with AI assistance (see the README), so contributions are welcome the same way: written by you, with a tool, or both. Please just say in the pull request if an AI wrote a good part of it, and make sure you have understood and run what you send.
 
 ## Before a pull request
 

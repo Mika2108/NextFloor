@@ -2,6 +2,8 @@
 
 Diese Anleitung folgt dem Weg, den du wirklich gehst: installieren, zeichnen, einrichten, verbinden, benutzen. Ein Video, das die ganze Einrichtung von der leeren Seite an zeigt, ist in der [README](../README.md) verlinkt. Englische Fassung: [manual.md](manual.md).
 
+NextFloor ist quelloffen und kostenlos, jeder Teil davon, und das bleibt so. Aus dieser Überzeugung ist das Projekt entstanden: Ein lebendiges 3D-Zuhause in Home Assistant soll allen gehören.
+
 **Springe zu:** [Installation](#installation) · [Haus zeichnen](#haus-zeichnen) · [Einrichten](#einrichten) · [Geräte verbinden](#geräte-verbinden) · [Außen, Dach, Energie](#außen-dach-und-energie) · [Kompass und Karte](#kompass-und-karte) · [3D-Ansicht](#die-3d-ansicht-benutzen) · [Live-Funktionen](#live-funktionen) · [Dashboard-Karte](#dashboard-karte) · [Wandtablet](#wandtablet) · [Eigene Modelle und Packs](#eigene-modelle-und-packs) · [Sicherung](#sicherung) · [Probleme](#probleme-und-lösungen)
 
 ---

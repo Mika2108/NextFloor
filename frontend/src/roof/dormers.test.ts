@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { gableSection, near } from "./fixtures.ts";
-import { dormerHole, dormerHoles, dormerParent, effectiveDormer, proposeDormer } from "./dormers.ts";
+import { dormerHole, dormerHoles, dormerParent, effectiveDormer, proposeDormer, wingOf } from "./dormers.ts";
 import { sectionProfile } from "./frame.ts";
 
 test("a dormer is proposed on the chosen side, 2 m wide, 35° gable, eaves 1.4 m above the section's", () => {
@@ -84,4 +84,17 @@ test("the slope opens in strips that follow the dormer's roof", () => {
     assert.ok(h.u1 > h.u0 && h.v1 > h.v0);
     assert.ok(h.u0 >= 4.9 && h.u1 <= 7.1, "inside the dormer's width");
   }
+});
+
+test("a wing butting against the eave of a bigger roof reaches into it to form the valleys", () => {
+  const main = gableSection({ id: "main", x0: 0, z0: 0, x1: 10, z1: 6, axis: "x", eave_a: 2.6, eave_b: 2.6, pitch_a: 40, pitch_b: 40, base: 2.6 });
+  const wing = gableSection({ id: "wing", x0: 6, z0: 6, x1: 10, z1: 12, axis: "z", eave_a: 2.6, eave_b: 2.6, pitch_a: 40, pitch_b: 40, base: 2.6 });
+  const found = wingOf([main, wing], wing);
+  assert.equal(found?.parent.id, "main");
+  // the wing reaches back into the main roof, but not past the middle (its ridge meets the slope before that)
+  assert.ok(found!.extended.z0 < 6 && found!.extended.z0 >= 3, `reaches to ${found!.extended.z0}`);
+  assert.equal(found!.extended.z1, 12);
+  assert.equal(wingOf([main, wing], main), null, "the bigger roof is no wing");
+  const apart = gableSection({ id: "apart", x0: 6, z0: 8, x1: 10, z1: 14, axis: "z" });
+  assert.equal(wingOf([main, apart], apart), null, "a section that does not touch stands on its own");
 });

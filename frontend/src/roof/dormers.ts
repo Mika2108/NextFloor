@@ -141,3 +141,32 @@ export function dormerHoles(parent: RoofSection, dormer: RoofSection): Hole[] {
 }
 
 export { cutHole };
+
+/**
+ * A wing that butts against the eave side of a bigger roof at a right angle (an L- or T-shaped house): its parent, and the wing
+ * reaching into the parent as far as the parent's ridge, so its slopes run into the parent's slope and form the valleys there.
+ * Null for a section that stands on its own or already sits on another (a dormer or cross gable).
+ */
+export function wingOf(sections: readonly RoofSection[], wing: RoofSection): { parent: RoofSection; extended: RoofSection } | null {
+  if (wing.dormer || wing.open || isFlat(wing) || dormerParent(sections, wing)) return null;
+  const w = orderedRect(wing);
+  const touch = 0.35;
+  for (const p of sections) {
+    if (p === wing || p.dormer || p.open || isFlat(p) || p.axis === wing.axis || area(p) < area(wing)) continue;
+    const r = orderedRect(p);
+    // the wing's ridge runs across the parent's ridge: along z when the parent's runs along x, and the other way round
+    const along = wing.axis === "z" ? ([w.z0, w.z1, r.z0, r.z1] as const) : ([w.x0, w.x1, r.x0, r.x1] as const);
+    const across = wing.axis === "z" ? ([w.x0, w.x1, r.x0, r.x1] as const) : ([w.z0, w.z1, r.z0, r.z1] as const);
+    // it lies alongside the parent's eave, within the parent's length
+    if (across[0] < across[2] - 0.05 || across[1] > across[3] + 0.05) continue;
+    const middle = (along[2] + along[3]) / 2;
+    const [lo, hi] = wing.axis === "z" ? (["z0", "z1"] as const) : (["x0", "x1"] as const);
+    let range: [number, number];
+    if (Math.abs(along[0] - along[3]) <= touch) range = [middle, along[1]]; // it starts at the parent's far eave: reach back
+    else if (Math.abs(along[1] - along[2]) <= touch) range = [along[0], middle]; // it ends at the parent's near eave: reach on
+    else continue;
+    const extended = { ...wing, [lo]: range[0], [hi]: range[1] };
+    return { parent: p, extended: effectiveDormer(p, extended) };
+  }
+  return null;
+}

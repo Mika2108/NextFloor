@@ -24,6 +24,7 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 - **Pets that roam**: a cat, a dog and a rabbit in the pets pack walk around their room in 3D, round the furniture, and sit for a while between their walks. While they all sit nothing is drawn, and on the *Tablet* level they rest with the other decorations.
 - **Day curve on the house card**: the energy card over the roof shows the last 24 hours, solar as a filled curve and consumption as a line, worked out from the history of exactly the sensors the card reads (refreshed every 10 minutes).
 - **Feet and inches**: *Editor → Settings → Show lengths in* shows the lengths and areas of the plan, the forms and the wall view in feet and inches (to the half inch) and square feet; inputs stay in metres.
+- **Valleys for L- and T-shaped houses**: a wing roof that butts against the eave of a bigger roof at a right angle now runs into that roof's slope like a cross gable, so the two roofs meet in valleys instead of the wing ending in a gable wall at the eave.
 - **Plan format and AI import**: [docs/plan-format.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/plan-format.md) describes the plan file, with a ready prompt that lets an AI turn a picture of your floor plan into a plan for *Backup → Import*.
 
 ### Fixed

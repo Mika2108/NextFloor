@@ -4,7 +4,7 @@
 import { Color } from "three";
 import { polygonArea, type Building, type RoofSection, type Vec2 } from "../../model.ts";
 import {
-  cutHole, dormerHoles, dormerParent, effectiveDormer, offsetPolygon, sectionFloor, sectionFrame, sectionGeometry, sectionHeightAt, sectionOverhang, sectionPolygon, sectionProfile, sectionUV,
+  cutHole, dormerHoles, dormerParent, effectiveDormer, wingOf, offsetPolygon, sectionFloor, sectionFrame, sectionGeometry, sectionHeightAt, sectionOverhang, sectionPolygon, sectionProfile, sectionUV,
   type Q, type SectionOverhang,
 } from "../../roof-sections.ts";
 import { roofFaces, windowCorners } from "../../solar.ts";
@@ -183,10 +183,14 @@ export function buildSections(b: Building, sections: readonly RoofSection[], ove
 
     // a dormer or cross gable (a smaller section on a bigger one) keeps its cheeks and front gable. An attic: the floor's
     // walls rise above the section's base, so they end under the slopes themselves and the roof draws none of its own.
-    const parent = dormerParent(sections, section);
+    // a wing butting against a bigger roof at a right angle reaches into it like a cross gable, so the valleys form there
+    const wing = wingOf(sections, section);
+    const parent = dormerParent(sections, section) ?? wing?.parent ?? null;
     const attic = floor.elevation + floor.height > section.base + 0.05 && !section.dormer && !parent;
     // the slope opens under every dormer and cross gable sitting on this section, and under its roof windows
-    const holes: Hole[] = sections.filter((d) => d !== section && dormerParent(sections, d) === section).flatMap((d) => dormerHoles(section, d));
+    const holes: Hole[] = sections
+      .filter((d) => d !== section)
+      .flatMap((d) => (dormerParent(sections, d) === section ? dormerHoles(section, d) : wingOf(sections, d)?.parent === section ? dormerHoles(section, wingOf(sections, d)!.extended) : []));
     for (const w of b.settings.roof.windows ?? []) {
       const face = faceByKey.get(w.face);
       const corners = face && face.section === section.id ? windowCorners(face, w) : null;
@@ -195,7 +199,7 @@ export function buildSections(b: Building, sections: readonly RoofSection[], ove
       holes.push({ u0: Math.min(...uv.map((q) => q[0])), u1: Math.max(...uv.map((q) => q[0])), v0: Math.min(...uv.map((q) => q[1])), v1: Math.max(...uv.map((q) => q[1])) });
     }
     // a dormer only goes as deep as its ridge needs to meet the slope; its gable is only at the front (the lower end of the slope)
-    const drawn = parent ? effectiveDormer(parent, section) : section;
+    const drawn = wing ? wing.extended : parent ? effectiveDormer(parent, section) : section;
     let frontEnd: 0 | 1 | null = null;
     if (parent) {
       const frame = sectionFrame(drawn);

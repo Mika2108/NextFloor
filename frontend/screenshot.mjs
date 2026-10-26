@@ -145,6 +145,8 @@ const shots = [
   { name: "dev-pets", dev: true, query: "", width: 1400, height: 850, click: "Erdgeschoss", settle: 1200, viewScript: "for (const p of v.viewer.pets.values()) { p.motion.rest = 999; p.motion.target = null; } const pets = [...v.viewer.pets.values()]; pets[0].motion.pos = [2.2, 1.6]; pets[1].motion.pos = [3.2, 1.9]; pets[1].floorId = pets[0].floorId; const w = v.viewer.getView(); w.target.set(2.7, 0.3, 1.8); w.theta = 0.3; w.phi = 1.0; w.radius = 3; v.viewer.flyTo(w, 1);" },
   { name: "dev-day-curves", dev: true, query: "", width: 1400, height: 850, settle: 4000 },
   { name: "dev-imperial", dev: true, query: "", width: 1400, height: 900, editor: true, editorScript: "e._doc = { ...e._doc, settings: { ...e._doc.settings, units: \"imperial\" } }; e.requestUpdate();", settle: 600 },
+  // ../preview/screenshots/lhouse.json: an L-shaped house, a wing roof meeting the main roof at a right angle
+  { name: "dev-lhouse", dev: true, query: "?state=/preview/screenshots/lhouse.json&noshowcase", width: 1400, height: 850, settle: 1500, viewScript: "document.querySelector(\"nextfloor-panel\")._clean = true; const w = v.viewer.getView(); w.target.set(6, 3, 6); w.theta = 0.9; w.phi = 0.95; w.radius = 22; v.viewer.flyTo(w, 1);" },
   { name: "dev-pool-cut", dev: true, query: "", width: 1500, height: 950, editor: true, editorScript: POOL_SCRIPT, then3d: "Erdgeschoss" },
   { name: "view-room-light", query: "", ha: "light", width: 1280, height: 800, click: "Erdgeschoss", then: "Wohnzimmer" },
   { name: "card-light", query: "?card", ha: "light", width: 1400, height: 820 },

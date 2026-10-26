@@ -4,7 +4,8 @@
 
 import { pointInPolygon, type Floor, type Room } from "../model.ts";
 import type { HomeAssistant } from "../types.ts";
-import { domainOf, entityName, isPlaceable, isUnavailable, KIND_ORDER, kindOf, toCelsius } from "./kinds.ts";
+import { onPluginsChanged, pluginKind } from "../plugins/registry.ts";
+import { domainOf, entityName, isPlaceable, isUnavailable, KIND_ORDER, kindOf, toCelsius, type DeviceKind } from "./kinds.ts";
 
 /** Sensor classes that get a marker: room climate, air quality, power and energy, meters, light. */
 const SHOWN_SENSOR_CLASSES = new Set([
@@ -30,11 +31,16 @@ const isHiddenOrConfig = (hass: HomeAssistant, entityId: string): boolean => {
   return !!(entry?.hidden || entry?.entity_category);
 };
 
+/** The kind of an entity: by its domain, else the one a plugin gives it (a robot vacuum shown as a switch). */
+export const entityKind = (hass: HomeAssistant, entityId: string): DeviceKind | null => kindOf(entityId) ?? pluginKind(entityId, hass.states[entityId]);
+
 /** Whether an entity is shown at all: visible, not a configuration entity, and of a kind that is handled. */
 export function isRelevant(hass: HomeAssistant, entityId: string): boolean {
-  const kind = kindOf(entityId);
   const state = hass.states[entityId];
-  if (!kind || !state || isHiddenOrConfig(hass, entityId)) return false;
+  if (!state || isHiddenOrConfig(hass, entityId)) return false;
+  const kind = kindOf(entityId);
+  // an entity a plugin takes care of is shown, whatever its class
+  if (!kind) return pluginKind(entityId, state) !== null;
   const deviceClass = state.attributes.device_class as string | undefined;
   if (kind === "sensor") return deviceClass ? SHOWN_SENSOR_CLASSES.has(deviceClass) : METER_UNITS.has(String(state.attributes.unit_of_measurement ?? ""));
   // a binary sensor without a class is mostly integration noise, unless someone gave that entity an area by hand
@@ -69,6 +75,8 @@ interface Index {
 }
 
 let cached: Index | null = null;
+// a plugin can give a kind to entities of unknown domains: they are offered from then on
+onPluginsChanged(() => (cached = null));
 
 function bucket<K, V>(map: Map<K, V[]>, key: K): V[] {
   let list = map.get(key);
@@ -83,7 +91,7 @@ function build(hass: HomeAssistant): Index {
   const areasOfDevice = new Map<string, Set<string>>();
   const withoutArea: string[] = [];
   const offerWithoutArea = (id: string) => {
-    if ((isRelevant(hass, id) || isLooseSensor(hass, id)) && isPlaceable(kindOf(id))) withoutArea.push(id);
+    if ((isRelevant(hass, id) || isLooseSensor(hass, id)) && isPlaceable(entityKind(hass, id))) withoutArea.push(id);
   };
 
   for (const [id, entry] of Object.entries(hass.entities ?? {})) {
@@ -98,7 +106,7 @@ function build(hass: HomeAssistant): Index {
   // entities that are not in the registry (YAML without a unique_id, a USB camera) have no area either
   if (hass.entities) for (const id of Object.keys(hass.states)) if (!hass.entities[id]) offerWithoutArea(id);
 
-  const rank = (id: string) => KIND_ORDER.indexOf(kindOf(id)!);
+  const rank = (id: string) => KIND_ORDER.indexOf(entityKind(hass, id)!);
   withoutArea.sort((a, b) => rank(a) - rank(b) || entityName(hass, a).localeCompare(entityName(hass, b)));
   for (const [areaId, ids] of byArea) {
     const areaName = hass.areas?.[areaId]?.name;
@@ -135,7 +143,7 @@ export function otherAreaEntities(hass: HomeAssistant, exceptArea: string | null
   if (!hass.entities) return [];
   const groups: { areaId: string; name: string; ids: string[] }[] = [];
   for (const [areaId, all] of indexOf(hass).byArea) {
-    const ids = all.filter((id) => isPlaceable(kindOf(id)));
+    const ids = all.filter((id) => isPlaceable(entityKind(hass, id)));
     if (areaId !== exceptArea && ids.length > 0) groups.push({ areaId, name: hass.areas?.[areaId]?.name ?? areaId, ids });
   }
   return groups.sort((a, b) => a.name.localeCompare(b.name));

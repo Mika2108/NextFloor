@@ -1,7 +1,7 @@
 // The device list of a room: the entities of its area to place, the rows with their pins, and the room's climate sensors.
 
 import { html, nothing, type TemplateResult } from "lit";
-import { areaEntities, CLIMATE_CLASSES, entityAreaId, entityName, groupByDevice, isPlaceable, isRoomClimateSensor, kindOf, otherAreaEntities, roomClimateSensors, unassignedEntities, type ClimateKey } from "../../../devices.ts";
+import { areaEntities, CLIMATE_CLASSES, entityAreaId, entityKind, entityName, groupByDevice, isPlaceable, isRoomClimateSensor, kindOf, otherAreaEntities, roomClimateSensors, unassignedEntities, type ClimateKey } from "../../../devices.ts";
 import { iconPath } from "../../../icons.ts";
 import { pointInPolygon, type Room } from "../../../model.ts";
 import { entityOptions, isNumeric } from "../entities.ts";
@@ -40,7 +40,7 @@ function rowFor(host: EditorHost, room: Room, here: Set<string>, elsewhere: Map<
     const isHidden = hidden.includes(id);
     return html`<div class="nf-row nf-dev-row ${extra ? "nf-dev-extra" : ""} ${isHidden ? "nf-dev-hidden" : ""}">
       <button class="nf-dev-name ${placed ? "" : "nf-muted"}" ?disabled=${!placed} @click=${() => actions.select(id)}>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${iconPath(kindOf(id)!)} /></svg>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${iconPath((host.hass ? entityKind(host.hass, id) : kindOf(id)) ?? "sensor")} /></svg>
         <span>${entityName(host.hass, id, nameArea)}${other ? html`<small class="nf-muted"> · ${host.t("devices_placed_in", { room: other })}</small>` : nothing}</span>
       </button>
       ${host.admin && !extra ? roomFlag(host, hidden, id, "hidden", ["🙈", "👁"], ["panel_unhide", "panel_hide"], actions) : nothing}
@@ -75,7 +75,7 @@ function extras(host: EditorHost, state: SideState, room: Room, row: Row, source
 /** The entities of the room's area, grouped by device with the device's main entity first. */
 function areaList(host: EditorHost, state: SideState, room: Room, row: Row, here: Set<string>, areaName: string | undefined, actions: DeviceListActions): TemplateResult {
   const { hass } = host;
-  const ids = hass ? areaEntities(hass, room.area_id).filter((id) => isPlaceable(kindOf(id))) : [];
+  const ids = hass ? areaEntities(hass, room.area_id).filter((id) => isPlaceable(entityKind(hass, id))) : [];
   if (!room.area_id) return hint(host.t("devices_none_area"));
   if (ids.length === 0) return hint(host.t("devices_none"));
   const groups = hass ? groupByDevice(hass, ids) : [];
@@ -108,7 +108,7 @@ export function renderDeviceList(host: EditorHost, state: SideState, room: Room,
   const here = placedInRoom(host.floor, room);
   const row = rowFor(host, room, here, placedElsewhere(host.doc, room), areaName, actions);
   const source = host.admin ? state.deviceSource : "area";
-  const areaCount = hass ? groupByDevice(hass, areaEntities(hass, room.area_id).filter((id) => isPlaceable(kindOf(id)))).length : 0;
+  const areaCount = hass ? groupByDevice(hass, areaEntities(hass, room.area_id).filter((id) => isPlaceable(entityKind(hass, id)))).length : 0;
   const sources: ["area" | "other" | "none", string][] = [["area", `${host.t("devices_src_area")}${areaCount > 0 ? ` (${areaCount})` : ""}`], ["other", host.t("devices_src_other")], ["none", host.t("devices_src_none")]];
   const search = html`<input class="nf-search" type="search" placeholder=${host.t("devices_search")} .value=${state.deviceQuery} @input=${(e: Event) => (state.deviceQuery = (e.target as HTMLInputElement).value)} />`;
   return html`<section>

@@ -1015,7 +1015,7 @@
  "lock3d_off": "Déverrouiller la 3D",
  "walk": "Se promener dans la maison",
  "walk_stop": "Arrêter la promenade",
- "walk_hint": "Glisser : regarder autour · W A S D / flèches ou joystick : avancer · molette : pas",
+ "walk_hint": "Glisser : regarder autour · Z Q S D / flèches ou joystick : avancer · molette : pas",
  "card_walk_button": "Bouton de promenade",
  "card_lock_button": "Bouton de verrouillage de la 3D",
  "backdrop": "Fond personnalisé",

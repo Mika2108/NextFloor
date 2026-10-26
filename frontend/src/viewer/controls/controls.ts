@@ -25,6 +25,17 @@ export interface ControlEvents {
   swipeEnd?(): void;
 }
 
+/** Walking keys by their place on the keyboard (W A S D on QWERTY is Z Q S D on AZERTY), and the arrows. */
+const WALK_CODES: Record<string, string> = { KeyW: "w", KeyA: "a", KeyS: "s", KeyD: "d", KeyQ: "q", KeyE: "e" };
+const WALK_KEYS = new Set(["w", "a", "s", "d", "q", "e", "arrowup", "arrowdown", "arrowleft", "arrowright"]);
+
+/** The walking key a key press stands for (null: none). The place of the key wins over its letter. */
+export function walkKey(e: { code?: string; key: string }): string | null {
+  // a letter key is known by its place; other keys (the arrows), and browsers without a code, by their name
+  const name = e.code?.startsWith("Key") ? (WALK_CODES[e.code] ?? null) : e.key.toLowerCase();
+  return name && WALK_KEYS.has(name) ? name : null;
+}
+
 const HOLD_MS = 500;
 const TAP_MAX_MS = 400;
 const DOUBLE_TAP_MS = 320;
@@ -112,8 +123,8 @@ export class OrbitControls {
     // keys walk while walking (not while typing into a field)
     const key = (down: boolean) => (e: KeyboardEvent) => {
       if (!this.walk || (e.target as HTMLElement | null)?.closest?.("input, textarea, select")) return;
-      const name = e.key.toLowerCase();
-      if (!["w", "a", "s", "d", "q", "e", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(name)) return;
+      const name = walkKey(e);
+      if (!name) return;
       e.preventDefault();
       if (down) this.walk.keys.add(name);
       else this.walk.keys.delete(name);

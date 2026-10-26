@@ -263,6 +263,20 @@ const params = new URLSearchParams(location.search);
               (msg.entity_ids ?? []).forEach((id, k) => {
                 const st = this.states[id];
                 if (!st) return;
+                if (id.startsWith("sensor.") && Number.isFinite(Number(st.state))) {
+                  // a number over the day: solar as a bell over noon, everything else wandering around its value
+                  const rows = [];
+                  for (let i = 0; i <= 96; i++) {
+                    const t = from + ((to - from) * i) / 96;
+                    const hour = new Date(t * 1000).getHours() + new Date(t * 1000).getMinutes() / 60;
+                    const sun = Math.max(0, Math.sin(((hour - 6) / 14) * Math.PI));
+                    const base = Number(st.state);
+                    const v = /pv|solar/.test(id) ? Math.round(5200 * sun * (0.8 + 0.2 * Math.sin(i))) : Math.round(base * (0.6 + 0.4 * Math.abs(Math.sin(i / 7 + k))));
+                    rows.push({ s: String(v), lu: t });
+                  }
+                  out[id] = rows;
+                  return;
+                }
                 const rows = [{ s: id.startsWith("light.") || id.startsWith("binary_sensor.") ? "off" : st.state, a: st.attributes, lu: from }];
                 const steps = 6 + (k % 5);
                 for (let i = 1; i <= steps; i++) rows.push({ s: i % 2 ? (id.startsWith("cover.") ? "closed" : "on") : id.startsWith("cover.") ? "open" : "off", lu: from + ((to - from) * (i + (k % 3) / 3)) / (steps + 1) });

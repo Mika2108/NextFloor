@@ -14,6 +14,7 @@ import { socColor, type CarInfo } from "./car.ts";
 import type { MediaNow } from "./media.ts";
 import { formatNumber, translate } from "../i18n.ts";
 import type { HomeAssistant } from "../types.ts";
+import { curvePath } from "./day-curves.ts";
 import type { PlanPoint } from "../viewer/live-energy.ts";
 
 export interface HouseCard {
@@ -21,6 +22,8 @@ export interface HouseCard {
   at: PlanPoint;
   summary: EnergySummary;
   autarky: number | null;
+  /** Solar and consumption over the last 24 hours (quarter hours), when the history could be loaded. */
+  curves?: { solar: (number | null)[]; use: (number | null)[] };
 }
 
 export interface CarCard {
@@ -80,6 +83,25 @@ function houseCard(hass: HomeAssistant | undefined, c: HouseCard, i: number): Te
       ? html`<div class="live-own">${ring(own, own > 0.95 ? "#4ade80" : own > 0.6 ? "#facc15" : "#f87171")}<div class="live-own-text"><b>${Math.round(own * 100)} %</b><span>${t("live_autarky")}</span></div></div>`
       : nothing}
     <div class="live-rows">${rows}</div>
+    ${dayChart(hass, c.curves)}
+  </div>`;
+}
+
+/** The day at a glance: solar as a filled curve, consumption as a line, over the last 24 hours. */
+function dayChart(hass: HomeAssistant | undefined, curves: HouseCard["curves"]): TemplateResult | typeof nothing {
+  if (!curves) return nothing;
+  const values = [...curves.solar, ...curves.use].filter((v): v is number => v !== null);
+  if (values.length < 4) return nothing;
+  const top = Math.max(...values) * 1.08 || 1;
+  const [w, h] = [150, 34];
+  const solar = curvePath(curves.solar, w, h, top);
+  const use = curvePath(curves.use, w, h, top);
+  return html`<div class="live-day" title=${translate(hass, "live_day_hint")}>
+    <svg viewBox=${`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+      ${solar ? svg`<path d=${`${solar}L${w},${h}L0,${h}Z`} class="live-day-solar"></path>` : nothing}
+      ${use ? svg`<path d=${use} class="live-day-use"></path>` : nothing}
+    </svg>
+    <span>24 h</span>
   </div>`;
 }
 
@@ -231,6 +253,34 @@ export const liveCardStyles = css`
     display: flex;
     justify-content: space-between;
     gap: 14px;
+  }
+  .live-day {
+    position: relative;
+    margin-top: 6px;
+  }
+  .live-day svg {
+    display: block;
+    width: 100%;
+    height: 34px;
+  }
+  .live-day-solar {
+    fill: rgba(250, 204, 21, 0.35);
+    stroke: #facc15;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .live-day-use {
+    fill: none;
+    stroke: #e8eeff;
+    stroke-width: 1.4;
+    vector-effect: non-scaling-stroke;
+  }
+  .live-day span {
+    position: absolute;
+    right: 2px;
+    top: 0;
+    font-size: 9px;
+    opacity: 0.6;
   }
   .live-row span {
     opacity: 0.8;

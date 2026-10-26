@@ -45,7 +45,7 @@ export function parseHistory(raw: Record<string, CompressedState[]>): History {
 }
 
 /** Loads the history of the replayed entities between two moments (ms). */
-export async function loadHistory(hass: HomeAssistant, ids: readonly string[], from: number, to: number): Promise<History> {
+export async function loadHistory(hass: HomeAssistant, ids: readonly string[], from: number, to: number, minimal = false): Promise<History> {
   if (ids.length === 0) return new Map();
   const raw = await hass.callWS<Record<string, CompressedState[]>>({
     type: "history/history_during_period",
@@ -54,8 +54,9 @@ export async function loadHistory(hass: HomeAssistant, ids: readonly string[], f
     entity_ids: ids,
     include_start_time_state: true,
     significant_changes_only: false,
-    minimal_response: false,
-    no_attributes: false,
+    // values only (day curves) or every attribute (time travel replays colours and positions)
+    minimal_response: minimal,
+    no_attributes: minimal,
   });
   return parseHistory(raw);
 }

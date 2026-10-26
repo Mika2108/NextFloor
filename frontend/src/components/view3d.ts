@@ -1,6 +1,7 @@
 // Lit wrapper around the lazily loaded 3D viewer.
 
 import { changeMoments, hassAt, loadHistory, replayable, type History } from "../live/time-travel.ts";
+import { dayCurves, statesRead, type DayCurves } from "../live/day-curves.ts";
 import { backdropStyle } from "../backdrop.ts";
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 import {
@@ -246,6 +247,9 @@ export class NfView3d extends LitElement {
   /** Time travel: the loaded history, its span, the moment shown, and whether it plays (null: live). */
   private declare _travel: { history: History; from: number; to: number; t: number; playing: boolean; speed: number; hours: number; moments: number[]; loading: boolean } | null;
   private travelTimer: ReturnType<typeof setInterval> | undefined;
+  /** The house card's day curves and when they were last loaded. */
+  private dayCurves: DayCurves | null = null;
+  private curvesAt = 0;
   private declare _walking: boolean;
   /** Where the touch stick's knob is (-1 … 1 each way) while a finger holds it. */
   private declare _stick: [number, number] | null;
@@ -1866,6 +1870,23 @@ export class NfView3d extends LitElement {
     return mediaNow(hass, spots);
   }
 
+  /** Solar and consumption over the last 24 hours for the house card, loaded at most every 10 minutes while the card shows. */
+  private refreshDayCurves(b: Building): void {
+    const hass = this.hass;
+    if (!hass || this._travel || Date.now() - this.curvesAt < 600_000) return;
+    this.curvesAt = Date.now();
+    const balance = (h: HomeAssistant) => energySummary(h, b, findConsumers(h, b), deviceSensors(b, (f) => this.furnitureLinks?.get(f.id)?.power ?? null));
+    const ids = statesRead(hass, balance);
+    const to = Date.now();
+    const from = to - 24 * 3600_000;
+    void loadHistory(hass, ids, from, to, true)
+      .then((history) => {
+        this.dayCurves = dayCurves(hass, history, from, to, balance);
+        this.syncDevices(true);
+      })
+      .catch(() => (this.dayCurves = null));
+  }
+
   private syncLhCards(v: NextFloorViewer, b: Building, pic: EnergyPicture, cars: ReturnType<NfView3d["liveCars"]>, media: MediaNow[]): void {
     const cards: LiveCard[] = [];
     const s = pic.summary;
@@ -1876,7 +1897,8 @@ export class NfView3d extends LitElement {
       // over the middle of the house, above the roof
       let x = 0, z = 0, n = 0;
       for (const r of top.rooms) for (const [px, pz] of r.points) (x += px), (z += pz), n++;
-      cards.push({ kind: "house", at: { floorId: top.id, x: n ? x / n : hub.x, z: n ? z / n : hub.z, y: top.height + 3.2 }, summary: s, autarky: pic.autarky });
+      cards.push({ kind: "house", at: { floorId: top.id, x: n ? x / n : hub.x, z: n ? z / n : hub.z, y: top.height + 3.2 }, summary: s, autarky: pic.autarky, curves: this.dayCurves ?? undefined });
+      this.refreshDayCurves(b);
     }
     if (this.liveCardsOn && !this.dimmed && !this.roomId) {
       for (const c of cars) cards.push({ kind: "car", at: c.at, spot: c.spot, name: c.name, car: c.car });

@@ -39,6 +39,11 @@ Open the **Editor** tab (administrators only). The toolbar holds the tools; the 
 - Drag to move, drag corners to resize, use the turn handle or type position, size and rotation. *Mirror* flips left and right, *Duplicate* copies, *Fix* locks.
 - Items marked with an electrical symbol can be linked to devices (see below). Lamps are furniture with a light behind them; the lights section has twelve kinds.
 - **Place spots:** a room's *Place spots* lays out a grid of lamps (columns × rows) that all follow one light, undoable in one step.
+- **Library:** furniture sorted by kind (seating, beds, kitchen …) with a picture and its size; a model in several sizes is one card with size chips. With a room selected, what fits it comes first (*Fits …*), *Show all rooms* lifts that. Filters for ⚡ linkable, 💡 lit and 🌳 outdoor; ★ favourites and recently used stand at the top.
+- **Resizing:** legs, arms, plates and handles keep their real size, only the middle grows.
+- **Wall view (▣):** in a room's wall list, *Wall view* shows the wall from the front with its doors, windows and the furniture against it; drag, or type the distance and height.
+- **Light switches and sockets** (smart home pack, 1 to 4 gang): each button with its own entity; it glows while what it switches is on.
+- **Awnings, curtains, blinds, roll-down screen, sliding gate:** *Moves with* picks the cover entity they follow.
 
 ## Connect devices
 
@@ -53,7 +58,8 @@ In a room's form the **Devices** section lists the Home Assistant devices of tha
 ## Outside, roof and energy
 
 - **Outdoor:** drag out lawn, terrace, path, driveway, pool, flower bed, wild patch, hedge, fence or pergola. *Height offset* lowers or raises, *Slope* tilts, *Show the outline* toggles the glowing edge, *Cut out of the areas beneath* makes a hole (pond). Hedges and fences take a height. Garden and path lights come from the library and light the areas.
-- **Roof:** the *Roof* tool builds roof sections from the rooms (shape, ridge direction, eaves, pitch; drag to move, corners to resize). The simple roof shape lives in Settings. Roof windows sit on a section and take a blind and contacts.
+- **Roof:** the *Roof* tool builds roof sections from the rooms (shape, ridge direction, eaves, pitch; drag to move, corners to resize). The simple roof shape lives in Settings. Roof windows sit on a section and take a blind and contacts. Gable, hip and half-hip sections can end differently at each end of the ridge, and a wing that butts against a bigger roof runs into it with valleys.
+- **Doors and windows (more):** a door takes a smart lock (tap the door to lock or unlock, it glows while unlocked); a window chooses its sill and board, can be left out of the rain warning, and below the ground gets a light well.
 - **Energy:** the checklist asks for a solar field, a meter and an inverter (battery and grid connection optional). A solar field goes on the best south-facing roof section (it uses the compass), in the garden or on a wall; set rows, columns, portrait/landscape. Meter, inverter, battery, wallbox are devices placed here; the energy balance fields default to "Automatic", and *Take over from the energy dashboard* reads your existing setup.
 
 ## Compass and map
@@ -62,7 +68,7 @@ Under **Settings**:
 
 - **Compass.** A dial shows where north lies (degrees clockwise from up). Sunlight, wind and the compass direction of roof faces follow it. If north and south are the wrong way round, press **Swap north ↔ south**; drawing, roof sections and solar fields stay as they are, only the directions change. Quarter turns and any angle are available too.
 - **Real map.** Off by default. When on, a dimmed map (OpenStreetMap, or your own `https://…/{z}/{x}/{y}` tile address) lies under the plan in the editor and under the house in 3D. It starts at Home Assistant's location; set visibility and detail, move it with the arrows until the house sits on its plot. Your browser loads the tiles directly from the map server, and only while the map is on.
-- Also here: wall thickness, grid, roof shape, weather entity and effects, rain warning, sunlight patches.
+- Also here: wall thickness, grid, lengths in metres or feet and inches, roof shape, weather entity and effects, rain warning (optionally from your own rain sensor), a power outage sensor, sunlight patches, and an own background (a colour or a picture) behind the house.
 
 ## Use the 3D view
 
@@ -83,6 +89,23 @@ Built in and free; they only need the devices you already have.
 - **Sound:** a card over every playing speaker or TV with cover and controls; sound rings in the app's colour; multiroom groups are joined by a thread.
 - **Car:** a card over the parking spot with charge ring, range, charging power, plug, inside temperature and buttons for lock, climate and charging.
 
+## Getting around
+
+- **Walk through the house (🚶):** on the open floor at eye height. Drag to look around, W A S D or the arrow keys walk (Q/E turn), the mouse wheel takes a step, and on tablets the stick at the bottom right steers. ✕ ends it.
+- **Time travel (⏪):** replays the last 24 hours or 7 days from Home Assistant's history: lamps, blinds, doors and windows, locks, media, robots. The bar marks every change; play at 1 min, 10 min or 1 h per second or drag to a moment. *Live* comes back; nothing is switched while in the past.
+- **3D lock (🔒):** turning, zooming and panning are off on this device; taps on devices still work.
+- **Clock:** 🕒 in the header puts a large clock in a corner of the view.
+- **Look *Auto*:** the day look while the sun is up, neon after sunset.
+- **House card:** the energy card over the roof shows the last 24 hours as a curve (solar as an area, consumption as a line).
+
+## Household and pets
+
+- **Waste bins** (garden pack, four colours, 120 and 240 l): pick the *Pickup date (sensor)* in the form, e.g. from Waste Collection Schedule or a sensor with days or a date. The day before and on the day the bin glows and shows its pin.
+- **Mailbox:** pick the *Post sensor* (e.g. a contact on the flap); while there is post it glows.
+- **Plants:** *Soil moisture (sensor)* and *Thirsty below (%)*; below that the plant glows.
+- **Washer, dryer, dishwasher:** when the device has a remaining-time sensor in Home Assistant, its pin says "25 min left".
+- **Pets** (pets pack: cat, dog, rabbit): walk around their room, round the furniture, with breaks in between.
+
 ## Dashboard card
 
 Add *NextFloor* in the dashboard's card dialog (`type: custom:nextfloor-card`). The visual editor sets floor, size, look, accent, walls, quality, floors below, markers, heat map, power flow, cards, switches in the card, room buttons, central star, room names, energy values, room details on tap, full screen, floors apart, roof fade, warnings, scene buttons and weather. The same options exist in YAML under the names shown in the editor.
@@ -98,6 +121,8 @@ The card's kiosk section returns to the start view after idle time, dims at nigh
 - **Furniture packs** come with the integration (26 packs, over 600 models) and need no setup. Own packs are JSON files, format in [packs.md](packs.md). The demo has a model showcase that shows every model live.
 
 ## Backup
+
+A plan from **Sweet Home 3D** (.sh3d, version 5.3 and newer) loads directly under *Backup → Import*: levels become floors, rooms become rooms, doors and windows sit in their walls, free walls stay free. Furniture is not taken over.
 
 Under *Backup* in the editor: **Export** / **Import** for the plan, **Share as template** (without personal device data), **Back up everything** (plan, pictures, packs in one file) and **Restore a full backup**. Back up before big changes.
 

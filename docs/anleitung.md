@@ -39,6 +39,11 @@ Werkzeug *Möbel*, Raum antippen, rechts aus der Bibliothek wählen. Neue Stück
 - Ziehen verschiebt, Eckgriffe ändern die Größe, am Drehgriff drehst du, oder du tippst Position, Größe und Drehung ein. *Spiegeln* vertauscht links und rechts, *Duplizieren* kopiert, *Fixieren* sperrt.
 - Elektrische Stücke lassen sich mit Geräten verbinden (siehe unten). Leuchten sind Möbel mit einem Licht dahinter; der Leuchten-Bereich hat zwölf Arten.
 - **Spots setzen:** am Raum legt ein Raster aus Leuchten (Spalten × Reihen) an, die alle einem Licht folgen, mit einem Schritt rückgängig zu machen.
+- **Bibliothek:** Möbel stehen nach Art sortiert (Sitzen, Betten, Küche …) mit Bild und Maß; ein Modell in mehreren Größen ist eine Karte mit Größen-Knöpfen. Ist ein Raum gewählt, steht oben, was in ihn passt (*Passend zu …*), *Alle Räume zeigen* hebt das auf. Filter für ⚡ verknüpfbar, 💡 leuchtet und 🌳 draußen, ★ Favoriten und Zuletzt benutzt stehen oben.
+- **Größe ändern:** Beine, Armlehnen, Platten und Griffe behalten ihre echte Größe, nur die Mitte wächst.
+- **Wandansicht (▣):** In der Wandliste eines Raums zeigt *Wandansicht* die Wand von vorn mit Türen, Fenstern und den Möbeln davor; ziehen oder Abstand und Höhe eintippen.
+- **Lichtschalter und Steckdosen** (Pack Smart Home & Technik, 1- bis 4-fach): jede Taste mit eigener Entität; sie leuchtet, solange das Geschaltete an ist.
+- **Markisen, Vorhänge, Rollos, Leinwand, Schiebetor:** *Bewegt sich mit* wählt die Cover-Entität, der sie folgen.
 
 ## Geräte verbinden
 
@@ -97,7 +102,8 @@ dem Plan werden nicht geladen.
 ## Außen, Dach und Energie
 
 - **Außen:** Rasen, Terrasse, Weg, Einfahrt, Pool, Beet, Wildfläche, Hecke, Zaun oder Pergola aufziehen. *Höhenversatz* senkt oder hebt, *Gefälle* neigt, *Umriss zeigen* schaltet die leuchtende Kante, *Aus den Flächen darunter ausschneiden* macht ein Loch (Teich). Hecken und Zäune haben eine Höhe. Garten- und Wegeleuchten kommen aus der Bibliothek und beleuchten die Flächen.
-- **Dach:** Das Werkzeug *Dach* baut Dachflächen aus den Räumen (Form, Firstrichtung, Traufe, Neigung; ziehen verschiebt, Ecken ändern die Größe). Die einfache Dachform steht in den Einstellungen. Dachfenster sitzen auf einer Fläche und bekommen Rollladen und Kontakte.
+- **Dach:** Das Werkzeug *Dach* baut Dachflächen aus den Räumen (Form, Firstrichtung, Traufe, Neigung; ziehen verschiebt, Ecken ändern die Größe). Die einfache Dachform steht in den Einstellungen. Dachfenster sitzen auf einer Fläche und bekommen Rollladen und Kontakte. Sattel-, Walm- und Krüppelwalmflächen können an jedem Firstende anders enden, und ein Flügel, der an ein größeres Dach stößt, läuft mit Kehlen in dessen Fläche.
+- **Türen und Fenster (mehr):** Eine Tür bekommt ein Smart Lock (Tür antippen schließt ab oder auf, aufgeschlossen leuchtet sie); ein Fenster wählt seine Fensterbank, kann aus der Regenwarnung genommen werden und bekommt unter Gelände einen Lichtschacht.
 - **Energie:** Die Checkliste verlangt ein Solarfeld, einen Zähler und einen Wechselrichter (Batterie und Netzanschluss optional). Ein Solarfeld kommt auf die am besten passende Südfläche (der Kompass entscheidet), in den Garten oder an eine Wand; Reihen, Spalten und Hoch-/Querformat einstellbar. Zähler, Wechselrichter, Batterie und Wallbox sind Geräte, die hier gesetzt werden; die Felder der Energiebilanz stehen auf „Automatisch“, und *Aus dem Energie-Dashboard übernehmen* liest deine bestehende Einrichtung.
 
 ## Kompass und Karte
@@ -106,7 +112,7 @@ In den **Einstellungen**:
 
 - **Kompass.** Eine Scheibe zeigt, wohin Norden liegt (Grad im Uhrzeigersinn von oben). Sonnenlicht, Wind und die Himmelsrichtung der Dachflächen richten sich danach. Sind Nord und Süd vertauscht, drückst du **Nord ↔ Süd tauschen**; Zeichnung, Dachflächen und Solarfelder bleiben, nur die Richtungen ändern sich. Viertel-Drehungen und jeder Winkel gehen auch.
 - **Echte Karte.** Standardmäßig aus. Eingeschaltet liegt eine gedimmte Karte (OpenStreetMap oder deine eigene Kachel-Adresse `https://…/{z}/{x}/{y}`) unter dem Plan im Editor und unter dem Haus in 3D. Sie startet am Standort von Home Assistant; Sichtbarkeit und Detail einstellen, mit den Pfeilen verschieben, bis das Haus auf seinem Grundstück sitzt. Dein Browser lädt die Kacheln direkt vom Kartenserver, und nur solange die Karte an ist.
-- Ebenfalls hier: Wanddicken, Raster, Dachform, Wetter-Entity und Effekte, Regenwarnung, Sonnenflecken.
+- Ebenfalls hier: Wanddicken, Raster, Maße in Metern oder Fuß und Zoll, Dachform, Wetter-Entity und Effekte, Regenwarnung (auf Wunsch vom eigenen Regensensor), ein Sensor für Stromausfall, Sonnenflecken und ein eigener Hintergrund (Farbe oder Bild) hinter dem Haus.
 
 ## Die 3D-Ansicht benutzen
 
@@ -127,6 +133,23 @@ Eingebaut und kostenlos; sie brauchen nur die Geräte, die du schon hast.
 - **Klang:** eine Karte über jedem spielenden Lautsprecher oder Fernseher mit Cover und Bedienung; Schallringe in der Farbe der App; Multiroom-Gruppen verbindet ein Faden.
 - **Auto:** eine Karte über dem Stellplatz mit Ladering, Reichweite, Ladeleistung, Stecker, Innentemperatur und Knöpfen für Schloss, Klima und Laden.
 
+## Im Haus unterwegs
+
+- **Durchs Haus gehen (🚶):** Auf der geöffneten Etage in Augenhöhe. Ziehen schaut sich um, W A S D oder die Pfeiltasten gehen (Q/E drehen), das Mausrad macht einen Schritt, auf dem Tablet steuert der Stick unten rechts. ✕ beendet es.
+- **Zeitreise (⏪):** spielt die letzten 24 Stunden oder 7 Tage aus dem Verlauf von Home Assistant ab: Lampen, Rollläden, Türen und Fenster, Schlösser, Medien, Roboter. Die Leiste zeigt jede Änderung als Strich; abspielen mit 1 Min., 10 Min. oder 1 Std. pro Sekunde oder an einen Zeitpunkt ziehen. *Live* kehrt zurück; in der Vergangenheit wird nichts geschaltet.
+- **3D-Sperre (🔒):** Drehen, Zoomen und Verschieben sind auf diesem Gerät aus, Tippen auf Geräte geht weiter.
+- **Uhr:** 🕒 in der Kopfzeile stellt eine große Uhr in eine Ecke der Ansicht.
+- **Look *Auto*:** tagsüber der Tag-Look, nach Sonnenuntergang Neon.
+- **Hauskarte:** Die Energie-Glaskarte über dem Dach zeigt die letzten 24 Stunden als Kurve (Solar als Fläche, Verbrauch als Linie).
+
+## Haushalt und Haustiere
+
+- **Mülltonnen** (Pack Garten & Terrasse, vier Farben, 120 und 240 l): Im Formular *Abholtermin (Sensor)* wählen, z. B. von Waste Collection Schedule oder ein Sensor mit Tagen oder Datum. Am Tag davor und am Abholtag leuchtet die Tonne und zeigt ihren Pin.
+- **Briefkasten:** *Post-Sensor* wählen (z. B. ein Kontakt an der Klappe); liegt Post drin, leuchtet er.
+- **Pflanzen:** *Bodenfeuchte (Sensor)* und *Durst unter (%)*; darunter leuchtet die Pflanze.
+- **Waschmaschine, Trockner, Spülmaschine:** Hat das Gerät in Home Assistant einen Restlaufzeit-Sensor, steht am Pin „Noch 25 min“.
+- **Haustiere** (Pack Haustiere: Katze, Hund, Kaninchen): laufen in ihrem Raum um die Möbel herum und machen zwischendurch Pausen.
+
 ## Dashboard-Karte
 
 Im Karten-Dialog des Dashboards *NextFloor* hinzufügen (`type: custom:nextfloor-card`). Der visuelle Editor stellt Etage, Größe, Aussehen, Akzent, Wände, Qualität, Etagen darunter, Symbole, Heatmap, Stromfluss, Karten, Schalter in der Karte, Raum-Knöpfe, zentralen Stern, Raumnamen, Energiewerte, Raumdetails beim Antippen, Vollbild, Etagen auseinander, Dach ausblenden, Warnungen, Szenen-Knöpfe und Wetter ein. Dieselben Optionen gibt es in YAML unter den im Editor gezeigten Namen.
@@ -142,6 +165,8 @@ Der Kiosk-Abschnitt der Karte kehrt nach einer Ruhezeit zur Startansicht zurück
 - **Möbel-Packs** kommen mit der Integration (26 Packs, über 600 Modelle) und brauchen keine Einrichtung. Eigene Packs sind JSON-Dateien, Format in [packs.md](packs.md). Die Demo hat eine Modellschau, die jedes Modell live zeigt.
 
 ## Sicherung
+
+Ein Plan aus **Sweet Home 3D** (.sh3d, ab Version 5.3) lässt sich unter *Sicherung → Importieren* direkt laden: Ebenen werden Etagen, Räume werden Räume, Türen und Fenster sitzen in ihren Wänden, freie Wände bleiben frei. Möbel werden nicht übernommen.
 
 Unter *Sicherung* im Editor: **Exportieren** / **Importieren** für den Plan, **Als Vorlage teilen** (ohne persönliche Geräte), **Alles sichern** (Plan, Bilder, Packs in einer Datei) und **Vollsicherung wiederherstellen**. Vor größeren Änderungen sichern.
 

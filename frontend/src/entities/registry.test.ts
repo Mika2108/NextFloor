@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { entity, floorWith, box, hassOf } from "./fixtures.ts";
-import { areaEntities, entityAreaId, groupByDevice, isHubDevice, isRelevant, isRoomClimateSensor, otherAreaEntities, powerSensorsOf, primaryEntities, roomClimateSensors, roomClimateValue, unassignedEntities } from "./registry.ts";
+import { registerPlugin, resetPlugins } from "../plugins/registry.ts";
+import { areaEntities, entityAreaId, entityKind, groupByDevice, isHubDevice, isRelevant, isRoomClimateSensor, otherAreaEntities, powerSensorsOf, primaryEntities, roomClimateSensors, roomClimateValue, unassignedEntities } from "./registry.ts";
 
 const lounge = hassOf(
   [
@@ -145,4 +146,21 @@ test("a hub's room sensors still count, although its other entities are lights",
     { "sensor.bus_t_k": { area_id: "k", device_id: "bus" }, "light.bus_k": { area_id: "k", device_id: "bus" }, "light.bus_b": { area_id: "b", device_id: "bus" } },
   );
   assert.equal(isRoomClimateSensor(hass, "sensor.bus_t_k"), true);
+});
+
+test("entities a plugin gives a kind are offered like the others, in their area and without one", () => {
+  registerPlugin({ id: "robot", apiVersion: 1, devices: [{ match: (id) => id.startsWith("vacuum."), kind: "switch" }] });
+  try {
+    const hass = hassOf(
+      [entity("vacuum.rob", "docked"), entity("vacuum.loose", "docked"), entity("lawn_mower.x", "docked"), entity("light.a", "on")],
+      { "vacuum.rob": { area_id: "kitchen" }, "vacuum.loose": {}, "lawn_mower.x": {}, "light.a": { area_id: "kitchen" } },
+      { areas: { kitchen: { area_id: "kitchen", name: "Kitchen" } } },
+    );
+    assert.deepEqual(areaEntities(hass, "kitchen"), ["light.a", "vacuum.rob"]);
+    assert.deepEqual(unassignedEntities(hass), ["vacuum.loose"]);
+    assert.equal(entityKind(hass, "vacuum.rob"), "switch");
+    assert.equal(entityKind(hass, "lawn_mower.x"), null);
+  } finally {
+    resetPlugins();
+  }
 });

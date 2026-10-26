@@ -41,6 +41,7 @@ Free, open source, no cloud, no account. Made for wall tablets.</p>
 | 🖥️ **Wall tablet ready** | Alerts for smoke, gas, water and open windows, kiosk mode with night dimming, a light quality level for Fire tablets. |
 | 🎨 **Fits your theme** | Takes colours, font and corner radius from Home Assistant; three looks (*Neon*, *Blueprint*, *Day*) and a heatmap. |
 | 🧩 **Dashboard card** | `custom:nextfloor-card` with a visual editor. |
+| 🌍 **Nine languages** | German, English, French, Spanish, Italian, Dutch, Polish, Portuguese and Swedish, following the language of your Home Assistant user. |
 | 📦 **Own 3D models** | Upload a `.glb` of your own on the Extensions page; NextFloor prepares it for you. |
 
 ## 💚 Free and open, for good

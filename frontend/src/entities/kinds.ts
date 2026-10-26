@@ -37,6 +37,9 @@ export const isPlaceable = (kind: DeviceKind | null): boolean => kind !== null &
 
 export const isUnavailable = (st: HassEntity | undefined): boolean => !st || st.state === "unavailable" || st.state === "unknown";
 
+/** A cover that only sends commands (assumed state, a garage remote) and so stays unknown: its buttons still work. */
+export const assumedCover = (st: HassEntity | undefined): boolean => !!st && st.entity_id.startsWith("cover.") && st.state === "unknown" && st.attributes.assumed_state === true;
+
 /** The entity's name without the area in front of it: "Lounge Ceiling light" in the Lounge reads "Ceiling light". */
 export function entityName(hass: HomeAssistant | undefined, entityId: string, areaName?: string): string {
   const name = (hass?.states[entityId]?.attributes.friendly_name as string | undefined) ?? hass?.entities?.[entityId]?.name ?? entityId;

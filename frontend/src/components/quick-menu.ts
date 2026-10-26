@@ -2,7 +2,7 @@
 // up/stop/down for blinds, on/off for switches, with a slider and a way to the full details.
 
 import { css, html, LitElement, nothing } from "lit";
-import { type CarState, entityName, isUnavailable, kindOf } from "../devices.ts";
+import { assumedCover, type CarState, entityName, isUnavailable, kindOf } from "../devices.ts";
 import { translate, type I18nKey } from "../i18n.ts";
 import { openMoreInfo, stateText } from "../markers.ts";
 import { tokens } from "../styles.ts";
@@ -139,11 +139,14 @@ export class NfQuickMenu extends LitElement {
     ];
     // the centre shows the blind: its closed part fills from the top
     const closed = pos === null ? (st.state === "closed" ? 100 : 0) : 100 - pos;
+    // without a known state the centre cannot tell whether to open or close: only the arrows move it
+    const known = pos !== null || moving || st.state === "open" || st.state === "closed";
     return html`<div class="qm-ring">
         ${this.ring(ring)}
         <button
-          class="qm-power qm-blind ${closed < 100 ? "qm-on" : ""}"
+          class="qm-power qm-blind ${known && closed < 100 ? "qm-on" : ""}"
           style="--closed:${closed}%"
+          ?disabled=${!known}
           aria-label=${moving ? this.t("cover_stop") : closed > 50 ? this.t("cover_open") : this.t("cover_close")}
           @click=${() => (moving ? this.call("cover", "stop_cover") : this.ask() && this.call("cover", closed > 50 ? "open_cover" : "close_cover"))}
         >
@@ -208,7 +211,8 @@ export class NfQuickMenu extends LitElement {
     const st = this.hass?.states[this.entity];
     if (!st) return nothing;
     const kind = kindOf(this.entity);
-    const body = isUnavailable(st)
+    // a cover without feedback (a garage remote) stays unknown, but its buttons still work
+    const body = isUnavailable(st) && !assumedCover(st)
       ? html`<p class="qm-note">${stateText(this.hass, st)}</p>`
       : kind === "light"
         ? this.renderLight(st)
@@ -321,7 +325,11 @@ export class NfQuickMenu extends LitElement {
         cursor: pointer;
         font: inherit;
       }
-      .qm-power b {
+      .qm-power:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+            .qm-power b {
         font: 700 15px var(--nf-title-font);
         color: var(--nf-text);
       }

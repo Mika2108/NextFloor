@@ -51,6 +51,7 @@ export function renderSettings(host: EditorHost, actions: SettingsActions): Temp
       ${numberField(host, t("wall_exterior"), s.wall_exterior, (v) => set({ wall_exterior: clamp(v, 0.02, 1) }), 0.01, 0.02)}
       ${numberField(host, t("wall_interior"), s.wall_interior, (v) => set({ wall_interior: clamp(v, 0.02, 1) }), 0.01, 0.02)}
       ${numberField(host, t("grid"), s.grid, (v) => set({ grid: clamp(v, 0.01, 1) }), 0.01, 0.01)}
+      ${selectField(host, t("units"), s.units === "imperial" ? "imperial" : "metric", [["metric", t("units_metric")], ["imperial", t("units_imperial")]] as const, (v) => set({ units: v === "imperial" ? "imperial" : null }), { title: t("units_hint") })}
       ${renderCompass(host, s.north, (north) => set({ north }))}
       ${renderMapSettings(host, host.doc, (map) => set({ map }))}
       ${selectField(host, t("roof"), s.roof.type, roofChoices, (type) => (type === "custom" ? actions.useRoofSections() : setRoof({ type })), { wide: true })}

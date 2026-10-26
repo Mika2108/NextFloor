@@ -3,11 +3,11 @@
 import { nothing, svg, type TemplateResult } from "lit";
 import { entityName, kindOf } from "../../../devices.ts";
 import { furnitureName } from "../../../furniture-names.ts";
-import { formatNumber } from "../../../i18n.ts";
 import { iconPath } from "../../../icons.ts";
 import { ENERGY_DEVICES, isLamp, type Floor, type Furniture, type Placement } from "../../../model.ts";
 import { furnitureSymbol } from "../../furniture2d.ts";
 import type { CanvasContext } from "./context.ts";
+import { formatLength } from "../../../units.ts";
 
 type Layer = TemplateResult | typeof nothing;
 
@@ -56,7 +56,7 @@ export function furnitureLayer(ctx: CanvasContext, floor: Floor, selectedId: str
         ${labelled ? svg`<text x=${cx} y=${cy + 4}>${furnitureName(host.hass, item.type)}</text>` : nothing}
       </g>
       ${movable ? resizeHandles(ctx, item) : nothing}
-      ${selected ? svg`<text class="nf-dim" x=${lx} y=${ly + 4}>${formatNumber(host.hass, item.w, 2)} × ${formatNumber(host.hass, item.d, 2)} m</text>` : nothing}
+      ${selected ? svg`<text class="nf-dim" x=${lx} y=${ly + 4}>${formatLength(host.hass, item.w)} × ${formatLength(host.hass, item.d)}</text>` : nothing}
       ${selected && item.locked ? svg`<text class="nf-lock" x=${handleAt[0]} y=${handleAt[1] + 5}>🔒</text>` : nothing}
       ${movable ? turnHandle("data-rotate", item.id, stemFrom, handleAt) : nothing}`;
   };

@@ -2,11 +2,11 @@
 // buttons to remove, cut or join it. Hovering a row lights the wall up in the plan.
 
 import { html, nothing, type TemplateResult } from "lit";
-import { formatNumber } from "../../../i18n.ts";
 import type { Room } from "../../../model.ts";
 import { hint, numberField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { edgeLength, thicknessFromTyped } from "../ops/edges.ts";
+import { formatLength } from "../../../units.ts";
 
 export interface EdgeActions {
   /** Shows the wall from the front, with its doors, windows and furniture. */
@@ -54,7 +54,7 @@ export function renderEdgeHeights(host: EditorHost, room: Room, actions: EdgeAct
       const light = () => actions.light(edge);
       const dark = () => actions.light(null);
       return html`<div class="nf-edge-height${edge === actions.lit ? " nf-edge-on" : ""}${height !== null ? " nf-edge-low" : ""}" @mouseenter=${light} @mouseleave=${dark} @focusin=${light} @focusout=${dark}>
-        <span><b>${title}</b><br /><span class="nf-muted">${formatNumber(host.hass, length, 2)} m</span></span>
+        <span><b>${title}</b><br /><span class="nf-muted">${formatLength(host.hass, length)}</span></span>
         ${height === 0
           ? html`<span class="nf-muted">${t("wall_none")}</span>`
           : sloping

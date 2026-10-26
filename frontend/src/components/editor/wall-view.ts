@@ -4,10 +4,11 @@
 
 import { LitElement, css, html, nothing, svg, type PropertyValues } from "lit";
 import { furnitureName } from "../../furniture-names.ts";
-import { formatNumber, type I18nKey } from "../../i18n.ts";
+import type { I18nKey } from "../../i18n.ts";
 import { openingPreset } from "../../model.ts";
 import type { EditorHost } from "./host.ts";
 import { furnitureAt, openingAt, wallElevation, wallFrame, type ElevationBox } from "./ops/wall-view.ts";
+import { formatLength } from "../../units.ts";
 
 const SNAP = 0.01;
 const snap = (v: number) => Math.round(v / SNAP) * SNAP;
@@ -114,7 +115,7 @@ export class NfWallView extends LitElement {
     const frame = this.frame();
     if (!room || !frame) return nothing;
     const n = room.points.length;
-    const fmt = (v: number) => formatNumber(this.host.hass, v, 2);
+    const fmt = (v: number) => formatLength(this.host.hass, v);
     const boxes = this.boxes().map((b) => (this._drag?.id === b.id ? { ...b, x1: this._drag.x0 + (b.x1 - b.x0), y1: this._drag.y0 + (b.y1 - b.y0), x0: this._drag.x0, y0: this._drag.y0 } : b));
     const top = Math.max(frame.heightLeft, frame.heightRight, ...boxes.map((b) => b.y1));
     const pad = 0.35;
@@ -137,7 +138,7 @@ export class NfWallView extends LitElement {
       <div class="sheet" role="dialog" aria-label=${t("wall_view")}>
         <header>
           <b>${t("wall_view")} · ${room.name || t("room")} · ${t("wall_n", { a: this.edge + 1, b: ((this.edge + 1) % n) + 1 })}</b>
-          <span class="muted">${fmt(frame.length)} m</span>
+          <span class="muted">${fmt(frame.length)}</span>
           <span class="grow"></span>
           <button aria-label=${t("wall_view_prev")} title=${t("wall_view_prev")} @click=${() => (this.edge = (this.edge - 1 + n) % n)}>‹</button>
           <button aria-label=${t("wall_view_next")} title=${t("wall_view_next")} @click=${() => (this.edge = (this.edge + 1) % n)}>›</button>

@@ -10,6 +10,7 @@ import { actions, checkField, entityField, hint, numberField, selectField, textF
 import { sectionNumber } from "../ops/roof.ts";
 import { choiceButtons, faceLabel, floorButtons, lockButton, type RoofPanelDeps } from "./roof-parts.ts";
 import type { EditorHost } from "../host.ts";
+import { formatLength } from "../../../units.ts";
 
 const heading = (title: string, lock: TemplateResult | typeof nothing) => html`<div class="nf-h3row"><h3>${title}</h3>${lock}</div>`;
 const backButton = (label: string, onClick: () => void) => html`<button class="nf-btn nf-back" @click=${onClick}>‹ ${label}</button>`;
@@ -72,7 +73,7 @@ function sectionForm(deps: RoofPanelDeps, section: RoofSection): TemplateResult 
             : nothing}
           ${hint(t(section.points ? "roof_points_hint" : "roof_outline_hint"))}`
         : nothing}
-      ${hint(`${t("roof_ridge_height")}: ${formatNumber(host.hass, ridgeHeight(section), 2)} m · ${t("roof_section_hint")}`)}
+      ${hint(`${t("roof_ridge_height")}: ${formatLength(host.hass, ridgeHeight(section))} · ${t("roof_section_hint")}`)}
       ${host.admin
         ? actions(
             flat ? nothing : html`<button class="nf-btn" title=${t("roof_swap_hint")} @click=${() => set({ flip: !section.flip })}>⇅ ${t("roof_swap")}</button>`,

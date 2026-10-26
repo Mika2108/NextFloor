@@ -514,6 +514,8 @@ export interface BuildingSettings {
   start_view?: StartView | null;
   /** A real map under the plan (null = none). */
   map?: MapSettings | null;
+  /** How lengths and areas are shown in the editor: metres or feet and inches (inputs stay in metres). */
+  units?: "metric" | "imperial" | null;
   /** The rain warning asks this sensor (a weather station: on, or a rain rate above 0) instead of the weather entity. */
   rain_sensor?: string | null;
   /** A sensor that tells a power outage: a warning for the whole house while the grid is gone. */

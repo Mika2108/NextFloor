@@ -2,9 +2,9 @@
 // guides with the point they snap to.
 
 import { nothing, svg, type TemplateResult } from "lit";
-import { formatNumber } from "../../../i18n.ts";
 import type { Vec2 } from "../../../model.ts";
 import type { CanvasContext } from "./context.ts";
+import { formatLength } from "../../../units.ts";
 
 type Layer = TemplateResult | typeof nothing;
 
@@ -18,7 +18,7 @@ export interface Guides {
 /** A gesture in progress that draws a shape. */
 export type Sketch = { kind: "freewall"; start: Vec2; end: Vec2 } | { kind: "rect"; start: Vec2; end: Vec2 };
 
-const metres = (ctx: CanvasContext, v: number) => formatNumber(ctx.host.hass, v, 2);
+const metres = (ctx: CanvasContext, v: number) => formatLength(ctx.host.hass, v);
 
 export function sketchLayer(ctx: CanvasContext, sketch: Sketch): TemplateResult {
   const [a, b] = [ctx.toScreen(sketch.start), ctx.toScreen(sketch.end)];
@@ -26,13 +26,13 @@ export function sketchLayer(ctx: CanvasContext, sketch: Sketch): TemplateResult 
     const length = Math.hypot(sketch.end[0] - sketch.start[0], sketch.end[1] - sketch.start[1]);
     return svg`<g pointer-events="none">
       <line class="nf-draft nf-draft-wall" x1=${a[0]} y1=${a[1]} x2=${b[0]} y2=${b[1]} />
-      <text class="nf-dim" x=${(a[0] + b[0]) / 2} y=${(a[1] + b[1]) / 2 - 10}>${metres(ctx, length)} m</text>
+      <text class="nf-dim" x=${(a[0] + b[0]) / 2} y=${(a[1] + b[1]) / 2 - 10}>${metres(ctx, length)}</text>
     </g>`;
   }
   const [width, depth] = [Math.abs(sketch.end[0] - sketch.start[0]), Math.abs(sketch.end[1] - sketch.start[1])];
   return svg`<g pointer-events="none">
     <rect class="nf-draft" x=${Math.min(a[0], b[0])} y=${Math.min(a[1], b[1])} width=${Math.abs(b[0] - a[0])} height=${Math.abs(b[1] - a[1])} />
-    <text class="nf-dim" x=${(a[0] + b[0]) / 2} y=${Math.min(a[1], b[1]) - 8}>${metres(ctx, width)} × ${metres(ctx, depth)} m</text>
+    <text class="nf-dim" x=${(a[0] + b[0]) / 2} y=${Math.min(a[1], b[1]) - 8}>${metres(ctx, width)} × ${metres(ctx, depth)}</text>
   </g>`;
 }
 
@@ -43,7 +43,7 @@ export function outlineLayer(ctx: CanvasContext, draft: readonly Vec2[], cursor:
   const lengths = measuring
     ? draft.slice(1).map((p, i) => {
         const [a, b] = [ctx.toScreen(draft[i]), ctx.toScreen(p)];
-        return svg`<text class="nf-dim" x=${(a[0] + b[0]) / 2} y=${(a[1] + b[1]) / 2 - 6}>${metres(ctx, Math.hypot(p[0] - draft[i][0], p[1] - draft[i][1]))} m</text>`;
+        return svg`<text class="nf-dim" x=${(a[0] + b[0]) / 2} y=${(a[1] + b[1]) / 2 - 6}>${metres(ctx, Math.hypot(p[0] - draft[i][0], p[1] - draft[i][1]))}</text>`;
       })
     : nothing;
   const points = draft.map((p, i) => {

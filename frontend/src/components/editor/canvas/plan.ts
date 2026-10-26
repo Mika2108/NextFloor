@@ -2,10 +2,11 @@
 // the handles of the selected room, outdoor area and walls.
 
 import { nothing, svg, type TemplateResult } from "lit";
-import { formatNumber, type I18nKey } from "../../../i18n.ts";
+import type { I18nKey } from "../../../i18n.ts";
 import { bounds, centroid, isFixed, polygonArea, type Floor, type FreeWall, type OutdoorArea, type Room, type Vec2 } from "../../../model.ts";
 import type { Wall } from "../../../geometry/walls.ts";
 import { edgePlus, pointsAttribute, type CanvasContext } from "./context.ts";
+import { formatArea, formatLength } from "../../../units.ts";
 
 type Layer = TemplateResult | typeof nothing;
 
@@ -86,7 +87,7 @@ export function roomsLayer(ctx: CanvasContext, floor: Floor, selectedId: string 
     <g pointer-events="none">${floor.rooms.map((r) => {
       const [cx, cy] = ctx.toScreen(centroid(r.points));
       return svg`<text class="nf-room-name" x=${cx} y=${cy - 2}>${r.name}</text>
-        <text class="nf-room-area" x=${cx} y=${cy + 14}>${ctx.host.t("area_m2", { a: formatNumber(ctx.host.hass, polygonArea(r.points), 1) })}</text>`;
+        <text class="nf-room-area" x=${cx} y=${cy + 14}>${formatArea(ctx.host.hass, polygonArea(r.points))}</text>`;
     })}</g>`;
 }
 
@@ -146,7 +147,7 @@ export function roomHandlesLayer(ctx: CanvasContext, room: Room, selectedCorner:
     const norm = Math.hypot(nx, ny) || 1;
     [nx, ny] = [nx / norm, ny / norm];
     if (nx * (mx - cx) + ny * (my - cy) < 0) [nx, ny] = [-nx, -ny];
-    return svg`${onScreen > 50 ? svg`<text class="nf-dim" x=${mx + nx * 16} y=${my + ny * 16 + 4}>${formatNumber(ctx.host.hass, Math.hypot(b[0] - a[0], b[1] - a[1]), 2)} m</text>` : nothing}
+    return svg`${onScreen > 50 ? svg`<text class="nf-dim" x=${mx + nx * 16} y=${my + ny * 16 + 4}>${formatLength(ctx.host.hass, Math.hypot(b[0] - a[0], b[1] - a[1]))}</text>` : nothing}
       ${onScreen > 36 ? svg`<g data-mid=${i} class="nf-mid"><circle cx=${mx} cy=${my} r="14" class="nf-hit" /><circle cx=${mx} cy=${my} r="6" /><path d="M${mx - 3} ${my}h6M${mx} ${my - 3}v6" /></g>` : nothing}`;
   };
   const corner = (p: Vec2, i: number) => {

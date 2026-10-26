@@ -1,7 +1,7 @@
 // The side panel's room part: the list of rooms, and the form of one room with its corners, packages and spot grid.
 
 import { html, nothing, type TemplateResult } from "lit";
-import { formatNumber, type I18nKey } from "../../../i18n.ts";
+import type { I18nKey } from "../../../i18n.ts";
 import { bounds, FLOOR_MATERIALS, isAxisRect, polygonArea, type Floor, type FurnitureType, type Room } from "../../../model.ts";
 import { PACKAGES, type PackageId } from "../../../packages.ts";
 import { entityOptions } from "../entities.ts";
@@ -10,6 +10,7 @@ import type { EditorHost } from "../host.ts";
 import type { RectField } from "../ops/rooms.ts";
 import { SPOT_TYPES, spotCount, spotItems } from "../ops/spots.ts";
 import type { SideState } from "../side-state.ts";
+import { formatArea } from "../../../units.ts";
 
 /** What the room form makes the editor do, and the parts of it that the editor still draws itself. */
 export interface RoomActions {
@@ -42,7 +43,7 @@ export function renderRoomList(host: EditorHost, floor: Floor, actions: Pick<Roo
     <div class="nf-room-list">
       ${floor.rooms.map(
         (room) => html`<button class="nf-row" @click=${() => actions.select(room.id)}>
-          <span>${room.name}</span><span class="nf-muted">${host.t("area_m2", { a: formatNumber(host.hass, polygonArea(room.points), 1) })}</span>
+          <span>${room.name}</span><span class="nf-muted">${formatArea(host.hass, polygonArea(room.points))}</span>
         </button>`,
       )}
     </div>

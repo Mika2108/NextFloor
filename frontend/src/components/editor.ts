@@ -62,6 +62,7 @@ import { renderFreeWallForm, renderMeasureForm, renderOutdoorForm, type FreeWall
 import { insertRoofCorner, roofOutline } from "./editor/ops/roof.ts";
 import { insertOutdoorCorner, outdoorRectangleAfter, removeOutdoorCorner } from "./editor/ops/items.ts";
 import { renderDeviceList, renderRoomClimate, type DeviceListActions } from "./editor/forms/device-list.ts";
+import { setUnits } from "../units.ts";
 import "./editor/wall-view.ts";
 import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
 import { insertCorner } from "./editor/ops/rooms.ts";
@@ -2655,6 +2656,8 @@ export class NfEditor extends LitElement {
   // ------------------------------------------------------------------ rendering
 
   protected render(): TemplateResult {
+    // lengths in the plan, the forms and the wall view in the plan's own units
+    setUnits(this._doc.settings.units);
     const floor = this.floor;
     const walls = floor ? generateWalls(floor.rooms, { exterior: this._doc.settings.wall_exterior, interior: this._doc.settings.wall_interior }, floor.walls ?? []) : null;
     return html`

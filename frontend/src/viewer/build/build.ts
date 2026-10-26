@@ -24,7 +24,7 @@ import { buildFloors } from "./floors.ts";
 import { outlineOf } from "./outline.ts";
 import { bucketWalls, placeOpenings, roofLimits } from "./placement.ts";
 import { buildShadow } from "./shadow.ts";
-import { buildWallSolids } from "./solids.ts";
+import { buildWallSolids, type WallPaint } from "./solids.ts";
 import type { FloorGeometry } from "./types.ts";
 
 export function buildFloorGeometry(
@@ -39,6 +39,8 @@ export function buildFloorGeometry(
    * at the eaves, gables up to the ridge, inner walls cut by the slope.
    */
   roofUnder?: (x: number, z: number) => number | null,
+  /** Painted walls for the solid wall view (see WallPaint). */
+  paint?: WallPaint,
 ): FloorGeometry {
   const { walls, open: openRooms } = generateWalls(floor.rooms, { exterior: wallExterior, interior: wallInterior }, floor.walls ?? []);
   const limits = roofLimits(roofUnder);
@@ -49,7 +51,7 @@ export function buildFloorGeometry(
   const { openings, spans } = placeOpenings(floor, walls, wallBucket, limits);
 
   const wallBuf = new GeoBuffer();
-  buildWallSolids(wallBuf, floor, walls, wallBucket, spans, limits, hasRoof);
+  buildWallSolids(wallBuf, floor, walls, wallBucket, spans, limits, hasRoof, paint);
 
   const outline = outlineOf(walls, walls.flatMap((w) => w.footprint));
   const lines = new LineBuffer();
@@ -105,3 +107,4 @@ export function stairHoles(floors: readonly Floor[], floor: Floor): Vec2[][] {
   // overlapping openings become one outline (an L-shaped stairwell made of two)
   return mergeHoles([...own, ...stairs]);
 }
+export type { WallPaint } from "./solids.ts";

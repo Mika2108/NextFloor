@@ -141,6 +141,8 @@ export interface PrismOptions {
   /** Cut-outs in the area: their rings are turned so the inner sides face the hole. */
   holes?: Vec2[][];
   skipSide?: (a: Vec2, b: Vec2) => boolean;
+  /** The colour of each side face instead of `side` (painted walls: each face in the colour of the room it faces). */
+  sideColor?: (a: Vec2, b: Vec2) => number;
 }
 
 /**
@@ -179,9 +181,10 @@ export function pushPrism(buf: GeoBuffer, poly: Vec2[], y0: number, y1: number |
       if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 1e-6 || opts.skipSide?.(a, b)) return;
       const light = sideLight(b[0] - a[0], b[1] - a[1]);
       const [ya, yb] = [topAt(a), topAt(b)];
-      const foot = shade(side, occlusion(y0) * light);
-      const headA = shade(side, occlusion(ya) * light);
-      const headB = shade(side, occlusion(yb) * light);
+      const own = opts.sideColor ? opts.sideColor(a, b) : side;
+      const foot = shade(own, occlusion(y0) * light);
+      const headA = shade(own, occlusion(ya) * light);
+      const headB = shade(own, occlusion(yb) * light);
       buf.tri([a[0], y0, a[1]], [a[0], ya, a[1]], [b[0], yb, b[1]], foot, headA, headB, undefined, fold);
       buf.tri([a[0], y0, a[1]], [b[0], yb, b[1]], [b[0], y0, b[1]], foot, headB, foot, undefined, fold);
     });

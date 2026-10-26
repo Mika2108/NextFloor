@@ -2,10 +2,10 @@
 
 import { html, nothing, type TemplateResult } from "lit";
 import type { I18nKey } from "../../../i18n.ts";
-import { bounds, FLOOR_MATERIALS, isAxisRect, polygonArea, type Floor, type FurnitureType, type Room } from "../../../model.ts";
+import { bounds, DEFAULT_PAINT_INSIDE, FLOOR_MATERIALS, isAxisRect, polygonArea, type Floor, type FurnitureType, type Room } from "../../../model.ts";
 import { PACKAGES, type PackageId } from "../../../packages.ts";
 import { entityOptions } from "../entities.ts";
-import { entityField, hint, numberField, selectField, textField } from "../fields.ts";
+import { colorField, entityField, hint, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import type { RectField } from "../ops/rooms.ts";
 import { SPOT_TYPES, spotCount, spotItems } from "../ops/spots.ts";
@@ -109,6 +109,7 @@ export function renderRoomForm(host: EditorHost, state: SideState, room: Room, a
       ${textField(host, t("room_name"), room.name, (v) => actions.patch({ name: v }), { wide: true })}
       ${selectField(host, t("area"), room.area_id ?? "", areaChoices, (id) => actions.setArea(id), { wide: true })}
       ${selectField(host, t("material"), room.floor_material, materials, (floor_material) => actions.patch({ floor_material }), { wide: true })}
+      ${colorField(host, t("wall_paint_room"), room.wall_paint, host.doc.settings.wall_paint_inside ?? DEFAULT_PAINT_INSIDE, (wall_paint) => actions.patch({ wall_paint }))}
       ${host.floor ? ceilingField(host, room, host.floor, actions) : nothing}
       ${rectangle
         ? html`${numberField(host, t("x"), box.x0, (v) => actions.setRect("x", v))} ${numberField(host, t("z"), box.z0, (v) => actions.setRect("z", v))}

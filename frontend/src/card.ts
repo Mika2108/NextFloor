@@ -217,7 +217,7 @@ export class NextFloorCard extends LitElement {
       html`<div class="nf-seg" role=${label ? "group" : nothing} aria-label=${label ?? nothing}>${buttons.map(([on, act, text]) => html`<button aria-pressed=${on} @click=${act}>${text}</button>`)}</div>`;
     return html`<div class="nf-card-controls">
       ${s.canGoBack ? html`<button class="nf-chip" @click=${() => this.back()}>${t("back")}</button>` : nothing}
-      ${this.shows("walls") ? group(undefined, [[s.walls === "auto", () => (this._walls = "auto"), t("walls_auto")], [s.walls === "cut", () => (this._walls = "cut"), t("walls_cut")]]) : nothing}
+      ${this.shows("walls") ? group(undefined, [[s.walls === "auto", () => (this._walls = "auto"), t("walls_auto")], [s.walls === "cut", () => (this._walls = "cut"), t("walls_cut")], [s.walls === "slope", () => (this._walls = "slope"), t("walls_slope")]]) : nothing}
       ${this.shows("floors") && b.floors.length > 1 && !s.floorId
         ? group(undefined, [[s.explode, () => (this._explode = true), t("floors_apart")], [!s.explode, () => (this._explode = false), t("floors_stacked")]])
         : nothing}
@@ -283,6 +283,7 @@ export class NextFloorCard extends LitElement {
       .floorId=${s.floorId}
       .roomId=${this._roomId}
       .wallMode=${s.walls}
+      .solidWalls=${c?.solid_walls === true}
       .explode=${s.explode}
       .keepRoof=${c?.roof_fade === false}
       .quality=${c?.quality ?? "auto"}

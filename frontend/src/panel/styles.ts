@@ -352,8 +352,8 @@ export const panelStyles = css`
     position: absolute;
     right: 12px;
     bottom: 12px;
-    /* room for the search button and the eye beside it */
-    left: 100px;
+    /* room for the search button and the row beside it (eye, lock, walk, time travel) */
+    left: 236px;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;

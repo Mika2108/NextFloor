@@ -25,6 +25,8 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 - **Day curve on the house card**: the energy card over the roof shows the last 24 hours, solar as a filled curve and consumption as a line, worked out from the history of exactly the sensors the card reads (refreshed every 10 minutes).
 - **Feet and inches**: *Editor → Settings → Show lengths in* shows the lengths and areas of the plan, the forms and the wall view in feet and inches (to the half inch) and square feet; inputs stay in metres.
 - **Valleys for L- and T-shaped houses**: a wing roof that butts against the eave of a bigger roof at a right angle now runs into that roof's slope like a cross gable, so the two roofs meet in valleys instead of the wing ending in a gable wall at the eave.
+- **Sloped walls**: a third wall view next to *Tall walls* and *Cut*: the walls are cut on a slope, half height on the side facing the camera and full height at the back, like a doll's house; the slope turns with the camera.
+- **Solid walls with colours**: the new switch *Solid* shows opaque walls in real colours instead of glass. *Editor → Settings* sets the wall colour outside and inside, and each room can have its own inside colour. In an open room the walls in front of the camera are lowered. Works in the dashboard card too (`solid_walls: true`, `walls: slope`).
 - **Plan format and AI import**: [docs/plan-format.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/plan-format.md) describes the plan file, with a ready prompt that lets an AI turn a picture of your floor plan into a plan for *Backup → Import*.
 
 ### Fixed

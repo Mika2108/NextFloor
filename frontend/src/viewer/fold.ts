@@ -5,8 +5,11 @@
 //
 // Roles: "plain" (lines, window and door parts) only follows standing/cut; "solid" (walls) also leaves
 // out glass buckets; "glass" draws only the wall parts of glass buckets, as tinted glass.
+//
+// The sloped view lowers every wall part (not furniture) to a plane that leans away from the camera: low on the near
+// side, full height on the far side. Painted wall parts (fold value + 128) keep their own colour in every look.
 
-import type { Material } from "three";
+import type { Material, Vector2, Vector4 } from "three";
 
 export interface FoldMask {
   value: number;
@@ -15,6 +18,12 @@ export interface FoldMask {
 export interface FoldMasks {
   standing: FoldMask;
   glass: FoldMask;
+  /**
+   * The sloped view: x, z = the direction away from the camera, then the plan distance along it where the walls are lowest
+   * and where they are full height; and the lowest and the highest wall top (floor coordinates). Off while the first two are 0.
+   */
+  slope?: { value: Vector4 };
+  slopeY?: { value: Vector2 };
 }
 
 export type FoldRole = "plain" | "solid" | "glass";
@@ -23,13 +32,26 @@ export function makeFoldable<T extends Material>(material: T, masks: FoldMasks, 
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uStanding = masks.standing;
     shader.uniforms.uGlass = masks.glass;
-    shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nattribute float fold;\nuniform int uStanding;\nuniform int uGlass;").replace(
+    shader.uniforms.uSlope = masks.slope ?? { value: { x: 0, y: 0, z: 0, w: 0 } };
+    shader.uniforms.uSlopeY = masks.slopeY ?? { value: { x: 0, y: 0 } };
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute float fold;\nuniform int uStanding;\nuniform int uGlass;\nuniform vec4 uSlope;\nuniform vec2 uSlopeY;\nvarying float vNfPaint;")
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+      vNfPaint = fold > 127.5 ? 1.0 : 0.0;
+      if (fold > -0.5 && (uSlope.x != 0.0 || uSlope.y != 0.0) && int(mod(fold, 128.0) + 0.5) / 16 != 4) {
+        float nfAlong = clamp((dot(transformed.xz, uSlope.xy) - uSlope.z) / max(uSlope.w - uSlope.z, 0.001), 0.0, 1.0);
+        transformed.y = min(transformed.y, mix(uSlopeY.x, uSlopeY.y, nfAlong));
+      }`,
+      )
+      .replace(
       "#include <project_vertex>",
       `#include <project_vertex>
       {
         bool nfShow = ${role === "glass" ? "false" : "true"};
         if (fold > -0.5) {
-          int nfFold = int(fold + 0.5);
+          int nfFold = int(mod(fold, 128.0) + 0.5);
           int nfKind = nfFold / 16;
           int nfBucket = nfFold - nfKind * 16;
           bool nfStanding = ((uStanding >> nfBucket) & 1) == 1;
@@ -43,6 +65,17 @@ export function makeFoldable<T extends Material>(material: T, masks: FoldMasks, 
         if (!nfShow) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
       }`,
     );
+    shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vNfPaint;");
+    if (role !== "glass") {
+      // painted walls: their own colour, after the look has mapped everything else (see theme.ts)
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+        #ifdef USE_COLOR
+        if (vNfPaint > 0.5) diffuseColor.rgb = vColor.rgb;
+        #endif`,
+      );
+    }
     if (role === "glass") {
       // dark walls become a faint cyan-tinted glass
       shader.fragmentShader = shader.fragmentShader.replace(

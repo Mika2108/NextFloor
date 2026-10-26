@@ -94,6 +94,7 @@ export class NfView3d extends LitElement {
     floorId: { attribute: false },
     roomId: { attribute: false },
     wallMode: { attribute: false },
+    solidWalls: { attribute: false },
     explode: { type: Boolean },
     keepRoof: { attribute: false },
     markerMode: { attribute: false },
@@ -167,6 +168,8 @@ export class NfView3d extends LitElement {
   declare floorId: string | null;
   declare roomId: string | null;
   declare wallMode: WallMode;
+  /** Solid walls in their paint instead of glass. */
+  declare solidWalls: boolean;
   declare explode: boolean;
   /** The roof stays while zooming in (no lift, no fade). */
   declare keepRoof: boolean;
@@ -344,6 +347,7 @@ export class NfView3d extends LitElement {
     this.floorId = null;
     this.roomId = null;
     this.wallMode = "auto";
+    this.solidWalls = false;
     this.explode = true;
     this.keepRoof = false;
     this.markerMode = "important";
@@ -504,6 +508,7 @@ export class NfView3d extends LitElement {
         },
       });
       this.viewer.setWallMode(this.wallMode);
+      this.viewer.setPaintedWalls(this.solidWalls);
       this.viewer.setTheme(this.theme);
       this.viewer.setAccent(this.accent ?? null);
       this.viewer.setNavigationLocked(this._locked);
@@ -576,6 +581,7 @@ export class NfView3d extends LitElement {
     if (changed.has("floorId")) v.setFloor(this.floorId);
     if (changed.has("roomId") && (this.roomId || changed.get("roomId"))) v.selectRoom(this.roomId);
     if (changed.has("wallMode")) v.setWallMode(this.wallMode);
+    if (changed.has("solidWalls")) v.setPaintedWalls(this.solidWalls);
     if (changed.has("explode")) v.setExplode(this.explode);
     if (changed.has("keepRoof")) v.setKeepRoof(this.keepRoof);
     if (changed.has("floorStack")) v.setFloorStack(this.floorStack);

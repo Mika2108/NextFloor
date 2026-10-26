@@ -12,6 +12,8 @@ export interface CardConfig {
   start_view?: StartView;
   height?: number;
   walls?: WallMode;
+  /** Solid walls in their paint (outside, inside, per room) instead of glass. */
+  solid_walls?: boolean;
   /** Pull floors apart in the house view (default true). */
   explode?: boolean;
   /** The roof lifts and fades while zooming in (default true); false keeps it on the house. */

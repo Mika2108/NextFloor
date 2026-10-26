@@ -36,6 +36,7 @@ import {
   BufferGeometry as Geometry,
   Vector2,
   Vector3,
+  Vector4,
   WebGLRenderer,
   WebGLRenderTarget,
   type BufferGeometry,
@@ -43,7 +44,7 @@ import {
 } from "three";
 import type { Building, Floor, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
-import { CEILING_TYPES, ceilingOf, centroid, furnitureFootprint, pointInPolygon, polygonArea, openingStyle, WALL_LAMP_Y } from "../model.ts";
+import { CEILING_TYPES, ceilingOf, centroid, DEFAULT_PAINT_INSIDE, DEFAULT_PAINT_OUTSIDE, furnitureFootprint, pointInPolygon, polygonArea, openingStyle, WALL_LAMP_Y } from "../model.ts";
 import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
 import { centredAt, floorLabelPosition, floorShowsMarkers, LabelPlacer, leftAt, project, stackFloorLabels, type FloorLabel, type ScreenPoint } from "./scene/labels.ts";
 import { easeFloor, fadeMaterials, floorShare, floorTarget } from "./scene/floor-motion.ts";
@@ -54,7 +55,7 @@ import { LAMP_SIZE, HANGING_LAMPS } from "./scene/lamp-data.ts";
 import { lightSourcesOf } from "./scene/light-sources.ts";
 import { makeFloorMaterials, type FloorMaterials } from "./scene/materials.ts";
 import { createDevicePin, type PinHooks } from "./scene/pins.ts";
-import { buildFloorGeometry, SLAB, stairHoles, type FloorGeometry } from "./build.ts";
+import { buildFloorGeometry, SLAB, stairHoles, type FloorGeometry, type WallPaint } from "./build.ts";
 import { OrbitControls, type OrbitView } from "./controls.ts";
 import { type FoldMasks } from "./fold.ts";
 import { pushPackGlow, pushPackLamp, pushPackMoving, screenRect, pushFridgeDoors } from "./furniture.ts";
@@ -88,7 +89,7 @@ const ROBOT_LED: Record<RobotInfo["mode"], number> = { cleaning: 0x37e0ff, retur
 export type { OpeningState } from "./openings.ts";
 
 export type Quality = "auto" | "low" | "high";
-export type WallMode = "auto" | "cut";
+export type WallMode = "auto" | "cut" | "slope";
 
 export interface ViewerOptions {
   quality?: Quality;
@@ -396,6 +397,8 @@ export class NextFloorViewer {
   private floorId: string | null = null;
   private roomId: string | null = null;
   private wallMode: WallMode = "auto";
+  /** Solid painted walls: no glass, every wall in its paint (see setPaintedWalls). */
+  private painted = false;
   private explode: boolean;
   private frame = 0;
   private lastFrame = 0;
@@ -743,6 +746,31 @@ export class NextFloorViewer {
     const zs = room.points.map((p) => p[1]);
     const size = new Vector3(Math.max(...xs) - Math.min(...xs), fv.floor.cut_height, Math.max(...zs) - Math.min(...zs));
     this.controls.flyTo({ target: new Vector3(cx, fv.floor.elevation + fv.ty + 0.3, cz), radius: Math.max(4, this.distanceFor(size) * 1.05), phi: 0.72 });
+  }
+
+  /** Walls lowered in this mode (cut flat, or sloped): ceiling lamps and the roof would float above them. */
+  private get lowered(): boolean {
+    return this.wallMode !== "auto";
+  }
+
+  /** Solid walls painted in the building's colours (outside, inside, per room) instead of the look's walls and glass. */
+  setPaintedWalls(on: boolean): void {
+    if (on === this.painted) return;
+    this.painted = on;
+    this.rebuild();
+    this.invalidate();
+  }
+
+  /** The paint the walls get in the solid view. */
+  private wallPaint(): WallPaint | undefined {
+    const b = this.building;
+    if (!this.painted || !b) return undefined;
+    const hex = (v: string | null | undefined, fallback: string) => Number.parseInt((/^#?([0-9a-f]{6})$/i.exec(v?.trim() ?? "")?.[1] ?? fallback.slice(1)), 16);
+    return {
+      outside: hex(b.settings.wall_paint_outside, DEFAULT_PAINT_OUTSIDE),
+      inside: hex(b.settings.wall_paint_inside, DEFAULT_PAINT_INSIDE),
+      rooms: b.floors.flatMap((f) => f.rooms).filter((r) => r.wall_paint && r.points.length >= 3).map((r) => ({ points: r.points, color: hex(r.wall_paint, DEFAULT_PAINT_INSIDE) })),
+    };
   }
 
   setWallMode(mode: WallMode): void {
@@ -1449,8 +1477,8 @@ export class NextFloorViewer {
             return y === null ? null : y - floor.elevation;
           }
         : undefined;
-      const geo = buildFloorGeometry(withVehicles(floor, this.parked), b.settings.wall_exterior, b.settings.wall_interior, stairHoles(b.floors, floor), garden, roofUnder);
-      const mask: FoldMasks = { standing: { value: 0xffff }, glass: { value: 0 } };
+      const geo = buildFloorGeometry(withVehicles(floor, this.parked), b.settings.wall_exterior, b.settings.wall_interior, stairHoles(b.floors, floor), garden, roofUnder, this.wallPaint());
+      const mask: FoldMasks = { standing: { value: 0xffff }, glass: { value: 0 }, slope: { value: new Vector4() }, slopeY: { value: new Vector2() } };
       const materials = makeFloorMaterials({ mask, look: this.themeUniform, theme: this.theme, textures: { pattern: this.patternTexture, blinds: this.blindTexture, halo: this.haloTexture } });
       const group = new Group();
       const floorMesh = new Mesh(geo.floor, materials.floor);
@@ -1682,7 +1710,7 @@ export class NextFloorViewer {
     const zoom = this.keepRoof ? 1 : Math.min(1, Math.max(0, (this.controls.view.radius / this.houseRadius - 0.62) / 0.3));
     // a house with a single floor shows that floor as its house view, roof included (D208)
     const house = this.floorId === null || this.floors.length === 1;
-    const target = house && this.wallMode !== "cut" ? 0.94 * zoom : 0;
+    const target = house && !this.lowered ? 0.94 * zoom : 0;
     const k = floorShare(dt);
     const before = this.roofO;
     this.roofO += (target - this.roofO) * k;
@@ -1837,7 +1865,7 @@ export class NextFloorViewer {
       for (const d of lamps) {
         // hanging lamps would float above cut walls
         const hanging = d.lamp === "strip" ? (d.base ?? H) > Math.min(fv.floor.cut_height, d.ceiling ?? H) : d.lamp ? HANGING_LAMPS.has(d.lamp) : false;
-        if (!d.lamp || (hanging && this.wallMode === "cut")) continue;
+        if (!d.lamp || (hanging && this.lowered)) continue;
         const start = buf.count;
         const packed = d.pack ? packItem(d.pack) : undefined;
         const [pw, pd, ph] = d.size ?? [0.3, 0.3, 0.3];
@@ -1905,7 +1933,7 @@ export class NextFloorViewer {
     }
     const points: HaloPoints = { positions: [], colours: [] };
     const cones = new GeoBuffer();
-    const cut = this.wallMode === "cut";
+    const cut = this.lowered;
     for (const marker of this.devices) {
       const glow = this.glowOf(marker);
       if (marker.floorId !== fv.floor.id || !marker.lamp || !glow) continue;
@@ -2160,9 +2188,9 @@ export class NextFloorViewer {
         if (id) return { entity: id };
       } else if (hit.object === fv.framesMesh || hit.object === fv.blindsMesh || hit.object === fv.glassMesh) {
         // the part above the cut is folded away with its wall: a tap there is meant for what lies behind
-        if (this.wallMode === "cut" && hit.face) {
+        if (this.lowered && hit.face) {
           const fold = ((hit.object as Mesh).geometry.getAttribute("fold") as Float32BufferAttribute | undefined)?.getX(hit.face.a) ?? ALWAYS;
-          if (fold !== ALWAYS && Math.floor(fold / 16) === 0) continue;
+          if (fold !== ALWAYS && Math.floor(fold / 16) % 8 === 0) continue;
         }
         // the whole window counts, glass included: a small blind is a poor target
         const id = inRange(hit.object === fv.framesMesh ? fv.frameTris : hit.object === fv.glassMesh ? fv.glassTris : fv.blindTris, tri);
@@ -2175,9 +2203,10 @@ export class NextFloorViewer {
         // a wall: the tap stops at it unless it is see-through (cut away, or glass in the floor view)
         if (hit.face && !id) {
           const fold = (fv.wallMesh.geometry.getAttribute("fold") as Float32BufferAttribute | undefined)?.getX(hit.face.a) ?? 32;
-          const part = Math.floor(fold / 16);
+          // (a painted wall's fold carries PAINT_OFFSET, a multiple of 16 * 8)
+          const part = Math.floor(fold / 16) % 8;
           const bucket = fold % 16;
-          const cutAway = this.wallMode === "cut" && part === 0;
+          const cutAway = this.lowered && part === 0;
           const glass = (fv.mask.glass.value & (1 << bucket)) !== 0;
           if (!cutAway) {
             // the room on the camera's side of the wall is what the tap means
@@ -2804,6 +2833,7 @@ export class NextFloorViewer {
       for (const fv of this.floors) {
         fv.mask.standing.value = 0xffff;
         fv.mask.glass.value = 0;
+        fv.mask.slope?.value.set(0, 0, 0, 0);
       }
       return;
     }
@@ -2817,13 +2847,37 @@ export class NextFloorViewer {
       const inRoom = this.roomId !== null && fv.floor.rooms.some((r) => r.id === this.roomId);
       const cut = this.wallMode === "cut";
       let glass = 0;
+      let lowered = 0;
       fv.geo.buckets.forEach((normal, b) => {
         const facing = normal ? (normal[0] * dx) / l + (normal[1] * dz) / l >= 0.25 : inRoom;
-        if (!cut && facing) glass |= 1 << b;
+        if (this.wallMode !== "auto" || !facing) return;
+        // solid walls never turn into glass: in a room, the walls in front of it are cut down instead (like a doll's house)
+        if (!this.painted) glass |= 1 << b;
+        else if (inRoom) lowered |= 1 << b;
       });
-      fv.mask.standing.value = cut ? 0 : 0xffff;
+      fv.mask.standing.value = cut ? 0 : 0xffff & ~lowered;
       fv.mask.glass.value = glass;
+      this.slopeWalls(fv, -dx / l, -dz / l);
     }
+  }
+
+  /**
+   * The sloped view: the walls of a floor are lowered to a plane that rises away from the camera, from the cut height on
+   * the floor's near edge to the full height on its far edge, so the rooms in front open up and the far walls frame them.
+   */
+  private slopeWalls(fv: FloorView, fx: number, fz: number): void {
+    const slope = fv.mask.slope!.value;
+    if (this.wallMode !== "slope" || !fv.bbox || this.controls.walk) {
+      slope.set(0, 0, 0, 0);
+      return;
+    }
+    const { x0, x1, z0, z1 } = fv.bbox;
+    const along = [x0 * fx + z0 * fz, x1 * fx + z0 * fz, x0 * fx + z1 * fz, x1 * fx + z1 * fz];
+    // a little inside the outline, so the near wall really sits at the low end and the far wall at the high end
+    const [near, far] = [Math.min(...along), Math.max(...along)];
+    const inset = (far - near) * 0.08;
+    slope.set(fx, fz, near + inset, far - inset);
+    fv.mask.slopeY!.value.set(Math.min(fv.floor.cut_height, fv.floor.height), fv.floor.height);
   }
 
   /** True when the camera view differs from the last frame's. */

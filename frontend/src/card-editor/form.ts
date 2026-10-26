@@ -8,6 +8,7 @@ import type { I18nKey } from "../i18n.ts";
 export const DEFAULTS: Partial<CardConfig> = {
   height: 420,
   walls: "auto",
+  solid_walls: false,
   explode: true,
   roof_fade: true,
   quality: "auto",
@@ -38,7 +39,7 @@ export const DEFAULTS: Partial<CardConfig> = {
 };
 
 /** The yes/no options that get a plain checkbox. */
-export type SwitchOption = "explode" | "roof_fade" | "energy" | "room_panel" | "room_buttons" | "stats" | "fullscreen_button" | "room_names" | "alerts" | "alert_jump" | "scenes" | "idle_orbit" | "weather";
+export type SwitchOption = "solid_walls" | "explode" | "roof_fade" | "energy" | "room_panel" | "room_buttons" | "stats" | "fullscreen_button" | "room_names" | "alerts" | "alert_jump" | "scenes" | "idle_orbit" | "weather";
 
 export type Choice = [value: string, label: I18nKey];
 

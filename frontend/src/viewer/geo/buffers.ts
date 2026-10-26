@@ -12,6 +12,8 @@ export const LOWER_OFFSET = 32;
 export const CAP_OFFSET = 48;
 /** The part of tall furniture above the cut height: it folds away with the walls. */
 export const FURN_OFFSET = 64;
+/** Added to the fold value of painted wall parts (solid wall view): the shader shows their own colour in every look. */
+export const PAINT_OFFSET = 128;
 
 const attribute = (values: number[], size: number) => new Float32BufferAttribute(values, size);
 

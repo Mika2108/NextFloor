@@ -170,6 +170,7 @@ export class NfEditor extends LitElement {
     _split: { state: true },
     _splitRatio: { state: true },
     _wall3d: { state: true },
+    _solid3d: { state: true },
     _sidePinned: { state: true },
     _sideOpen: { state: true },
     _floorId: { state: true },
@@ -205,6 +206,7 @@ export class NfEditor extends LitElement {
   private declare _splitRatio: number;
   /** Walls in the 3D pane: full height ("auto") or cut at the cut height (shows wall units and shelves). */
   private declare _wall3d: WallMode;
+  private declare _solid3d: boolean;
   /** Sidebar beside the 3D pane: pinned open always, or folded to a strip while nothing is selected. */
   private declare _sidePinned: boolean;
   private declare _sideOpen: boolean;
@@ -287,6 +289,7 @@ export class NfEditor extends LitElement {
       /* no storage */
     }
     this._wall3d = "cut";
+    this._solid3d = false;
     this._doc3d = this._doc;
     this._sideOpen = false;
     let pinned = true;
@@ -764,6 +767,8 @@ export class NfEditor extends LitElement {
         : html`<div class="nf-seg nf-3d-walls">
             <button aria-pressed=${this._wall3d === "auto"} @click=${() => (this._wall3d = "auto")}>${this.t("walls_auto")}</button>
             <button aria-pressed=${this._wall3d === "cut"} @click=${() => (this._wall3d = "cut")}>${this.t("walls_cut")}</button>
+            <button aria-pressed=${this._wall3d === "slope"} title=${this.t("walls_slope_hint")} @click=${() => (this._wall3d = "slope")}>${this.t("walls_slope")}</button>
+            <button aria-pressed=${this._solid3d} title=${this.t("walls_solid_hint")} @click=${() => (this._solid3d = !this._solid3d)}>${this.t("walls_solid")}</button>
           </div>`}
       ${this.render3dBar()}
       <nf-view3d
@@ -772,6 +777,7 @@ export class NfEditor extends LitElement {
         .floorId=${this.houseTool ? null : this._floorId}
         .roomId=${null}
         .wallMode=${this.houseTool ? "auto" : this._wall3d}
+        .solidWalls=${!this.houseTool && this._solid3d}
         .explode=${false}
         .keepRoof=${this._tool === "roof" || this._tool === "energy"}
         .markerMode=${"important"}

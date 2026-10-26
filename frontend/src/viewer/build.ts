@@ -5,4 +5,5 @@ export { FLOOR_LOOK, NEON, SLAB } from "./build/look.ts";
 export { clipAlong, outlineOf } from "./build/outline.ts";
 export { wallHeight } from "./build/placement.ts";
 export type { FloorGeometry, OpeningInfo } from "./build/types.ts";
+export type { WallPaint } from "./build/build.ts";
 export { ALWAYS, CUT_OFFSET, GeoBuffer, LineBuffer, pushPrism, shade } from "./geo.ts";

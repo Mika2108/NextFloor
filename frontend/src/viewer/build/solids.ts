@@ -1,8 +1,8 @@
 // The wall solids: every wall cut into pieces at its openings, built as prisms that fold away above the cut height.
 
 import type { Wall } from "../../geometry/walls.ts";
-import type { Floor, Vec2 } from "../../model.ts";
-import { CAP_OFFSET, LOWER_OFFSET, pushPrism, type GeoBuffer } from "../geo.ts";
+import { pointInPolygon, type Floor, type Vec2 } from "../../model.ts";
+import { CAP_OFFSET, LOWER_OFFSET, PAINT_OFFSET, pushPrism, type GeoBuffer } from "../geo.ts";
 import { NEON, SLAB } from "./look.ts";
 import { clipAlong, unit } from "./outline.ts";
 import { wallTops, type roofLimits } from "./placement.ts";
@@ -13,6 +13,32 @@ interface Piece {
   t1: number;
   /** The height ranges the wall fills at this piece (between and around openings). */
   ranges: [number, number][];
+}
+
+/** Wall paint for the solid wall view: outside, inside, and the rooms with a colour of their own. */
+export interface WallPaint {
+  outside: number;
+  inside: number;
+  rooms: { points: Vec2[]; color: number }[];
+}
+
+/** The top of a painted wall, where it is cut or ends: a plain light grey, like plaster seen in section. */
+const PAINT_TOP = 0xd9d5cd;
+
+/**
+ * The paint of one side face of a wall: the colour of the room in front of it, the inside colour when a room without one
+ * of its own is there, the outside colour when no room is.
+ */
+export function paintOfSide(poly: Vec2[], a: Vec2, b: Vec2, paint: WallPaint, rooms: { points: Vec2[] }[]): number {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  const m: Vec2 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  let n: Vec2 = [(b[1] - a[1]) / len, -(b[0] - a[0]) / len];
+  // the normal that points away from the wall body
+  if (pointInPolygon([m[0] + n[0] * 0.01, m[1] + n[1] * 0.01], poly)) n = [-n[0], -n[1]];
+  const front: Vec2 = [m[0] + n[0] * 0.06, m[1] + n[1] * 0.06];
+  const own = paint.rooms.find((r) => pointInPolygon(front, r.points));
+  if (own) return own.color;
+  return rooms.some((r) => r.points.length >= 3 && pointInPolygon(front, r.points)) ? paint.inside : paint.outside;
 }
 
 /**
@@ -47,8 +73,13 @@ export function buildWallSolids(
   spans: Map<Wall, Span[]>,
   limits: ReturnType<typeof roofLimits>,
   hasRoof: boolean,
+  /** Painted walls (solid wall view): each face in its colour, and marked so every look keeps that colour. */
+  paint?: WallPaint,
 ): void {
   const cut = Math.min(floor.cut_height, floor.height);
+  const offset = paint ? PAINT_OFFSET : 0;
+  const sideColor = paint ? (poly: Vec2[]) => (a: Vec2, b: Vec2) => paintOfSide(poly, a, b, paint, floor.rooms) : null;
+  const top = paint ? PAINT_TOP : NEON.wallTop;
   for (const wall of walls) {
     const bucket = wallBucket.get(wall)!;
     const axis = unit([wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]]);
@@ -94,9 +125,11 @@ export function buildWallSolids(
           // the top face at the cut height is only seen while the wall is cut
           const topFold = y1 > cut + 1e-6 ? CAP_OFFSET + bucket : LOWER_OFFSET + bucket;
           const capped = sloped && roofTop < cut ? (x: number, z: number) => Math.min(cut, topOf(x, z)) : Math.min(y1, cut);
-          pushPrism(buf, poly, y0, capped, NEON.wall, NEON.wallTop, { aoFrom: 0, bottom: lintel, fold: LOWER_OFFSET + bucket, topFold, skipSide });
+          pushPrism(buf, poly, y0, capped, NEON.wall, top, { aoFrom: 0, bottom: lintel, fold: offset + LOWER_OFFSET + bucket, topFold: offset + topFold, skipSide, sideColor: sideColor?.(poly) });
         }
-        if (y1 > cut + 1e-6 && roofTop > cut + 1e-6) pushPrism(buf, poly, Math.max(y0, cut), sloped ? topOf : y1, NEON.wall, NEON.wallTop, { aoFrom: 0, fold: bucket, bottom: lintel && y0 >= cut, skipSide });
+        if (y1 > cut + 1e-6 && roofTop > cut + 1e-6) {
+          pushPrism(buf, poly, Math.max(y0, cut), sloped ? topOf : y1, NEON.wall, top, { aoFrom: 0, fold: offset + bucket, bottom: lintel && y0 >= cut, skipSide, sideColor: sideColor?.(poly) });
+        }
       }
     }
   }

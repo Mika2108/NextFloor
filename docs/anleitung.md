@@ -118,7 +118,8 @@ In den **Einstellungen**:
 
 - **Bewegen:** Ziehen dreht, das Mausrad zoomt, rechte Taste oder zwei Finger verschieben. Etagen- und Raumknöpfe oben fliegen die Kamera hin; *Zurück* oder Esc geht eine Ebene hoch.
 - **Aussehen:** Qualität *Auto / Tablet / Hoch*; Themen *Neon / Blueprint / Tag* mit Akzentfarbe; Symbole *Keine / Wichtige / Alle*.
-- **Schalter unten:** *Hohe Wände / Schnitt*, *Auseinander / Gestapelt*, *Dach bleibt*, Heatmap (*Temp., Feuchte, CO₂, Werte*), *Raumnamen*, *Wetter*, *Stromfluss*, *Karten*.
+- **Schalter unten:** *Wände hoch / Schnitt / Schräg*, *Massiv*, *Auseinander / Gestapelt*, *Dach bleibt*, Heatmap (*Temp., Feuchte, CO₂, Werte*), *Raumnamen*, *Wetter*, *Stromfluss*, *Karten*.
+- **Wände:** *Schräg* schneidet die Wände schräg ab, vorne halbhoch und hinten voll hoch, wie ein Puppenhaus; die Schräge dreht mit der Kamera. *Massiv* zeigt blickdichte Wände in ihren Farben statt Glas; im geöffneten Raum werden die Wände vor der Kamera abgesenkt. Die Farben stellst du im Editor ein: *Einstellungen → Wandfarbe außen / innen*, und pro Raum *Wandfarbe innen (dieser Raum)*. *Massiv* und *Schräg* lassen sich kombinieren.
 - **Raum-Fenster:** Lichter (schalten, Helligkeit, Farbtemperatur, Farbpunkte, *Alle aus*), Rollläden, Medien, Sensoren, Szenen. Antippen eines Lampen-Pins schaltet sie, langer Druck öffnet das Schnellmenü, ein Rollladen öffnet sein Menü.
 - **Zentralmenü (Stern):** alle Lichter und Rollläden der Etage oder des Hauses plus deine Favoriten. **Suche (Lupe):** Gerät oder Raum tippen, die Kamera fliegt hin.
 - **Warnungen:** Rauch, Gas, CO, Wasser, Alarmanlage und offene Fenster bei Regen erscheinen als Banner; Antippen springt in den Raum.

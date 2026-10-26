@@ -360,7 +360,12 @@ export class NextFloorPanel extends LitElement {
     const stacks: FloorStack[] = ["dim", "stacked", "single"];
     const several = building.floors.length > 1;
     return html`<div class="nf-overlay">
-      ${pair([this._wallMode === "auto", () => (this._wallMode = "auto"), t("walls_auto")], [this._wallMode === "cut", () => (this._wallMode = "cut"), t("walls_cut")])}
+      <div class="nf-seg">
+        ${(["auto", "cut", "slope"] as const).map(
+          (m) => html`<button aria-pressed=${this._wallMode === m} title=${m === "slope" ? t("walls_slope_hint") : nothing} @click=${() => (this._wallMode = m)}>${t(`walls_${m}`)}</button>`,
+        )}
+      </div>
+      <div class="nf-seg"><button aria-pressed=${p.solidWalls} title=${t("walls_solid_hint")} @click=${() => this.setPref("solidWalls", !p.solidWalls)}>${t("walls_solid")}</button></div>
       ${several && !this._floorId ? pair([p.explode, () => this.setPref("explode", true), t("floors_apart")], [!p.explode, () => this.setPref("explode", false), t("floors_stacked")]) : nothing}
       ${!this._floorId && building.settings.roof.type !== "none"
         ? html`<div class="nf-seg"><button aria-pressed=${p.keepRoof} title=${t("roof_keep_hint")} @click=${() => this.setPref("keepRoof", !p.keepRoof)}>${t("roof_keep")}</button></div>`
@@ -409,6 +414,7 @@ export class NextFloorPanel extends LitElement {
           .floorId=${building.floors.length > 1 ? this._floorId : (building.floors[0]?.id ?? null)}
           .roomId=${this._roomId}
           .wallMode=${this._wallMode}
+          .solidWalls=${p.solidWalls}
           .explode=${p.explode}
           .keepRoof=${p.keepRoof}
           .markerMode=${p.markers}

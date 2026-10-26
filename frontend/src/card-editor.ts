@@ -212,7 +212,8 @@ export class NextFloorCardEditor extends LitElement {
           <input type="color" .value=${this._config.accent ?? "#37e0ff"} @input=${(e: Event) => f.set("accent", (e.target as HTMLInputElement).value)} />
           ${this._config.accent ? html`<button type="button" class="link" @click=${() => f.set("accent", undefined)}>${f.t("accent_reset")}</button>` : nothing}
         </label>
-        ${choice(f, "walls", "card_walls", [["auto", "walls_auto"], ["cut", "walls_cut"]], v.walls)}
+        ${choice(f, "walls", "card_walls", [["auto", "walls_auto"], ["cut", "walls_cut"], ["slope", "walls_slope"]], v.walls)}
+        ${switchOption(f, "solid_walls", "card_solid_walls")}
         ${choice(f, "quality", "quality", [["auto", "quality_auto"], ["low", "quality_low"], ["high", "quality_high"]], v.quality)}
         ${choice(f, "floor_stack", "card_floor_stack", [["dim", "floor_stack_dim"], ["stacked", "floor_stack_stacked"], ["single", "floor_stack_single"]], v.floor_stack)}
       </div>

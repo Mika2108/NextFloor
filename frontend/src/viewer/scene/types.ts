@@ -13,7 +13,7 @@ export type { EnergyArc, PlanPoint, SparkField } from "../live-energy.ts";
 export type { SoundSpot } from "../live-sound.ts";
 
 export type Quality = "auto" | "low" | "high";
-export type WallMode = "auto" | "cut";
+export type WallMode = "auto" | "cut" | "slope";
 /** How the floors above and below the chosen one are shown. */
 export type FloorStack = "dim" | "stacked" | "single";
 

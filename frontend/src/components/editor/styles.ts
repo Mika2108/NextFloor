@@ -1516,6 +1516,18 @@ export const editorStyles = css`
   .nf-dev-name svg {
     flex: none;
   }
+  .nf-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nf-color-row input[type="color"] {
+    width: 48px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: none;
+  }
   .nf-link {
     font: inherit;
     font-size: 13px;

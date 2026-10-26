@@ -9,6 +9,8 @@ import type { FloorStack, Quality } from "../viewer/viewer3d.ts";
 export interface DevicePrefs {
   explode: boolean;
   keepRoof: boolean;
+  /** Solid painted walls instead of glass. */
+  solidWalls: boolean;
   quality: Quality;
   stats: boolean;
   markers: MarkerMode;
@@ -52,6 +54,7 @@ const word = <T extends string>(name: string, allowed: readonly T[], fallback: T
 const CODECS: { [K in keyof DevicePrefs]: Codec<DevicePrefs[K]> } = {
   explode: flag("explode", true),
   keepRoof: flag("roof", false),
+  solidWalls: flag("solid_walls", false),
   quality: word("quality", ["auto", "low", "high"], "auto"),
   stats: flag("stats", false),
   markers: word("markers", ["none", "important", "all"], "important"),

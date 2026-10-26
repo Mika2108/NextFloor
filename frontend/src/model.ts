@@ -28,6 +28,8 @@ export interface Room {
   start_view?: StartView | null;
   points: Vec2[];
   floor_material: string;
+  /** Paint of the room's walls on its inside in the solid wall view ("#rrggbb"; null = the building's inside colour). */
+  wall_paint?: string | null;
   /** Entities shown in the room's panel although they are not in the plan. */
   panel?: string[];
   /** Entities of the room's area kept out of the room panel. */
@@ -496,6 +498,9 @@ export interface BuildingSettings {
   buttons?: CustomButton[];
   wall_exterior: number;
   wall_interior: number;
+  /** Paint of the walls in the solid wall view ("#rrggbb"): outside, and inside where a room has no colour of its own (null = default). */
+  wall_paint_outside?: string | null;
+  wall_paint_inside?: string | null;
   grid: number;
   /** Direction of north in the plan, degrees clockwise from "up" (for the sun). */
   north: number;
@@ -715,6 +720,10 @@ export const DEFAULT_ENERGY: EnergySettings = {
 export const FLOOR_MATERIALS = ["wood", "oak", "tiles", "carpet", "stone", "concrete"] as const;
 
 export const DEFAULT_ROOF: RoofSettings = { type: "none", pitch: 35, overhang: 0.4 };
+
+/** Default wall paints of the solid wall view: a light plaster outside, a warm white inside. */
+export const DEFAULT_PAINT_OUTSIDE = "#d6cfc2";
+export const DEFAULT_PAINT_INSIDE = "#e8e3da";
 
 export const DEFAULT_SETTINGS: BuildingSettings = { wall_exterior: 0.24, wall_interior: 0.12, grid: 0.05, north: 0, roof: { ...DEFAULT_ROOF } };
 

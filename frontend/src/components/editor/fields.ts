@@ -71,6 +71,17 @@ export function checkField(host: EditorHost, label: string, checked: boolean, on
   >`;
 }
 
+/** A colour ("#rrggbb"), or null for the default `fallback`; a button goes back to the default. */
+export function colorField(host: EditorHost, label: string, value: string | null | undefined, fallback: string, onChange: (v: string | null) => void): TemplateResult {
+  return html`<label class="nf-field"
+    >${label}
+    <span class="nf-color-row"
+      ><input type="color" .value=${value ?? fallback} ?disabled=${!host.admin} @change=${(e: Event) => onChange((e.target as HTMLInputElement).value)} />
+      ${value ? html`<button type="button" class="nf-link" ?disabled=${!host.admin} @click=${() => onChange(null)}>${host.t("wall_paint_default")}</button>` : nothing}</span
+    ></label
+  >`;
+}
+
 /**
  * A searchable picker for an entity. `auto` is what "automatic" would choose: a name, null for "nothing found", or undefined when
  * there is no automatic choice. The stored value is null for automatic, "none" for none, and the entity id otherwise.

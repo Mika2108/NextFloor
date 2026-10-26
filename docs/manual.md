@@ -74,7 +74,8 @@ Under **Settings**:
 
 - **Move:** drag to turn, wheel to zoom, right button or two fingers to pan. Floor and room buttons at the top fly the camera there; *Back* or Esc goes up a level.
 - **Look:** quality *Auto / Tablet / High*; themes *Neon / Blueprint / Day* with an accent colour; markers *None / Important / All*.
-- **Switches at the bottom:** *Tall walls / Cut*, *Apart / Stacked*, *Roof stays*, heat map (*Temp., Humidity, CO₂, Values*), *Room names*, *Weather*, *Power flow*, *Cards*.
+- **Switches at the bottom:** *Tall walls / Cut / Sloped*, *Solid*, *Apart / Stacked*, *Roof stays*, heat map (*Temp., Humidity, CO₂, Values*), *Room names*, *Weather*, *Power flow*, *Cards*.
+- **Walls:** *Sloped* cuts the walls on a slope, half height in front and full height at the back, like a doll's house; the slope turns with the camera. *Solid* shows opaque walls in their colours instead of glass; in an open room the walls in front of the camera are lowered. Set the colours in the editor: *Settings → Wall colour outside / inside*, and per room *Wall colour inside (this room)*. *Solid* and *Sloped* can be combined.
 - **Room panel:** lights (switch, brightness, colour temperature, colour dots, *All off*), blinds, media, sensors, scenes. Tapping a lamp pin switches it, a long press opens the quick menu, a blind opens its menu.
 - **Central menu (star):** all lights and blinds of the floor or house plus your favourites. **Search (magnifier):** type a device or room, the camera flies there.
 - **Warnings:** smoke, gas, CO, water, alarm panel and windows open in the rain appear as banners; a tap jumps into the room.

@@ -1,11 +1,11 @@
 import { html, nothing, type TemplateResult } from "lit";
 import { weatherEntity } from "../../../weather.ts";
 import type { I18nKey } from "../../../i18n.ts";
-import { DEFAULT_WEATHER_EFFECTS, WEATHER_EFFECTS, type Building, type RoofType } from "../../../model.ts";
+import { DEFAULT_PAINT_INSIDE, DEFAULT_PAINT_OUTSIDE, DEFAULT_WEATHER_EFFECTS, WEATHER_EFFECTS, type Building, type RoofType } from "../../../model.ts";
 import { entityOptions } from "../entities.ts";
 import { renderCompass } from "./compass.ts";
 import { renderMapSettings } from "./map.ts";
-import { checkField, entityField, hint, numberField, selectField, textField } from "../fields.ts";
+import { checkField, colorField, entityField, hint, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { clamp, withEffect } from "../ops/settings.ts";
 
@@ -50,6 +50,9 @@ export function renderSettings(host: EditorHost, actions: SettingsActions): Temp
     <div class="nf-form">
       ${numberField(host, t("wall_exterior"), s.wall_exterior, (v) => set({ wall_exterior: clamp(v, 0.02, 1) }), 0.01, 0.02)}
       ${numberField(host, t("wall_interior"), s.wall_interior, (v) => set({ wall_interior: clamp(v, 0.02, 1) }), 0.01, 0.02)}
+      ${colorField(host, t("wall_paint_outside"), s.wall_paint_outside, DEFAULT_PAINT_OUTSIDE, (v) => set({ wall_paint_outside: v }))}
+      ${colorField(host, t("wall_paint_inside"), s.wall_paint_inside, DEFAULT_PAINT_INSIDE, (v) => set({ wall_paint_inside: v }))}
+      ${hint(t("wall_paint_hint"), "nf-wide")}
       ${numberField(host, t("grid"), s.grid, (v) => set({ grid: clamp(v, 0.01, 1) }), 0.01, 0.01)}
       ${selectField(host, t("units"), s.units === "imperial" ? "imperial" : "metric", [["metric", t("units_metric")], ["imperial", t("units_imperial")]] as const, (v) => set({ units: v === "imperial" ? "imperial" : null }), { title: t("units_hint") })}
       ${renderCompass(host, s.north, (north) => set({ north }))}

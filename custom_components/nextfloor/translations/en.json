@@ -9,21 +9,5 @@
     "abort": {
       "single_instance_allowed": "NextFloor is already set up."
     }
-  },
-  "services": {
-    "ask": {
-      "name": "Ask the house",
-      "description": "Answers questions about the plan and the house: show a room or device, where something is, what is open, which lights are on. Showing also flies every open NextFloor view there.",
-      "fields": {
-        "text": {
-          "name": "Text",
-          "description": "The question or command, in German or English."
-        },
-        "language": {
-          "name": "Language",
-          "description": "de or en (default: Home Assistant's language)."
-        }
-      }
-    }
   }
 }

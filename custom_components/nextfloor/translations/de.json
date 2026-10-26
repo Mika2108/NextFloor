@@ -9,21 +9,5 @@
     "abort": {
       "single_instance_allowed": "NextFloor ist bereits eingerichtet."
     }
-  },
-  "services": {
-    "ask": {
-      "name": "Das Haus fragen",
-      "description": "Beantwortet Fragen zum Plan und zum Haus: einen Raum oder ein Gerät zeigen, wo etwas ist, was offen ist, welche Lichter an sind. Beim Zeigen fliegen alle offenen NextFloor-Ansichten dorthin.",
-      "fields": {
-        "text": {
-          "name": "Text",
-          "description": "Die Frage oder der Befehl, auf Deutsch oder Englisch."
-        },
-        "language": {
-          "name": "Sprache",
-          "description": "de oder en (Standard: die Sprache von Home Assistant)."
-        }
-      }
-    }
   }
 }

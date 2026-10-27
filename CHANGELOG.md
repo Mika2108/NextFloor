@@ -2,7 +2,7 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
-## Unreleased
+## 0.14.0
 
 ### Added
 
@@ -32,6 +32,10 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 ### Fixed
 
+- **A garage door follows its contact when the cover cannot tell** by @Mika2108 (#21): a remote without feedback (`assumed_state`, always `unknown`) no longer shows the door open while its contact says closed.
+- **Quick menu for covers without feedback** by @Mika2108 (#21): such a cover keeps its open, close and stop buttons; the centre button stays off while the state is unknown.
+- **Entities that a plugin gives a kind** by @Mika2108 (#21) are offered in the editor's area lists, *without area* and *other areas*.
+- **Walking keys by their place on the keyboard** by @Mika2108 (#21): W A S D walk under the same fingers on QWERTY, QWERTZ and AZERTY (Z Q S D).
 - **Doors and windows of an imported plan can be selected again**: a plan written by hand or by an AI without ids (or with repeated ones) gets an id for every room, door, window, piece of furniture and outdoor area, so they can be picked and changed (e.g. into a garage door). Missing sizes, the plan version and the settings are filled in instead of refusing the file.
 
 ## 0.13.0

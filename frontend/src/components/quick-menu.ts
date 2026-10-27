@@ -329,7 +329,7 @@ export class NfQuickMenu extends LitElement {
         opacity: 0.45;
         cursor: default;
       }
-            .qm-power b {
+      .qm-power b {
         font: 700 15px var(--nf-title-font);
         color: var(--nf-text);
       }

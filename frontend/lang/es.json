@@ -1475,6 +1475,8 @@
   "pack:nextfloor.a_haustechnik:buffer_tank": "Depósito de inercia",
   "pack:nextfloor.a_haustechnik:heating_manifold": "Colector de suelo radiante",
   "pack:nextfloor.a_haustechnik:ventilation_unit": "Ventilación con recuperación de calor",
+  "pack:nextfloor.a_haustechnik:split_indoor": "Aire acondicionado split (unidad interior, pared)",
+  "pack:nextfloor.a_haustechnik:split_outdoor": "Aire acondicionado split (unidad exterior)",
   "pack:nextfloor.a_haustechnik:radiator_tall": "Radiador de diseño alto",
   "pack:nextfloor.a_haustechnik:meter_cabinet": "Armario de contadores",
   "pack:nextfloor.a_haustechnik:water_softener": "Descalcificador",

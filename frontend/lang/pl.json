@@ -1475,6 +1475,8 @@
   "pack:nextfloor.a_haustechnik:buffer_tank": "Zbiornik buforowy",
   "pack:nextfloor.a_haustechnik:heating_manifold": "Rozdzielacz ogrzewania podłogowego",
   "pack:nextfloor.a_haustechnik:ventilation_unit": "Rekuperator",
+  "pack:nextfloor.a_haustechnik:split_indoor": "Klimatyzator split (jednostka wewnętrzna, ścienna)",
+  "pack:nextfloor.a_haustechnik:split_outdoor": "Klimatyzator split (jednostka zewnętrzna)",
   "pack:nextfloor.a_haustechnik:radiator_tall": "Wysoki grzejnik dekoracyjny",
   "pack:nextfloor.a_haustechnik:meter_cabinet": "Szafka licznikowa",
   "pack:nextfloor.a_haustechnik:water_softener": "Zmiękczacz wody",

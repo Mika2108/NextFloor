@@ -1475,6 +1475,8 @@
   "pack:nextfloor.a_haustechnik:buffer_tank": "Serbatoio di accumulo",
   "pack:nextfloor.a_haustechnik:heating_manifold": "Collettore riscaldamento a pavimento",
   "pack:nextfloor.a_haustechnik:ventilation_unit": "Ventilazione con recupero di calore",
+  "pack:nextfloor.a_haustechnik:split_indoor": "Climatizzatore split (unità interna, a parete)",
+  "pack:nextfloor.a_haustechnik:split_outdoor": "Climatizzatore split (unità esterna)",
   "pack:nextfloor.a_haustechnik:radiator_tall": "Radiatore di design alto",
   "pack:nextfloor.a_haustechnik:meter_cabinet": "Armadio contatori",
   "pack:nextfloor.a_haustechnik:water_softener": "Addolcitore d'acqua",

@@ -2,6 +2,12 @@
 
 All notable changes to NextFloor, newest first. Every release lists what is **Added**, **Changed** and **Fixed**. Releases: [GitHub releases](https://github.com/therealMRBK/NextFloor/releases).
 
+## Unreleased
+
+### Added
+
+- **Wall-mounted air conditioner** (#23): the *Utility & building services* pack has a split air conditioner, an indoor unit for the wall and an outdoor unit. The indoor unit links to a climate entity like the wall thermostat.
+
 ## 0.14.0
 
 ### Added

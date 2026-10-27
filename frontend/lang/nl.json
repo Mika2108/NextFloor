@@ -1475,6 +1475,8 @@
   "pack:nextfloor.a_haustechnik:buffer_tank": "Buffervat",
   "pack:nextfloor.a_haustechnik:heating_manifold": "Vloerverwarmingsverdeler",
   "pack:nextfloor.a_haustechnik:ventilation_unit": "Ventilatie met warmteterugwinning",
+  "pack:nextfloor.a_haustechnik:split_indoor": "Split-airco (binnenunit, aan de muur)",
+  "pack:nextfloor.a_haustechnik:split_outdoor": "Split-airco (buitenunit)",
   "pack:nextfloor.a_haustechnik:radiator_tall": "Hoge designradiator",
   "pack:nextfloor.a_haustechnik:meter_cabinet": "Meterkast",
   "pack:nextfloor.a_haustechnik:water_softener": "Waterontharder",

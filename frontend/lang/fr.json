@@ -1407,6 +1407,8 @@
  "pack:nextfloor.a_haustechnik:buffer_tank": "Ballon tampon",
  "pack:nextfloor.a_haustechnik:heating_manifold": "Collecteur de plancher chauffant",
  "pack:nextfloor.a_haustechnik:ventilation_unit": "Ventilation avec récupération de chaleur",
+ "pack:nextfloor.a_haustechnik:split_indoor": "Climatiseur split (unité intérieure, murale)",
+ "pack:nextfloor.a_haustechnik:split_outdoor": "Climatiseur split (unité extérieure)",
  "pack:nextfloor.a_haustechnik:radiator_tall": "Radiateur design haut",
  "pack:nextfloor.a_haustechnik:meter_cabinet": "Armoire à compteurs",
  "pack:nextfloor.a_haustechnik:water_softener": "Adoucisseur d'eau",

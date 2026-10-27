@@ -911,6 +911,37 @@ def build(bp):
         electric=True,
     )
     U(
+        "split_indoor",
+        "Klimagerät Split (Innengerät, Wand)",
+        "Split air conditioner (indoor unit, wall)",
+        (0.85, 0.22, 0.29),
+        lambda m: [
+            m.b(0, 0, m.w, m.d, 0.0, m.h, "white", edges="faint"),
+            m.b(0, m.d / 2, m.w - 0.04, 0.01, 0.0, 0.05, "#cfd6e2"),
+            m.b(0, m.d / 2, m.w - 0.06, 0.012, 0.015, 0.012, "dark"),
+            m.b(0.3, m.d / 2, 0.08, 0.01, 0.2, 0.04, "#2b3446", screen=True),
+        ],
+        mount="wall",
+        wall_y=2.0,
+        electric=True,
+        climate=True,
+    )
+    U(
+        "split_outdoor",
+        "Klimagerät Split (Außengerät)",
+        "Split air conditioner (outdoor unit)",
+        (0.8, 0.3, 0.55),
+        lambda m: [
+            m.b(0, 0, m.w, m.d, 0.06, m.h - 0.06, "#d9dee6", edges="faint"),
+            m.c(-0.12, m.d / 2, 0.38, 0.38, 0.1, 0.4, "dark", axis="z"),
+            m.c(-0.12, m.d / 2 + 0.005, 0.12, 0.12, 0.24, 0.12, "metal", axis="z"),
+            m.b(0.28, m.d / 2, 0.16, 0.01, 0.08, 0.4, "metal"),
+            m.b(-0.3, 0, 0.06, 0.26, 0.0, 0.06, "dark"),
+            m.b(0.3, 0, 0.06, 0.26, 0.0, 0.06, "dark"),
+        ],
+        electric=True,
+    )
+    U(
         "radiator_tall",
         "Designheizkörper hoch",
         "Tall designer radiator",

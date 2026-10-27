@@ -1475,6 +1475,8 @@
   "pack:nextfloor.a_haustechnik:buffer_tank": "Ackumulatortank",
   "pack:nextfloor.a_haustechnik:heating_manifold": "Golvvärmefördelare",
   "pack:nextfloor.a_haustechnik:ventilation_unit": "Ventilation med värmeåtervinning",
+  "pack:nextfloor.a_haustechnik:split_indoor": "Split-luftkonditionering (inomhusenhet, vägg)",
+  "pack:nextfloor.a_haustechnik:split_outdoor": "Split-luftkonditionering (utomhusenhet)",
   "pack:nextfloor.a_haustechnik:radiator_tall": "Hög designradiator",
   "pack:nextfloor.a_haustechnik:meter_cabinet": "Mätarskåp",
   "pack:nextfloor.a_haustechnik:water_softener": "Vattenavhärdare",

@@ -385,6 +385,144 @@
    "electric": true
   },
   {
+   "id": "split_indoor",
+   "name": {
+    "de": "Klimagerät Split (Innengerät, Wand)",
+    "en": "Split air conditioner (indoor unit, wall)"
+   },
+   "size": [
+    0.85,
+    0.22,
+    0.29
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0,
+     "h": 1,
+     "color": "white",
+     "edges": "faint"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9529,
+     "d": 0.0455,
+     "y": 0,
+     "h": 0.1724,
+     "color": "#cfd6e2"
+    },
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.5,
+     "w": 0.9294,
+     "d": 0.0545,
+     "y": 0.0517,
+     "h": 0.0414,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.3529,
+     "z": 0.5,
+     "w": 0.0941,
+     "d": 0.0455,
+     "y": 0.6897,
+     "h": 0.1379,
+     "color": "#2b3446",
+     "screen": true
+    }
+   ],
+   "mount": "wall",
+   "wall_y": 2.0,
+   "electric": true,
+   "climate": true
+  },
+  {
+   "id": "split_outdoor",
+   "name": {
+    "de": "Klimagerät Split (Außengerät)",
+    "en": "Split air conditioner (outdoor unit)"
+   },
+   "size": [
+    0.8,
+    0.3,
+    0.55
+   ],
+   "parts": [
+    {
+     "shape": "box",
+     "x": 0.0,
+     "z": 0.0,
+     "w": 1,
+     "d": 1,
+     "y": 0.1091,
+     "h": 0.8909,
+     "color": "#d9dee6",
+     "edges": "faint"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.15,
+     "z": 0.5,
+     "w": 0.475,
+     "d": 1,
+     "y": 0.1818,
+     "h": 0.7273,
+     "color": "dark",
+     "axis": "z"
+    },
+    {
+     "shape": "cyl",
+     "x": -0.15,
+     "z": 0.5,
+     "w": 0.15,
+     "d": 0.4,
+     "y": 0.4364,
+     "h": 0.2182,
+     "color": "metal",
+     "axis": "z"
+    },
+    {
+     "shape": "box",
+     "x": 0.35,
+     "z": 0.5,
+     "w": 0.2,
+     "d": 0.0333,
+     "y": 0.1455,
+     "h": 0.7273,
+     "color": "metal"
+    },
+    {
+     "shape": "box",
+     "x": -0.375,
+     "z": 0.0,
+     "w": 0.075,
+     "d": 0.8667,
+     "y": 0,
+     "h": 0.1091,
+     "color": "dark"
+    },
+    {
+     "shape": "box",
+     "x": 0.375,
+     "z": 0.0,
+     "w": 0.075,
+     "d": 0.8667,
+     "y": 0,
+     "h": 0.1091,
+     "color": "dark"
+    }
+   ],
+   "electric": true
+  },
+  {
    "id": "radiator_tall",
    "name": {
     "de": "Designheizkörper hoch",

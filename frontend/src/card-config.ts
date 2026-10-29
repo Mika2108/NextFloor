@@ -1,5 +1,6 @@
 // Configuration of the dashboard card, shared by the card and its visual editor (a bundle of its own).
 
+import type { MarkerKind } from "./entities/kinds.ts";
 import type { StartView } from "./model.ts";
 import type { Quality, WallMode } from "./viewer/viewer3d.ts";
 
@@ -23,6 +24,8 @@ export interface CardConfig {
   stats?: boolean;
   /** HTML markers: none | important (default) | all. */
   markers?: "none" | "important" | "all";
+  /** Outside the opened room only markers of these kinds show (absent: the same as in the room). */
+  markers_outside?: MarkerKind[];
   /** Devices are switched by a tap only in the opened room; elsewhere a tap opens the floor or room (a long press still acts). */
   tap_in_room?: boolean;
   /** Every device with an own name shows it under its marker (#156). */

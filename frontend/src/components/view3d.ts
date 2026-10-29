@@ -22,6 +22,8 @@ import {
   gangEntities,
   isUnavailable,
   kindOf,
+  markerKind,
+  type MarkerKind,
   lightGlow,
   openingEntities,
   openingState,
@@ -99,6 +101,7 @@ export class NfView3d extends LitElement {
     keepRoof: { attribute: false },
     markerMode: { attribute: false },
     markerNames: { attribute: false },
+    markersOutside: { attribute: false },
     tapInRoom: { type: Boolean },
     heatMode: { attribute: false },
     theme: { attribute: false },
@@ -177,6 +180,8 @@ export class NfView3d extends LitElement {
   declare markerMode: MarkerMode;
   /** Card option marker_names: every device with an own name shows it under its pin. */
   declare markerNames: boolean;
+  /** Card option markers_outside: outside the opened room only these kinds of markers show (null: as in the room). */
+  declare markersOutside: MarkerKind[] | null;
   /** Card option tap_in_room: a tap switches a device only in the opened room, elsewhere it opens the floor or room. */
   declare tapInRoom: boolean;
   declare heatMode: HeatMode;
@@ -354,6 +359,7 @@ export class NfView3d extends LitElement {
     this.explode = true;
     this.keepRoof = false;
     this.markerMode = "important";
+    this.markersOutside = null;
     this.tapInRoom = false;
     this.heatMode = "none";
     this.theme = "neon";
@@ -578,7 +584,9 @@ export class NfView3d extends LitElement {
       if (this.floorId === null) v.resetView();
     }
     if (changed.has("building") || changed.has("theme") || changed.has("floorThumbs") || changed.has("packs")) this.scheduleThumbs();
-    const forced = this.pluginsDirty || ["building", "markerMode", "heatMode", "flows", "alerts", "dimmed"].some((k) => changed.has(k));
+    // markers shown by kind outside the opened room change with the room
+    const byRoom = this.markersOutside ? ["markersOutside", "floorId", "roomId"] : ["markersOutside"];
+    const forced = this.pluginsDirty || ["building", "markerMode", "heatMode", "flows", "alerts", "dimmed", ...byRoom].some((k) => changed.has(k));
     this.pluginsDirty = false;
     if (forced || changed.has("hass")) this.syncDevices(forced);
     if (changed.has("autoOrbit")) v.setAutoOrbit(this.autoOrbit ? 0.06 : 0);
@@ -1231,7 +1239,10 @@ export class NfView3d extends LitElement {
     if (this.furnish && !m.fromFurniture) return true;
     // the device's own setting wins over the marker mode (except "none", which hides every marker)
     if (m.show === "never" || this.markerMode === "none") return false;
-    if (m.show === "always" || this.markerMode === "all") return true;
+    if (m.show === "always") return true;
+    // outside the opened room (the house, a floor, another room): the kinds chosen in the card
+    if (this.markersOutside && !(this.roomId && m.roomId === this.roomId)) return this.markersOutside.includes(markerKind(m.id, !!m.lamp));
+    if (this.markerMode === "all") return true;
     if (m.lamp) return false;
     const kind = kindOf(m.id);
     if (kind === "light") return false;

@@ -47,7 +47,7 @@ export type Choice = [value: string, label: I18nKey];
 /** What the form helpers need from the editor. */
 export interface FormContext {
   /** The config with defaults filled in. */
-  value: Required<Omit<CardConfig, "floor" | "flows" | "holograms">> & Pick<CardConfig, "floor" | "flows" | "holograms">;
+  value: Required<Omit<CardConfig, "floor" | "flows" | "holograms" | "markers_outside">> & Pick<CardConfig, "floor" | "flows" | "holograms" | "markers_outside">;
   t(key: I18nKey, vars?: Record<string, string | number>): string;
   set<K extends keyof CardConfig>(key: K, value: CardConfig[K] | undefined): void;
 }

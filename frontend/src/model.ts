@@ -143,6 +143,8 @@ export interface ScreenPicture {
 }
 
 export interface Furniture extends LightEffectConfig {
+  /** A tap on the item runs this own action (open a path, an entity's details, a service, a browser_mod popup); null = the item's usual tap. */
+  tap?: Pick<CustomButton, "action" | "target" | "data"> | null;
   /** Fixed against moving by accident. */
   locked?: boolean | null;
   id: string;

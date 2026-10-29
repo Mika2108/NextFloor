@@ -78,3 +78,14 @@ def test_plugins_are_optional_and_limited() -> None:
     with pytest.raises(vol.Invalid):
         SETTINGS_SCHEMA({**SETTINGS, "plugins": many})
     assert len(SETTINGS_SCHEMA({**SETTINGS, "plugins": many[:20]})["plugins"]) == 20
+
+
+def test_furniture_tap_action() -> None:
+    item = {"id": "f1", "type": "table", "x": 1, "z": 1, "rotation": 0, "w": 0.5, "d": 0.5, "h": 0.8, "variant": None}
+    assert FURNITURE_SCHEMA(item)["tap"] is None
+    tap = FURNITURE_SCHEMA({**item, "tap": {"action": "more_info", "target": "sensor.pills"}})["tap"]
+    assert tap == {"action": "more_info", "target": "sensor.pills", "data": None}
+    popup = {"action": "fire_dom_event", "data": {"browser_mod": {"service": "browser_mod.popup"}}}
+    assert FURNITURE_SCHEMA({**item, "tap": popup})["tap"]["data"] == popup["data"]
+    with pytest.raises(vol.Invalid):
+        FURNITURE_SCHEMA({**item, "tap": {"action": "toggle"}})

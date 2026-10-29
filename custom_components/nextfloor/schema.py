@@ -188,6 +188,15 @@ _VEHICLE_TYPE_SCHEMA = vol.Schema(
     {vol.Required("state"): vol.All(str, vol.Length(max=64)), vol.Required("vehicle"): vol.All(str, vol.Length(max=96))}
 )
 
+# an own tap action of a piece of furniture: the same actions as the own buttons of the central menu
+_TAP_SCHEMA = vol.Schema(
+    {
+        vol.Required("action"): vol.In(["navigate", "more_info", "service", "fire_dom_event"]),
+        vol.Optional("target", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        vol.Optional("data", default=None): vol.Any(None, dict),
+    }
+)
+
 FURNITURE_SCHEMA = vol.Schema(
     {
         vol.Required("id"): _ID,
@@ -272,6 +281,8 @@ FURNITURE_SCHEMA = vol.Schema(
         vol.Optional("scale", default=1.0): vol.All(vol.Coerce(float), vol.Range(min=0.2, max=2)),
         vol.Optional("type_entity", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
         vol.Optional("types", default=[]): vol.All([_VEHICLE_TYPE_SCHEMA], vol.Length(max=20)),
+        # a tap on the item runs an own action (like the star menu's own buttons); None = its usual tap
+        vol.Optional("tap", default=None): vol.Any(None, _TAP_SCHEMA),
         # fixed against moving by accident
         vol.Optional("locked", default=None): vol.Any(None, bool),
     },

@@ -29,13 +29,14 @@ export const kindOf = (entityId: string): DeviceKind | null => KIND_OF_DOMAIN[do
 /** The order kinds are listed in. */
 export const KIND_ORDER: DeviceKind[] = ["light", "cover", "climate", "media", "switch", "fan", "lock", "binary", "sensor", "scene", "script"];
 
-/** The kinds of markers one can choose to see outside the opened room: device kinds, and the rest. */
-export type MarkerKind = Exclude<DeviceKind, "scene" | "script"> | "other";
-export const MARKER_KINDS: MarkerKind[] = ["light", "cover", "climate", "media", "switch", "fan", "lock", "binary", "sensor", "other"];
+/** The kinds of markers one can choose to see outside the opened room: device kinds, furniture with an own tap action, and the rest. */
+export type MarkerKind = Exclude<DeviceKind, "scene" | "script"> | "tap" | "other";
+export const MARKER_KINDS: MarkerKind[] = ["light", "cover", "climate", "media", "switch", "fan", "lock", "binary", "sensor", "tap", "other"];
 
-/** The kind of a marker by its id: an entity, or one of NextFloor's own (a lamp without light, a light switch plate, the grid). */
+/** The kind of a marker by its id: an entity, or one of NextFloor's own (a lamp without light, a light switch plate, a tap action, the grid). */
 export function markerKind(id: string, lamp = false): MarkerKind {
   if (lamp || id.startsWith("lamp:")) return "light";
+  if (id.startsWith("tap:")) return "tap";
   if (id.startsWith("gang:")) return "switch";
   if (id === "grid") return "sensor";
   const kind = kindOf(id);

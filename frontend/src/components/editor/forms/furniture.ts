@@ -4,11 +4,12 @@ import { html, nothing, type TemplateResult } from "lit";
 import { colourLabel, furnitureName, packItemLabel, packLabel } from "../../../furniture-names.ts";
 import { holeInRoom } from "../../../geometry/holes.ts";
 import type { I18nKey } from "../../../i18n.ts";
-import { canLift, CEILING_TYPES, ceilingAt, ceilingOf, FURNITURE_TYPES, furnitureFootprint, isLamp, type Furniture } from "../../../model.ts";
+import { BUTTON_ACTIONS, canLift, CEILING_TYPES, ceilingAt, ceilingOf, FURNITURE_TYPES, furnitureFootprint, isLamp, type ButtonAction, type Furniture } from "../../../model.ts";
 import { hasMovingParts, householdKind, isElectric, mountBase, packItem, packType, type FurniturePack } from "../../../packs.ts";
-import { checkField, hint, numberField, selectField } from "../fields.ts";
+import { checkField, hint, iconField, markerField, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { careLink, coverLink, furnitureLinks, gangLinks, stateLinks, type FurnitureLinkActions } from "./furniture-links.ts";
+import { dataField, TARGET_EXAMPLES } from "./house.ts";
 import { parkingForm } from "./parking.ts";
 
 export interface FurnitureActions extends FurnitureLinkActions {
@@ -137,6 +138,23 @@ function buttons(host: EditorHost, item: Furniture, actions: FurnitureActions): 
   </div>`;
 }
 
+/** What a tap on the item does: its usual tap, or an own action like the star menu's own buttons. */
+function tapField(host: EditorHost, item: Furniture, actions: FurnitureActions): TemplateResult {
+  const tap = item.tap ?? null;
+  const choices: [string, string][] = [["", host.t("furn_tap_default")], ...BUTTON_ACTIONS.map((a): [string, string] => [a, host.t(`own_action_${a}` as I18nKey)])];
+  const set = (patch: Partial<NonNullable<Furniture["tap"]>>) => actions.update({ tap: { action: tap?.action ?? "navigate", target: tap?.target ?? null, data: tap?.data ?? null, ...patch } });
+  return html`<div class="nf-form">
+    ${selectField(host, host.t("furn_tap"), tap?.action ?? "", choices, (v) => (v ? set({ action: v as ButtonAction }) : actions.update({ tap: null })), { wide: true, title: host.t("furn_tap_hint") })}
+    ${tap && tap.action !== "fire_dom_event"
+      ? textField(host, host.t(`own_target_${tap.action}` as I18nKey), tap.target ?? "", (v) => set({ target: v || null }), { wide: true, placeholder: TARGET_EXAMPLES[tap.action] })
+      : nothing}
+    ${tap && (tap.action === "service" || tap.action === "fire_dom_event") ? dataField(host, tap, (data) => set({ data })) : nothing}
+    ${tap && !isElectric(item.type) && !packItem(item.type)?.gangs
+      ? html`${markerField(host, item.marker ?? null, (v) => actions.update({ marker: v }))}${iconField(host, item.icon, (v) => actions.update({ icon: v }))}`
+      : nothing}
+  </div>`;
+}
+
 /** The form of the selected piece of furniture. */
 export function renderFurnitureForm(host: EditorHost, item: Furniture, actions: FurnitureActions): TemplateResult {
   const gangs = packItem(item.type)?.gangs ?? 0;
@@ -149,6 +167,6 @@ export function renderFurnitureForm(host: EditorHost, item: Furniture, actions: 
     ${item.type.startsWith("pack:nextfloor.fahrzeuge:") && host.admin
       ? html`<section>${hint(host.t("vehicle_to_spot_hint"))}<div class="nf-actions"><button class="nf-btn nf-primary" @click=${() => actions.toSpot(item)}>🅿 ${host.t("vehicle_to_spot")}</button></div></section>`
       : nothing}
-    ${buttons(host, item, actions)}
+    ${host.admin ? tapField(host, item, actions) : nothing} ${buttons(host, item, actions)}
   </section>`;
 }

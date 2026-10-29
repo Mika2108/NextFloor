@@ -899,6 +899,15 @@ export class NfView3d extends LitElement {
         const plate = packItem(f.type);
         // a curtain, roller screen, awning or gate: a tap opens the menu of the cover it follows
         if (f.cover_entity && hasMovingParts(plate)) targets.set(f.id, f.cover_entity);
+        // an item with its own tap action: a tap runs it (and nothing else of the item)
+        if (f.tap?.action) {
+          targets.set(f.id, `tap:${f.id}`);
+          // and a pin above it, like a device's, that does the same
+          const room = floor.rooms.find((r) => r.points.length >= 3 && pointInPolygon([f.x, f.z], r.points));
+          const name = f.name || furnitureName(hass, f.type);
+          markers.push({ id: `tap:${f.id}`, floorId: floor.id, roomId: room?.id ?? null, x: f.x, z: f.z, y: markerHeight(f) + mountBase(floor, f), icon: mdiIcon(f.icon || "gesture-tap-button"), name, ownName: f.name || undefined, showName: !!f.show_name, text: "", active: false, unavailable: false, glow: null, furnitureId: f.id, show: f.marker ?? undefined, fromFurniture: true });
+          continue;
+        }
         if (plate?.gangs) {
           const gangs = gangGlows(hass, (f.gang_entities ?? []).slice(0, plate.gangs), /socket/.test(f.type));
           if (gangs.length) screens.set(f.id, { color: gangs[0].color, level: gangs[0].level, gangs });
@@ -1250,6 +1259,8 @@ export class NfView3d extends LitElement {
     if (m.fromFurniture && kind === "fan") return true;
     // a bin to put out, post in the box, a thirsty plant: important while it is due
     if (m.care) return m.active;
+    // an item with its own tap action: its pin is the way to find it
+    if (m.id.startsWith("tap:")) return true;
     if (m.fromFurniture) return (m.power ?? 0) >= 1 || (kind === "media" && m.active) || (!!m.energyDevice && !!m.text);
     return true;
   }
@@ -1806,6 +1817,11 @@ export class NfView3d extends LitElement {
     // in the past nothing is switched
     if (this._travel) return;
     if (entityId.startsWith("gang:")) return this.tapPlate(entityId.slice(5), x, y);
+    if (entityId.startsWith("tap:")) {
+      const f = this.building?.floors.flatMap((fl) => fl.furniture).find((it) => it.id === entityId.slice(4));
+      if (f?.tap) runButton(this.hass, this, f.tap);
+      return;
+    }
     // the street end of the grid cable opens the grid sensor: the balance's, else the meter's (#223)
     if (entityId === "grid") {
       const b = this.building;

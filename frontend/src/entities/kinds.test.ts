@@ -113,6 +113,7 @@ test("a marker's kind: its entity's, or NextFloor's own markers", () => {
   assert.equal(markerKind("light.kitchen"), "light");
   assert.equal(markerKind("lamp:f1"), "light");
   assert.equal(markerKind("sensor.x", true), "light");
+  assert.equal(markerKind("tap:f2"), "tap");
   assert.equal(markerKind("gang:f3"), "switch");
   assert.equal(markerKind("grid"), "sensor");
   assert.equal(markerKind("binary_sensor.door"), "binary");

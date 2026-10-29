@@ -99,6 +99,7 @@ export class NfView3d extends LitElement {
     keepRoof: { attribute: false },
     markerMode: { attribute: false },
     markerNames: { attribute: false },
+    tapInRoom: { type: Boolean },
     heatMode: { attribute: false },
     theme: { attribute: false },
     accent: { attribute: false },
@@ -176,6 +177,8 @@ export class NfView3d extends LitElement {
   declare markerMode: MarkerMode;
   /** Card option marker_names: every device with an own name shows it under its pin. */
   declare markerNames: boolean;
+  /** Card option tap_in_room: a tap switches a device only in the opened room, elsewhere it opens the floor or room. */
+  declare tapInRoom: boolean;
   declare heatMode: HeatMode;
   /** Imported furniture packs (a new list rebuilds pack furniture). */
   declare packs: unknown;
@@ -351,6 +354,7 @@ export class NfView3d extends LitElement {
     this.explode = true;
     this.keepRoof = false;
     this.markerMode = "important";
+    this.tapInRoom = false;
     this.heatMode = "none";
     this.theme = "neon";
     this.accent = null;
@@ -513,6 +517,7 @@ export class NfView3d extends LitElement {
       this.viewer.setAccent(this.accent ?? null);
       this.viewer.setNavigationLocked(this._locked);
       this.viewer.setFurnishMode(this.furnish);
+      this.viewer.setTapInRoom(this.tapInRoom);
       this.viewer.setSurfaceGrab(this.surfaceGrab ?? null);
       this.viewer.setFurnishTypes(this.furnishTypes ?? null);
       this.viewer.setFloorStack(this.floorStack);
@@ -580,6 +585,7 @@ export class NfView3d extends LitElement {
     if (changed.has("_thumbs") || changed.has("_narrowStage")) v.setLabelInset(this._thumbs.length ? (this.narrowThumbs ? 136 : 184) : 0);
     if (changed.has("floorId")) v.setFloor(this.floorId);
     if (changed.has("roomId") && (this.roomId || changed.get("roomId"))) v.selectRoom(this.roomId);
+    if (changed.has("tapInRoom")) v.setTapInRoom(this.tapInRoom);
     if (changed.has("wallMode")) v.setWallMode(this.wallMode);
     if (changed.has("solidWalls")) v.setPaintedWalls(this.solidWalls);
     if (changed.has("explode")) v.setExplode(this.explode);

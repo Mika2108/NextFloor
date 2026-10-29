@@ -1236,6 +1236,8 @@
  "show_name": "Afficher le nom sous le repère en 3D",
  "card_marker_names": "Noms personnalisés sur les repères",
  "card_marker_names_hint": "Chaque appareil ayant un nom personnalisé l'affiche en petit sous son repère – trois thermomètres dans le jardin restent distincts.",
+ "card_tap_in_room": "Piloter les appareils seulement dans la pièce ouverte",
+ "card_tap_in_room_hint": "Vue maison et vue étage : un appui ouvre l'étage ou la pièce, même sur un appareil ou son repère. Dans la pièce ouverte, il pilote l'appareil. L'appui long ouvre toujours son menu ou sa fiche.",
  "device_name_hint": "Un nom pour le plan uniquement, p. ex. « Éclairage d'ambiance de l'îlot » – l'entité dans Home Assistant reste inchangée.",
  "floor_turn": "Pivoter de 90°",
  "floor_shift_all": "Entraîner tous les étages (toute la maison)",

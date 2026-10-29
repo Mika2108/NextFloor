@@ -78,6 +78,7 @@ import { SoundLayer, type SoundSpot } from "./live-sound.ts";
 import { ScreenLayer, type LiveScreen } from "./live-screens.ts";
 import { addMeshLighting, applyEnvironment, disposeMeshInstance, instantiateMesh, loadMesh } from "./meshes.ts";
 import { circlePath, cleaningPath, stepRobot, type RobotInfo, type RobotMotion } from "./robot.ts";
+import { inReach } from "./tap-reach.ts";
 import type { AnimationName } from "../light-effects.ts";
 
 export type { RobotInfo } from "./robot.ts";
@@ -485,9 +486,16 @@ export class NextFloorViewer {
       const [box, area] = [pin.getBoundingClientRect(), this.host.getBoundingClientRect()];
       return { x: box.left + box.width / 2 - area.left, y: box.top + box.height / 2 - area.top };
     },
-    tap: (id, x, y) => this.options.onDeviceTap?.(id, x, y),
+    tap: (id, x, y) => {
+      // away from the opened room a marker opens its floor or room (tap_in_room)
+      const d = this.tapInRoom ? this.devices.find((m) => m.id === id) : undefined;
+      if (d && !this.deviceInReach(d.floorId, d.roomId)) return this.options.onRoomTap?.(d.floorId, d.roomId);
+      this.options.onDeviceTap?.(id, x, y);
+    },
     hold: (id, x, y) => this.options.onDeviceHold?.(id, x, y),
   };
+  /** A tap switches devices only in the opened room (outside any room: once their floor is open). */
+  private tapInRoom = false;
   private deviceGrab: { id: string; floorId: string; offset: [number, number]; x: number; z: number; moved: boolean } | null = null;
   private grab: { floorId: string; id: string; offset: [number, number]; x: number; z: number; moved: boolean } | null = null;
   private ghost: LineSegments | null = null;
@@ -2164,11 +2172,30 @@ export class NextFloorViewer {
     return ray;
   }
 
-  private pick(x: number, y: number): { entity: string } | { floorId: string; roomId: string | null } | null {
+  /** A tap on devices only acts in the opened room (or, outside any room, on the opened floor). */
+  setTapInRoom(on: boolean): void {
+    this.tapInRoom = on;
+  }
+
+  /** Whether a device at this place can be switched by a tap now (tap_in_room). */
+  private deviceInReach(floorId: string, roomId: string | null): boolean {
+    return !this.tapInRoom || inReach({ floorId, roomId }, { floorId: this.floorId, roomId: this.roomId });
+  }
+
+  /** With tap_in_room, an entity under the tap away from the opened room gives way to the room behind it. */
+  private pickInReach(x: number, y: number): { entity: string } | { floorId: string; roomId: string | null } | null {
+    const hit = this.pick(x, y);
+    if (!this.tapInRoom || !hit || !("entity" in hit)) return hit;
+    const place = this.pick(x, y, false);
+    if (place && "floorId" in place && this.deviceInReach(place.floorId, place.roomId)) return hit;
+    return place;
+  }
+
+  private pick(x: number, y: number, devices = true): { entity: string } | { floorId: string; roomId: string | null } | null {
     const ray = this.rayAt(x, y);
     const floors = this.activeFloors();
     // an owned 3D model that stands for a device: a tap on it is a tap on the device
-    if (this.meshes.length) {
+    if (devices && this.meshes.length) {
       const hit = ray.intersectObjects(this.meshes.map((m) => m.group), true)[0];
       if (hit) {
         let o: Object3D | null = hit.object;
@@ -2183,6 +2210,8 @@ export class NextFloorViewer {
       if (hit.faceIndex == null) continue;
       const tri = hit.faceIndex;
       const fv = floors.find((f) => f.group === hit.object.parent)!;
+      // only the place is asked for: lamps, light cones and windows are looked through
+      if (!devices && (hit.object === fv.lampMesh || hit.object === fv.coneMesh || hit.object === fv.framesMesh || hit.object === fv.blindsMesh || hit.object === fv.glassMesh)) continue;
       if (hit.object === fv.lampMesh || hit.object === fv.coneMesh) {
         const id = hit.object === fv.lampMesh ? inRange(fv.lampTris, tri) : undefined;
         if (id) return { entity: id };
@@ -2198,7 +2227,7 @@ export class NextFloorViewer {
         if (entity) return { entity };
       } else if (hit.object === fv.wallMesh) {
         const id = inRange(fv.geo.furnitureTris, tri);
-        const entity = id ? this.pickFurniture.get(id) : undefined;
+        const entity = id && devices ? this.pickFurniture.get(id) : undefined;
         if (entity) return { entity };
         // a wall: the tap stops at it unless it is see-through (cut away, or glass in the floor view)
         if (hit.face && !id) {
@@ -2228,7 +2257,7 @@ export class NextFloorViewer {
   }
 
   private onTap(x: number, y: number): void {
-    const hit = this.pick(x, y);
+    const hit = this.furnish ? this.pick(x, y) : this.pickInReach(x, y);
     if (hit && "entity" in hit && this.furnish) {
       this.selectDevice(hit.entity);
       this.options.onDeviceSelect?.(hit.entity);
@@ -2485,7 +2514,7 @@ export class NextFloorViewer {
   /** A mostly vertical drag on a lamp or blind becomes a swipe (unless furnishing). */
   private swipeStart(x: number, y: number, dx: number, dy: number): boolean {
     if (this.furnish || Math.abs(dy) < Math.abs(dx) * 1.2) return false;
-    const hit = this.pick(x, y);
+    const hit = this.pickInReach(x, y);
     if (!hit || !("entity" in hit)) return false;
     if (this.options.onDeviceSwipe?.(hit.entity, "start", 0, x, y) !== true) return false;
     this.swipe = { entity: hit.entity, x, y };

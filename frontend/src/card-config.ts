@@ -23,6 +23,8 @@ export interface CardConfig {
   stats?: boolean;
   /** HTML markers: none | important (default) | all. */
   markers?: "none" | "important" | "all";
+  /** Devices are switched by a tap only in the opened room; elsewhere a tap opens the floor or room (a long press still acts). */
+  tap_in_room?: boolean;
   /** Every device with an own name shows it under its marker (#156). */
   marker_names?: boolean;
   /** The star with the central menu: all lights / blinds of the floor or house and the favourites (default true, #145). */

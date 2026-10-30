@@ -79,6 +79,13 @@ Each entry handles the entities its `match(entityId, state)` returns `true` for:
 | `kind` | For entities of domains NextFloor does not know (`vacuum`, `lawn_mower`, `todo`, …): NextFloor then shows them like this kind (`light`, `switch`, `fan`, `cover`, `climate`, `media`, `lock`, `sensor`, `binary`, `scene`, `script`; default `sensor`). |
 | `marker({ hass, entityId, state })` | Returns what to change on the device's marker: `icon` (`"mdi:name"` or inline SVG), `text` (max. 60 characters), `active` (highlighted like an "on" device). Leave a field out to keep NextFloor's value. An icon picked in the plan wins over the plugin's. |
 
+| `watch({ hass, entityId, state })` | Further entity ids whose changes redraw this device (e.g. a camera's motion sensor that colours its wedge). The 3D view only redraws for entities it watches. |
+| `settings` | Extra fields in the device's form in the editor (see below). The values are stored with the placement and handed to `floorWedge` and `tap`. |
+| `floorWedge({ hass, entityId, state, placement, settings })` | A field of view or range drawn flat on the floor from the device, stopping at walls. Return `{ angle, reach, near?, color?, opacity?, tapThrough? }` or `null`: `angle` in degrees (360 all around), `reach` and `near` in metres, `color` as `"#rrggbb"`, `opacity` 0–1. It points the way the device is turned (the handle in front of it in the editor). A tap on the wedge taps the device, unless `tapThrough`. |
+| `tap({ hass, entityId, state, placement, settings, showWindow, moreInfo })` | A tap on the device's marker or wedge. Return `true` when you handled it; otherwise NextFloor does its usual thing. `showWindow(node, { title })` shows a node in a small window in the lower right corner of the 3D view (`null` closes it; a node with a `hass` property gets every new hass object). `moreInfo(entityId?)` opens Home Assistant's dialog. |
+
+`placement` is where the device stands: `floorId`, `roomId`, `x`, `z`, `y` (height above the floor) and `rotation` (degrees).
+
 ```js
 devices: [{
   match: (id) => id.startsWith("vacuum."),
@@ -86,6 +93,25 @@ devices: [{
   marker: ({ state }) => ({ icon: "mdi:robot-vacuum", text: state.state, active: state.state === "cleaning" }),
 }],
 ```
+
+#### Device settings
+
+Each entry of `settings` adds a field to the device's form, under the plugin's name:
+
+```js
+settings: [
+  { key: "fov", label: { en: "Field of view (°)", de: "Blickwinkel (°)" }, type: "number", default: 90, min: 20, max: 180, step: 5 },
+  { key: "mount", label: "Mount", type: "select", default: "wall", options: [["wall", "Wall"], ["dome", "Ceiling"]] },
+  { key: "wedge", label: "Show the wedge", type: "boolean", default: true, hint: "Shown when hovering" },
+],
+```
+
+`key` is 1–32 letters, digits or `_`; `type` is `number`, `select` or `boolean`. Labels, hints and option labels are
+plain text or texts by language code (English is the fallback). Your functions get `settings` with every key filled
+in: the stored value when it fits the field, the default otherwise.
+
+A complete plugin with all of this: [NextFloor Cameras](https://github.com/therealMRBK/NextFloor-Plugins/blob/main/plugins/cameras/nextfloor-cameras.js)
+(field-of-view wedges, red on detection, live picture in the corner, alarm panels).
 
 ### `roomSections`
 

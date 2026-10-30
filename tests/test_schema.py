@@ -7,6 +7,7 @@ from custom_components.nextfloor.schema import (
     ENERGY_SCHEMA,
     FURNITURE_SCHEMA,
     MAP_SCHEMA,
+    PLACEMENT_SCHEMA,
     PLUGIN_SCHEMA,
     ROOM_SCHEMA,
     SETTINGS_SCHEMA,
@@ -89,3 +90,14 @@ def test_furniture_tap_action() -> None:
     assert FURNITURE_SCHEMA({**item, "tap": popup})["tap"]["data"] == popup["data"]
     with pytest.raises(vol.Invalid):
         FURNITURE_SCHEMA({**item, "tap": {"action": "toggle"}})
+
+
+def test_placement_plugin_settings() -> None:
+    placed = {"entity_id": "camera.hall", "x": 1, "z": 2, "y": None}
+    assert PLACEMENT_SCHEMA(placed)["plugin"] is None
+    data = {"cameras": {"fov": 90, "dome": False, "detect": "person"}}
+    assert PLACEMENT_SCHEMA({**placed, "plugin": data})["plugin"] == data
+    with pytest.raises(vol.Invalid):
+        PLACEMENT_SCHEMA({**placed, "plugin": {"cameras": {"bad key": 1}}})
+    with pytest.raises(vol.Invalid):
+        PLACEMENT_SCHEMA({**placed, "plugin": {"cameras": {"nested": {"a": 1}}}})

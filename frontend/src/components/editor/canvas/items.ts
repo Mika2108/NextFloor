@@ -1,7 +1,8 @@
 // Furniture and devices in the plan: each piece with its symbol, the handles of the selected one, and the camera's field of view.
 
 import { nothing, svg, type TemplateResult } from "lit";
-import { entityName, kindOf } from "../../../devices.ts";
+import { entityKind, entityName, kindOf } from "../../../devices.ts";
+import { pluginDrawsWedge } from "../../../plugins/registry.ts";
 import { furnitureName } from "../../../furniture-names.ts";
 import { iconPath } from "../../../icons.ts";
 import { ENERGY_DEVICES, isLamp, type Floor, type Furniture, type Placement } from "../../../model.ts";
@@ -67,12 +68,17 @@ export function furnitureLayer(ctx: CanvasContext, floor: Floor, selectedId: str
 export function devicesLayer(ctx: CanvasContext, floor: Floor, selectedId: string | null): Layer {
   const { host } = ctx;
   const one = (placed: Placement) => {
-    const kind = kindOf(placed.entity_id);
+    // a plugin may take on entities NextFloor does not know (cameras)
+    const kind = kindOf(placed.entity_id) ?? (host.hass ? entityKind(host.hass, placed.entity_id) : null);
     if (!kind) return nothing;
     const [x, y] = ctx.toScreen([placed.x, placed.z]);
     const on = host.hass?.states[placed.entity_id]?.state === "on";
     const selected = placed.entity_id === selectedId;
-    return svg`<g data-device=${placed.entity_id} class=${`nf-device${on ? " nf-device-on" : ""}${selected ? " nf-device-sel" : ""}`} transform="translate(${x} ${y})">
+    // a device a plugin draws a wedge for can be turned by a handle in front of it
+    const turn = (placed.rotation ?? 0) * RAD;
+    const aim = selected && host.admin && !placed.locked && pluginDrawsWedge(placed.entity_id, host.hass?.states[placed.entity_id]);
+    const handle: [number, number] = [x - Math.sin(turn) * 46, y + Math.cos(turn) * 46];
+    return svg`${aim ? turnHandle("data-aim", placed.entity_id, [x, y], handle) : nothing}<g data-device=${placed.entity_id} class=${`nf-device${on ? " nf-device-on" : ""}${selected ? " nf-device-sel" : ""}`} transform="translate(${x} ${y})">
         <title>${entityName(host.hass, placed.entity_id)}</title>
         <circle r="18" class="nf-hit" /><circle r="12" />
         <path d=${iconPath(kind)} transform="translate(-7.2 -7.2) scale(0.6)" />

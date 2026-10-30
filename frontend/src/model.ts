@@ -271,6 +271,8 @@ export interface Placement extends LightEffectConfig {
   glow_scale?: number | null;
   /** Cameras: show the field-of-view wedge on the floor (null = yes). */
   cone?: boolean | null;
+  /** Settings plugins added to the device's form: per plugin id, the values by key. */
+  plugin?: Record<string, Record<string, string | number | boolean>> | null;
 }
 
 export interface Background {

@@ -66,7 +66,7 @@ import { setUnits } from "../units.ts";
 import "./editor/wall-view.ts";
 import { LibraryState, renderLibrary, renderPreview, type LibraryActions } from "./editor/forms/library.ts";
 import { insertCorner } from "./editor/ops/rooms.ts";
-import { aimReach, dragStep, facingAngle, gridPositionAfter, hasLeftStart, headingAngle, outlineWithCornerAt, shifted, steppedDelta, straightEnd } from "./editor/ops/drags.ts";
+import { dragStep, facingAngle, gridPositionAfter, hasLeftStart, headingAngle, outlineWithCornerAt, shifted, steppedDelta, straightEnd } from "./editor/ops/drags.ts";
 import { snapToPlan } from "./editor/ops/snapping.ts";
 import { draftLayer, guidesLayer } from "./editor/canvas/draft.ts";
 import { devicesLayer, furnitureLayer } from "./editor/canvas/items.ts";
@@ -1426,8 +1426,8 @@ export class NfEditor extends LitElement {
         drag.moved = true;
         const placed = this.floorOf(drag)?.placements.find((p) => p.entity_id === drag.entityId);
         if (!placed) return;
-        // the handle is at the far edge of the wedge: it turns the camera and sets how far it reaches
-        const turn = { rotation: facingAngle([placed.x, placed.z], world, fine ? 1 : 5), reach: aimReach([placed.x, placed.z], world) };
+        // the handle turns the device the way its plugin wedge (a camera's view) points
+        const turn = { rotation: facingAngle([placed.x, placed.z], world, fine ? 1 : 5) };
         this.live(drag, (_, floor) => void Object.assign(floor.placements.find((p) => p.entity_id === drag.entityId)!, turn));
         return;
       }

@@ -7,6 +7,7 @@ import { powerSensorFor } from "../../energy.ts";
 import { placedEntities } from "../../markers.ts";
 import type { Building } from "../../model.ts";
 import { parkingEntities } from "../../parking.ts";
+import { pluginWatched } from "../../plugins/registry.ts";
 import type { HomeAssistant } from "../../types.ts";
 import { weatherEntity } from "../../weather.ts";
 
@@ -63,6 +64,8 @@ export function watchedEntities(inputs: WatchInputs): string[] {
     ...placed,
     ...openingIds(inputs.openingLinks),
     ...placed.map((id) => powerSensorFor(hass, id)),
+    // what plugins draw for a device may follow further entities (a camera's motion sensor)
+    ...placed.flatMap((id) => (hass.states[id] ? pluginWatched({ hass, entityId: id, state: hass.states[id] }) : [])),
     ...furnitureIds(inputs),
     ...roofIds(b),
     energy.grid,

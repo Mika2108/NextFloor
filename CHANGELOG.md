@@ -11,6 +11,9 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 - **Choose the markers outside the opened room** by @Mika2108 (#26): card option `markers_outside` with one chip per kind (lights, blinds, heating, media, switches, fans, locks, contacts and detectors, sensors, furniture with an action, other). In the opened room the usual marker setting applies.
 - **Own tap action for furniture** by @Mika2108 (#26): *Tapping the item* in the furniture form runs one of the own-button actions (open a path, an entity's details, a service, a browser_mod popup) instead of the usual tap, with a marker above the item.
 
+- **Cameras and alarm panels as a plugin** (#27): the new *Cameras* plugin in the plugin store (*Extensions → Plugins → Open plugin store*) puts security cameras back into the plan. A camera shows its field of view as a wedge on the floor that stops at walls and turns red while a motion, person, vehicle or animal sensor of the same device detects something. A tap on the camera or its wedge opens Home Assistant's own live player in a small window in the corner (or HA's dialog). Mount, field of view, reach, tilt and detections are set in the camera's form, and a handle in the plan turns it. Alarm panels get a shield with their state, and a tap opens the keypad.
+- **More for plugins**: a device extension can now add fields to the device's form (`settings`), draw a wedge on the floor (`floorWedge`), handle taps and open a small window in the corner of the 3D view (`tap`, `showWindow`), and name further entities to watch (`watch`). Devices a plugin takes on are drawn in the editor's plan too. See [docs/plugins.md](https://github.com/therealMRBK/NextFloor/blob/main/docs/plugins.md).
+
 ### Changed
 
 - **Hide any entity of a room** (#24): in a room's device list, the further entities of a device (behind *more*) can now be hidden from the room and have their state hidden too, like the device's main entity.

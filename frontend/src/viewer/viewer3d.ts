@@ -49,7 +49,7 @@ import { roofRider, roofUnderAt, sectionCutsBelow } from "../roof-sections.ts";
 import { centredAt, floorLabelPosition, floorShowsMarkers, LabelPlacer, leftAt, project, stackFloorLabels, type FloorLabel, type ScreenPoint } from "./scene/labels.ts";
 import { easeFloor, fadeMaterials, floorShare, floorTarget } from "./scene/floor-motion.ts";
 import { atTarget, stepOpening, stepShare } from "./scene/opening-motion.ts";
-import { addLampHalo, addSpotCone, hiddenInCut, type HaloPoints } from "./scene/halos.ts";
+import { addFloorWedge, addLampHalo, addSpotCone, hiddenInCut, type HaloPoints } from "./scene/halos.ts";
 import { sunlightPatches, sunSignature } from "./scene/sunlight.ts";
 import { LAMP_SIZE, HANGING_LAMPS } from "./scene/lamp-data.ts";
 import { lightSourcesOf } from "./scene/light-sources.ts";
@@ -185,6 +185,8 @@ export interface DeviceMarker {
   variant?: string | null;
   /** Formatted power, e.g. "85 W". */
   powerText?: string;
+  /** A plugin's shape on the floor from the device (a camera's field of view): stops at walls; `through` lets taps pass. */
+  wedge?: { angle: number; reach: number; near: number; color: [number, number, number]; opacity: number; through: boolean } | null;
 }
 
 export type FloorStack = "dim" | "stacked" | "single";
@@ -304,6 +306,8 @@ interface FloorView {
   /** Soft glow around lit lamps, and light cones under spots (quality "High"). */
   haloMesh: Points;
   coneMesh: Mesh;
+  /** Triangle ranges of the wedges plugins draw on the floor, by device id (a tap on one taps the device). */
+  wedgeTris: { id: string; start: number; end: number }[];
   /** Motion trail on the floor (discs and ribbons). */
   /** Doors of smart fridges (they swing open with their sensors). */
   fridgeMesh: Mesh;
@@ -1594,6 +1598,7 @@ export class NextFloorViewer {
         sunSig: "",
         haloMesh,
         coneMesh,
+        wedgeTris: [],
         fridgeMesh,
         lampTris: [],
         lampFurnTris: [],
@@ -1861,7 +1866,11 @@ export class NextFloorViewer {
       (this.lowQuality ? "L" : this.highQuality ? "H" : "M") +
       lamps.map((d) => `${d.id},${d.lamp},${d.variant},${d.x},${d.z},${d.y},${d.rotation ?? 0},${d.roll ?? 0},${d.upright ? 1 : 0},${d.size?.join("/")},${d.base ?? 0},${d.pack ?? ""},${d.mirror ? 1 : 0},${d.ceiling ?? ""},${this.fanPhase(d)}`).join(";");
     const glows = lamps.map((d) => this.glowOf(d));
-    const colorSig = lamps.map((d, i) => `${flash(d.id)},${glows[i] ? `${glows[i]!.level.toFixed(3)},${glows[i]!.color.map((c) => c.toFixed(3)).join("/")}` : "off"}`).join(";");
+    const wedges = this.devices.filter((d) => d.floorId === fv.floor.id && d.wedge);
+    const colorSig =
+      lamps.map((d, i) => `${flash(d.id)},${glows[i] ? `${glows[i]!.level.toFixed(3)},${glows[i]!.color.map((c) => c.toFixed(3)).join("/")}` : "off"}`).join(";") +
+      "|" +
+      wedges.map((d) => `${d.id},${d.x},${d.z},${d.rotation ?? 0},${JSON.stringify(d.wedge)}`).join(";");
     if (shapeSig !== fv.lampShapeSig || !fv.lampMesh.geometry.getAttribute("position")) {
       fv.lampShapeSig = shapeSig;
       fv.lampColorSig = "";
@@ -1934,15 +1943,17 @@ export class NextFloorViewer {
 
   /** Glow points at lit shades (not at the tablet level) and light cones under spots (level "High"). */
   private buildHalos(fv: FloorView): void {
-    if (this.lowQuality) {
-      fv.haloMesh.visible = false;
-      fv.coneMesh.visible = false;
-      return;
-    }
     const points: HaloPoints = { positions: [], colours: [] };
     const cones = new GeoBuffer();
+    // plugin wedges on the floor are drawn at every quality: they are also what one taps
+    const wedges: FloorView["wedgeTris"] = [];
+    for (const marker of this.devices) if (marker.floorId === fv.floor.id && marker.wedge) {
+      const range = addFloorWedge(cones, marker, fv.geo.walls2d);
+      if (!marker.wedge.through) wedges.push({ id: marker.id, ...range });
+    }
+    fv.wedgeTris = wedges;
     const cut = this.lowered;
-    for (const marker of this.devices) {
+    for (const marker of this.lowQuality ? [] : this.devices) {
       const glow = this.glowOf(marker);
       if (marker.floorId !== fv.floor.id || !marker.lamp || !glow) continue;
       if (cut && hiddenInCut(marker.lamp)) continue;
@@ -1955,7 +1966,7 @@ export class NextFloorViewer {
     geometry.setAttribute("color", new Float32BufferAttribute(points.colours, 3));
     fv.haloMesh.geometry.dispose();
     fv.haloMesh.geometry = geometry;
-    fv.haloMesh.visible = points.positions.length > 0;
+    fv.haloMesh.visible = !this.lowQuality && points.positions.length > 0;
     fv.coneMesh.geometry.dispose();
     fv.coneMesh.geometry = cones.geometry();
     fv.coneMesh.visible = cones.count > 0;
@@ -2213,7 +2224,8 @@ export class NextFloorViewer {
       // only the place is asked for: lamps, light cones and windows are looked through
       if (!devices && (hit.object === fv.lampMesh || hit.object === fv.coneMesh || hit.object === fv.framesMesh || hit.object === fv.blindsMesh || hit.object === fv.glassMesh)) continue;
       if (hit.object === fv.lampMesh || hit.object === fv.coneMesh) {
-        const id = hit.object === fv.lampMesh ? inRange(fv.lampTris, tri) : undefined;
+        // a plugin's wedge on the floor is a far bigger target than the device itself
+        const id = inRange(hit.object === fv.lampMesh ? fv.lampTris : fv.wedgeTris, tri);
         if (id) return { entity: id };
       } else if (hit.object === fv.framesMesh || hit.object === fv.blindsMesh || hit.object === fv.glassMesh) {
         // the part above the cut is folded away with its wall: a tap there is meant for what lies behind

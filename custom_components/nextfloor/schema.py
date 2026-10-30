@@ -289,6 +289,19 @@ FURNITURE_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+# what plugins store on a placed device: a few plain values per plugin
+_PLUGIN_VALUES = vol.All(
+    vol.Schema(
+        {vol.All(str, vol.Match(r"^\w{1,32}$")): vol.Any(bool, int, float, vol.All(str, vol.Length(max=120)))},
+        extra=vol.PREVENT_EXTRA,
+    ),
+    vol.Length(max=30),
+)
+_PLUGIN_DATA = vol.All(
+    vol.Schema({vol.All(str, vol.Match(r"^[a-zA-Z0-9][\w.-]{0,63}$")): _PLUGIN_VALUES}, extra=vol.PREVENT_EXTRA),
+    vol.Length(max=10),
+)
+
 PLACEMENT_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): vol.All(str, vol.Length(max=255)),
@@ -327,6 +340,8 @@ PLACEMENT_SCHEMA = vol.Schema(
         ),
         # cameras: show the field-of-view wedge on the floor (None = yes)
         vol.Optional("cone", default=None): vol.Any(None, bool),
+        # settings plugins add to the device's form: per plugin id, the values by key
+        vol.Optional("plugin", default=None): vol.Any(None, _PLUGIN_DATA),
         # fixed against moving by accident
         vol.Optional("locked", default=None): vol.Any(None, bool),
     },

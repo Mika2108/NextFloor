@@ -46,7 +46,8 @@ import {
 import { liveScreens, readSun, roofWindowStates, skyLightness } from "./view3d/live-inputs.ts";
 import { watchedEntities } from "./view3d/watch-list.ts";
 import { lightAnimation, lightEffectSource } from "../light-effects.ts";
-import { onPluginsChanged } from "../plugins/registry.ts";
+import type { PlacementInfo } from "../plugins/api.ts";
+import { onPluginsChanged, pluginTap } from "../plugins/registry.ts";
 import { alertColor, alertSources, alertText, findAlerts, type Alert, type AlertSources } from "../alerts.ts";
 import { iconPath, iconSvg, mdiIcon } from "../icons.ts";
 import { deviceSensors, energySummary, findConsumers, readPower, subMeterIds, subMeterLabel, type Consumer, type EnergySummary } from "../energy.ts";
@@ -130,6 +131,7 @@ export class NfView3d extends LitElement {
     _liveCardOn: { state: true },
     _swipe: { state: true },
     _menu: { state: true },
+    _pluginWindow: { state: true },
     _plate: { state: true },
     _blend: { state: true },
     _wallBig: { state: true },
@@ -231,6 +233,10 @@ export class NfView3d extends LitElement {
   private declare _swipe: { entity: string; kind: "light" | "cover" | "fan"; start: number; value: number; x: number; y: number } | null;
   /** Quick menu at a device (long press). */
   private declare _menu: { entity: string; x: number; y: number; car?: CarState } | null;
+  /** A window a plugin opened in the lower right corner (a camera's live picture). */
+  private declare _pluginWindow: { node: Node; title: string } | null;
+  /** Where each placed device stands, for plugins that handle its taps. */
+  private placementInfo = new Map<string, PlacementInfo>();
   /** The buttons of a tapped switch plate or socket to pick from. */
   private declare _plate: { ids: string[]; x: number; y: number } | null;
   /** Looking through a camera: its live picture lies over the 3D view; `back` is the view to return to. */
@@ -383,6 +389,7 @@ export class NfView3d extends LitElement {
     this._energy = null;
     this._swipe = null;
     this._menu = null;
+    this._pluginWindow = null;
     this._plate = null;
     this._wallBig = null;
     this._blend = 0.6;
@@ -556,6 +563,9 @@ export class NfView3d extends LitElement {
 
   protected updated(changed: PropertyValues): void {
     if (changed.has("hass") && this.live?.el) this.live.el.hass = this.hass;
+    // a plugin window's content (a Home Assistant card) gets every new hass
+    const windowNode = this._pluginWindow?.node as (Node & { hass?: unknown }) | undefined;
+    if (changed.has("hass") && windowNode && "hass" in windowNode) windowNode.hass = this.hass;
     // the star menu closes when a room or another floor is chosen (#220)
     if (this._central && ((changed.has("roomId") && changed.get("roomId") !== undefined) || (changed.has("floorId") && changed.get("floorId") !== undefined))) this._central = false;
     const v = this.viewer;
@@ -658,6 +668,7 @@ export class NfView3d extends LitElement {
 
     const consumers = findConsumers(hass, b);
     const deviceMarkers = buildMarkers(hass, b);
+    this.placementInfo = new Map(deviceMarkers.map((m) => [m.id, { floorId: m.floorId, roomId: m.roomId, x: m.x, z: m.z, y: m.y, rotation: m.rotation ?? 0 }]));
     const furniture = this.furnitureMarkers(hass, b, new Set(deviceMarkers.map((m) => m.id)), new Set(consumers.map((c) => c.powerEntity)));
     consumers.push(...furniture.consumers);
     const summary = energySummary(hass, b, consumers, deviceSensors(b, (f) => this.furnitureLinks?.get(f.id)?.power ?? null));
@@ -1816,6 +1827,7 @@ export class NfView3d extends LitElement {
     if (entityId.startsWith("lamp:")) return;
     // in the past nothing is switched
     if (this._travel) return;
+    if (this.pluginTapped(entityId)) return;
     if (entityId.startsWith("gang:")) return this.tapPlate(entityId.slice(5), x, y);
     if (entityId.startsWith("tap:")) {
       const f = this.building?.floors.flatMap((fl) => fl.furniture).find((it) => it.id === entityId.slice(4));
@@ -1846,6 +1858,30 @@ export class NfView3d extends LitElement {
       if (this.confirmSet.has(entityId) && !confirm(translate(this.hass, "confirm_switch", { name: entityName(this.hass, entityId) }))) return;
       void toggleEntity(this.hass, entityId);
     } else openMoreInfo(this, entityId);
+  }
+
+  /** Hands a tap on a placed device to the plugins (a camera opens its live picture); true when one took it. */
+  private pluginTapped(entityId: string): boolean {
+    const state = this.hass?.states[entityId];
+    const placement = this.placementInfo.get(entityId);
+    if (!state || !placement) return false;
+    const placed = this.building?.floors.find((f) => f.id === placement.floorId)?.placements.find((p) => p.entity_id === entityId);
+    return pluginTap({ hass: this.hass, entityId, state }, placement, placed?.plugin ?? undefined, {
+      showWindow: (node, options) => {
+        if (node && "hass" in node) (node as Node & { hass: unknown }).hass = this.hass;
+        this._pluginWindow = node ? { node, title: options?.title ?? "" } : null;
+      },
+      moreInfo: (id) => openMoreInfo(this, id ?? entityId),
+    });
+  }
+
+  private renderPluginWindow() {
+    const w = this._pluginWindow;
+    if (!w) return nothing;
+    return html`<div class="nf-plugin-window" @pointerdown=${(e: Event) => e.stopPropagation()}>
+      <div class="nf-pw-head"><span>${w.title}</span><button class="nf-pw-close" aria-label=${translate(this.hass, "close")} @click=${() => (this._pluginWindow = null)}>✕</button></div>
+      <div class="nf-pw-body">${w.node}</div>
+    </div>`;
   }
 
   /** The start view: the card's own, else the one remembered in the editor. */
@@ -2047,7 +2083,7 @@ export class NfView3d extends LitElement {
     >
       ${this._error ? html`<p class="nf-error">${this._error}</p>` : nothing} ${this.clean ? nothing : this.renderLhEnergy()} ${renderLhCards(this.hass, this.roomId || this.panelOpen ? [] : this._liveCards, (domain, service, entity, data) => this.hass?.callService(domain, service, { entity_id: entity, ...data }))} ${this.clean ? nothing : this.renderLegend()} ${this.renderMapCredit()}
       ${this.renderAlerts()} ${this.clean ? nothing : html`${this.renderThumbs()} ${this.renderScenes()} ${this.renderFind()} ${this.renderCentral()}`} ${this.renderSwipe()}
-      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()} ${this.renderLock()} ${this.renderWalk()} ${this.renderTravel()} ${this.renderClock()}
+      ${this.renderMenu()} ${this.renderPlate()} ${this.renderEye()} ${this.renderLock()} ${this.renderWalk()} ${this.renderTravel()} ${this.renderClock()} ${this.renderPluginWindow()}
       ${this.showStats && this._stats
         ? html`<span class="nf-stats"
             ><b>${this._stats.fps ? translate(this.hass, "stats_fps", { fps: this._stats.fps, ms: this._stats.worstMs }) : translate(this.hass, "stats_idle")}</b>
@@ -2663,6 +2699,43 @@ export class NfView3d extends LitElement {
         color: #041018;
         background: var(--nf-accent);
         border-color: var(--nf-accent);
+      }
+      .nf-plugin-window {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        z-index: 6;
+        width: min(420px, calc(100% - 24px));
+        border-radius: 12px;
+        overflow: hidden;
+        background: rgba(10, 16, 22, 0.92);
+        border: 1px solid rgba(127, 208, 255, 0.35);
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+        color: #e6f4fb;
+      }
+      .nf-pw-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px 6px 12px;
+        font-size: 13px;
+      }
+      .nf-pw-head span {
+        flex: 1;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      .nf-pw-close {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 2px 6px;
+      }
+      .nf-pw-body {
+        line-height: 0;
       }
       .nf-clock {
         position: absolute;

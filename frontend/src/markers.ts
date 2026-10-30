@@ -8,7 +8,7 @@ import { ceilingAt, pointInPolygon, type Building, type Floor, type Placement, t
 import type { HassEntity, HomeAssistant } from "./types.ts";
 import type { DeviceMarker } from "./viewer/viewer3d.ts";
 import { lightAnimation } from "./light-effects.ts";
-import { pluginKind, pluginMarkerPatch } from "./plugins/registry.ts";
+import { pluginFloorWedge, pluginKind, pluginMarkerPatch } from "./plugins/registry.ts";
 
 type Hass = HomeAssistant | undefined;
 
@@ -128,6 +128,8 @@ function markerFor(hass: HomeAssistant, floor: Floor, placed: Placement): Device
     show: placed.marker ?? undefined,
     fixed: !!placed.locked,
   };
+  // a plugin may draw a shape on the floor from the device (a camera's field of view)
+  marker.wedge = pluginFloorWedge({ hass, entityId: placed.entity_id, state: st }, { floorId: floor.id, roomId: marker.roomId, x: marker.x, z: marker.z, y: marker.y, rotation: marker.rotation ?? 0 }, placed.plugin ?? undefined);
   return withPluginPatch(hass, marker, st, !!placed.icon);
 }
 

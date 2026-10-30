@@ -32,6 +32,71 @@ export interface MarkerPatch {
   active?: boolean;
 }
 
+/** A value of a plugin setting on a placed device. */
+export type SettingValue = string | number | boolean;
+
+/** A text in one language, or by language code ("en", "de", …; English is the fallback). */
+export type PluginText = string | Record<string, string>;
+
+/** A field the plugin adds to a placed device's form in the editor; the value is stored with the placement. */
+export interface DeviceSetting {
+  /** 1–32 letters, digits or "_". */
+  key: string;
+  label: PluginText;
+  type: "number" | "select" | "boolean";
+  default: SettingValue;
+  /** Numbers: limits and step. */
+  min?: number;
+  max?: number;
+  step?: number;
+  /** Selects: the choices as [value, label]. */
+  options?: [string, PluginText][];
+  hint?: PluginText;
+}
+
+/** Where a device stands in the plan. */
+export interface PlacementInfo {
+  floorId: string;
+  roomId: string | null;
+  x: number;
+  z: number;
+  /** Height above the floor (m). */
+  y: number;
+  /** Turn around the vertical axis (degrees), as set in the editor. */
+  rotation: number;
+}
+
+export interface DeviceContext extends MarkerContext {
+  placement: PlacementInfo;
+  /** This plugin's settings of the device, defaults filled in. */
+  settings: Record<string, SettingValue>;
+}
+
+/** A field of view (or a range) drawn flat on the floor from the device; it stops at walls. */
+export interface FloorWedge {
+  /** Opening angle in degrees (360: all around). */
+  angle: number;
+  /** How far it reaches (m), and where it starts (m, default 0). */
+  reach: number;
+  near?: number;
+  /** "#rrggbb"; default a faint teal. */
+  color?: string;
+  /** 0–1, default 0.6. */
+  opacity?: number;
+  /** A tap on the wedge goes through to the room instead of tapping the device. */
+  tapThrough?: boolean;
+}
+
+export interface TapContext extends DeviceContext {
+  /**
+   * Shows a node in a small window in the lower right corner of the 3D view (null closes it). A node with a `hass`
+   * property gets every new hass object.
+   */
+  showWindow(node: Node | null, options?: { title?: string }): void;
+  /** Opens Home Assistant's more-info dialog (default: this device). */
+  moreInfo(entityId?: string): void;
+}
+
 export interface DeviceExtension {
   /** Which entities this extension handles. Runs for every placed entity, so keep it cheap. */
   match: (entityId: string, state: HassEntity | undefined) => boolean;
@@ -41,6 +106,14 @@ export interface DeviceExtension {
    */
   kind?: DeviceKind;
   marker?: (ctx: MarkerContext) => MarkerPatch | null | undefined;
+  /** Further entities whose changes redraw this device (a camera's motion sensor that colours its wedge). */
+  watch?: (ctx: MarkerContext) => string[] | null | undefined;
+  /** Extra fields in the device's form in the editor. */
+  settings?: DeviceSetting[];
+  /** A shape on the floor from the device, worked out again on every state change. */
+  floorWedge?: (ctx: DeviceContext) => FloorWedge | null | undefined;
+  /** A tap on the device (its marker or its wedge). Return true when the plugin handled it, so NextFloor does nothing else. */
+  tap?: (ctx: TapContext) => boolean | void;
 }
 
 export interface RoomSectionContext {

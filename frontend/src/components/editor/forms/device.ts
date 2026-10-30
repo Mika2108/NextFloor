@@ -1,7 +1,7 @@
 // The form of a placed device: where it hangs, how high, how it is turned, and how its marker shows.
 
 import { html, nothing, type TemplateResult } from "lit";
-import { defaultHeight, entityName, hasScreen, kindOf, TOGGLE_KINDS } from "../../../devices.ts";
+import { defaultHeight, entityKind, entityName, hasScreen, kindOf, TOGGLE_KINDS } from "../../../devices.ts";
 import type { I18nKey } from "../../../i18n.ts";
 import { iconPath } from "../../../icons.ts";
 import { ceilingAt, FURNITURE_TYPES, isLamp, type LampMount, type Placement } from "../../../model.ts";
@@ -10,6 +10,7 @@ import { isClimateFurniture, isElectric, isPackType, packType, type FurniturePac
 import { checkField, glowField, iconField, markerField, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { lightEffectFields } from "../light-effect-fields.ts";
+import { pluginDeviceSettings, pluginText, settingsWithDefaults } from "../../../plugins/registry.ts";
 
 export interface DeviceActions {
   update(patch: Partial<Placement>): void;
@@ -54,10 +55,31 @@ function asFurniture(host: EditorHost, placed: Placement, actions: DeviceActions
   </label>`;
 }
 
+/** The fields plugins add for this device (a camera's field of view, say), stored with the placement per plugin. */
+function pluginFields(host: EditorHost, placed: Placement, set: (patch: Partial<Placement>) => void): TemplateResult[] {
+  const language = host.hass?.language ?? "en";
+  return pluginDeviceSettings(placed.entity_id, host.hass?.states[placed.entity_id]).map(({ pluginId, name, settings }) => {
+    const values = settingsWithDefaults(settings, placed.plugin?.[pluginId]);
+    const store = (key: string, value: string | number | boolean) => set({ plugin: { ...(placed.plugin ?? {}), [pluginId]: { ...(placed.plugin?.[pluginId] ?? {}), [key]: value } } });
+    const fields = settings.map((s) => {
+      const label = pluginText(s.label, language);
+      const title = s.hint ? pluginText(s.hint, language) : undefined;
+      if (s.type === "boolean") return checkField(host, label, values[s.key] === true, (on) => store(s.key, on), { title });
+      if (s.type === "select") {
+        const choices = (s.options ?? []).map(([v, l]): [string, string] => [v, pluginText(l, language)]);
+        return selectField(host, label, String(values[s.key]), choices, (v) => store(s.key, v), { wide: true, title });
+      }
+      const clamp = (v: number) => Math.min(s.max ?? Infinity, Math.max(s.min ?? -Infinity, v));
+      return numberField(host, label, Number(values[s.key]), (v) => store(s.key, clamp(v)), s.step ?? 1, s.min);
+    });
+    return html`<h4 class="nf-lib-head nf-wide">🔌 ${name}</h4>${fields}`;
+  });
+}
+
 /** The form of the selected device. */
 export function renderDeviceForm(host: EditorHost, placed: Placement, actions: DeviceActions): TemplateResult {
   const t = host.t;
-  const kind = kindOf(placed.entity_id);
+  const kind = kindOf(placed.entity_id) ?? (host.hass ? entityKind(host.hass, placed.entity_id) : null);
   const light = kind === "light";
   const mount = placed.mount ?? "ceiling";
   const automatic = kind ? defaultHeight(kind, host.floor ? ceilingAt(host.floor, placed.x, placed.z) : 2.5, light ? mount : null) : 1;
@@ -81,6 +103,7 @@ export function renderDeviceForm(host: EditorHost, placed: Placement, actions: D
       ${textField(host, t("device_name"), placed.name ?? "", (v) => set({ name: v || null }), { wide: true, maxlength: 60, title: t("device_name_hint"), placeholder: entityName(host.hass, placed.entity_id) })}
       ${placed.name ? checkField(host, t("show_name"), !!placed.show_name, (on) => set({ show_name: on || undefined })) : nothing}
       ${iconField(host, placed.icon, (v) => set({ icon: v }))}
+      ${pluginFields(host, placed, set)}
     </div>
     ${host.admin
       ? html`<div class="nf-actions">

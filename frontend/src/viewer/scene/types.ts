@@ -112,6 +112,8 @@ export interface DeviceMarker {
   variant?: string | null;
   /** The formatted power, for example "85 W". */
   powerText?: string;
+  /** A plugin's shape on the floor from the device (a camera's field of view): stops at walls; `through` lets taps pass. */
+  wedge?: { angle: number; reach: number; near: number; color: [number, number, number]; opacity: number; through: boolean } | null;
 }
 
 /** A ray from the camera through the pointer, in building coordinates (heights above the ground). */

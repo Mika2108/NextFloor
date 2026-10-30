@@ -6,7 +6,23 @@ import { emptyBuilding, newFloor } from "../model.ts";
 import type { HassEntity, HomeAssistant } from "../types.ts";
 import { isAllowedPluginUrl, type NextFloorPlugin } from "./api.ts";
 import { installPluginGlobal, loadPlugins, pluginLoadStates, resetLoads } from "./loader.ts";
-import { onPluginsChanged, pluginKind, pluginLightAnimationNames, pluginMarkerPatch, pluginRoomSections, pluginStatuses, registerPlugin, resetPlugins } from "./registry.ts";
+import {
+  onPluginsChanged,
+  pluginDeviceSettings,
+  pluginDrawsWedge,
+  pluginFloorWedge,
+  pluginKind,
+  pluginLightAnimationNames,
+  pluginMarkerPatch,
+  pluginRoomSections,
+  pluginStatuses,
+  pluginTap,
+  pluginText,
+  pluginWatched,
+  registerPlugin,
+  resetPlugins,
+  settingsWithDefaults,
+} from "./registry.ts";
 
 afterEach(() => {
   resetPlugins();
@@ -152,4 +168,84 @@ test("loader imports enabled allowed urls once, attributes registrations and rec
   assert.deepEqual(pluginStatuses().map((s) => [s.id, s.source]), [["one", "/local/one.js"]]);
   const states = Object.fromEntries(pluginLoadStates().map((l) => [l.url, l.state]));
   assert.deepEqual(states, { "/local/one.js": "loaded", "/local/broken.js": "error", "http://evil.example/x.js": "error" });
+});
+
+// ---- cameras and the like: settings, a wedge on the floor, taps and watched entities ----
+
+const AT = { floorId: "f1", roomId: null, x: 1, z: 2, y: 2.2, rotation: 90 };
+const cameraPlugin = (extra: Partial<NonNullable<NextFloorPlugin["devices"]>[number]> = {}) =>
+  plugin({
+    id: "cams",
+    name: "Cameras",
+    devices: [
+      {
+        match: (id) => id.startsWith("camera."),
+        settings: [
+          { key: "fov", label: { en: "Field of view", de: "Blickwinkel" }, type: "number", default: 90, min: 10, max: 360 },
+          { key: "mount", label: "Mount", type: "select", default: "wall", options: [["wall", "Wall"], ["dome", "Dome"]] },
+          { key: "wedge", label: "Wedge", type: "boolean", default: true },
+        ],
+        ...extra,
+      },
+    ],
+  });
+
+test("a setting needs a proper key and type", () => {
+  assert.throws(() => registerPlugin(plugin({ devices: [{ match: () => true, settings: [{ key: "bad key", label: "x", type: "number", default: 1 }] }] })), /key/);
+  assert.throws(() => registerPlugin(plugin({ devices: [{ match: () => true, settings: [{ key: "a", label: "x", type: "colour" as never, default: 1 }] }] })), /type/);
+  assert.throws(() => registerPlugin(plugin({ devices: [{ match: () => true, tap: "no" as never }] })), /tap/);
+});
+
+test("plugin settings: listed per plugin, stored values that fit win over the defaults", () => {
+  registerPlugin(cameraPlugin());
+  const found = pluginDeviceSettings("camera.hall", entity("camera.hall", "idle"));
+  assert.deepEqual(found.map((f) => [f.pluginId, f.name, f.settings.length]), [["cams", "Cameras", 3]]);
+  assert.deepEqual(pluginDeviceSettings("light.x", entity("light.x", "on")), []);
+  const values = settingsWithDefaults(found[0].settings, { fov: 120, mount: "ceiling", wedge: "yes" as never });
+  assert.deepEqual(values, { fov: 120, mount: "wall", wedge: true });
+  assert.equal(pluginText({ en: "Field of view", de: "Blickwinkel" }, "de-AT"), "Blickwinkel");
+  assert.equal(pluginText({ en: "Field of view", de: "Blickwinkel" }, "fr"), "Field of view");
+});
+
+test("a floor wedge gets the device's place and settings and is kept within limits", () => {
+  registerPlugin(cameraPlugin({ floorWedge: ({ placement, settings }) => ({ angle: settings.fov as number, reach: placement.y * 100, near: -1, color: "#ff0000", opacity: 3 }) }));
+  const ctx = { hass: hassWith(entity("camera.hall", "idle")), entityId: "camera.hall", state: entity("camera.hall", "idle") };
+  const wedge = pluginFloorWedge(ctx, AT, { cams: { fov: 60 } });
+  assert.deepEqual(wedge, { angle: 60, reach: 30, near: 0, color: [1, 0, 0], opacity: 1, through: false });
+  assert.equal(pluginDrawsWedge("camera.hall", ctx.state), true);
+  assert.equal(pluginDrawsWedge("light.x", undefined), false);
+});
+
+test("a throwing wedge or a wedge without reach draws nothing", () => {
+  registerPlugin(cameraPlugin({ floorWedge: () => ({ angle: 90, reach: 0 }) }));
+  const ctx = { hass: hassWith(), entityId: "camera.a", state: entity("camera.a", "idle") };
+  assert.equal(pluginFloorWedge(ctx, AT, undefined), null);
+  registerPlugin(cameraPlugin({ floorWedge: () => { throw new Error("boom"); } }));
+  assert.equal(pluginFloorWedge(ctx, AT, undefined), null);
+  assert.deepEqual(pluginStatuses()[0].errors, ["boom"]);
+});
+
+test("a tap goes to the plugin, which can open a window; false lets NextFloor handle it", () => {
+  const shown: (Node | null)[] = [];
+  registerPlugin(cameraPlugin({ tap: ({ settings, showWindow }) => settings.mount === "dome" && (showWindow(null, { title: "x" }), true) }));
+  const ctx = { hass: hassWith(), entityId: "camera.hall", state: entity("camera.hall", "idle") };
+  const tools = { showWindow: (node: Node | null) => void shown.push(node), moreInfo: () => undefined };
+  assert.equal(pluginTap(ctx, AT, { cams: { mount: "dome" } }, tools), true);
+  assert.deepEqual(shown, [null]);
+  assert.equal(pluginTap(ctx, AT, undefined, tools), false);
+});
+
+test("plugins name further entities to watch for a device", () => {
+  registerPlugin(cameraPlugin({ watch: ({ entityId }) => [entityId.replace("camera.", "binary_sensor.") + "_motion", 7 as never] }));
+  assert.deepEqual(pluginWatched({ hass: hassWith(), entityId: "camera.hall", state: entity("camera.hall", "idle") }), ["binary_sensor.hall_motion"]);
+});
+
+test("a placed camera's marker carries the plugin's wedge", () => {
+  registerPlugin(cameraPlugin({ kind: "sensor", floorWedge: ({ placement }) => ({ angle: 90, reach: 4, color: "#000000", opacity: 0.5 + placement.rotation / 1000 }) }));
+  const b = emptyBuilding();
+  const f = newFloor("eg", "EG", 0);
+  f.placements.push({ entity_id: "camera.hall", x: 1, z: 1, y: 2.4, rotation: 100 });
+  b.floors.push(f);
+  const [m] = buildMarkers(hassWith(entity("camera.hall", "idle")), b);
+  assert.deepEqual(m.wedge, { angle: 90, reach: 4, near: 0, color: [0, 0, 0], opacity: 0.6, through: false });
 });

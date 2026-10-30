@@ -7,6 +7,9 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 ### Added
 
 - **Wall-mounted air conditioner** (#23): the *Utility & building services* pack has a split air conditioner, an indoor unit for the wall and an outdoor unit. The indoor unit links to a climate entity like the wall thermostat.
+- **Switch devices only in the opened room** by @Mika2108 (#26): card option *Switch devices only in the opened room* (`tap_in_room: true`). In the house and floor views a tap opens the floor or room, even on a device or its marker, so a tap meant for a room no longer switches a lamp by accident. In the opened room nothing changes; a long press still opens the menu or details everywhere.
+- **Choose the markers outside the opened room** by @Mika2108 (#26): card option `markers_outside` with one chip per kind (lights, blinds, heating, media, switches, fans, locks, contacts and detectors, sensors, furniture with an action, other). In the opened room the usual marker setting applies.
+- **Own tap action for furniture** by @Mika2108 (#26): *Tapping the item* in the furniture form runs one of the own-button actions (open a path, an entity's details, a service, a browser_mod popup) instead of the usual tap, with a marker above the item.
 
 ### Fixed
 

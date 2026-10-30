@@ -1581,6 +1581,22 @@ export const editorStyles = css`
   .nf-device-on path {
     stroke: #2a1a00;
   }
+  .nf-device-icon {
+    pointer-events: none;
+    overflow: visible;
+  }
+  .nf-device-icon ha-icon {
+    display: block;
+    --mdc-icon-size: 16px;
+    color: var(--nf-text);
+  }
+  .nf-device-on .nf-device-icon ha-icon {
+    color: #2a1a00;
+  }
+  .nf-dev-icon {
+    --mdc-icon-size: 18px;
+    flex: none;
+  }
   .nf-muted {
     color: var(--nf-muted);
     font-variant-numeric: tabular-nums;

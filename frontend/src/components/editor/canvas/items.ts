@@ -5,6 +5,7 @@ import { entityKind, entityName, kindOf } from "../../../devices.ts";
 import { pluginDrawsWedge } from "../../../plugins/registry.ts";
 import { furnitureName } from "../../../furniture-names.ts";
 import { iconPath } from "../../../icons.ts";
+import { deviceIcon } from "../fields.ts";
 import { ENERGY_DEVICES, isLamp, type Floor, type Furniture, type Placement } from "../../../model.ts";
 import { furnitureSymbol } from "../../furniture2d.ts";
 import type { CanvasContext } from "./context.ts";
@@ -78,10 +79,13 @@ export function devicesLayer(ctx: CanvasContext, floor: Floor, selectedId: strin
     const turn = (placed.rotation ?? 0) * RAD;
     const aim = selected && host.admin && !placed.locked && pluginDrawsWedge(placed.entity_id, host.hass?.states[placed.entity_id]);
     const handle: [number, number] = [x - Math.sin(turn) * 46, y + Math.cos(turn) * 46];
+    const icon = deviceIcon(host, placed.entity_id, placed.icon);
     return svg`${aim ? turnHandle("data-aim", placed.entity_id, [x, y], handle) : nothing}<g data-device=${placed.entity_id} class=${`nf-device${on ? " nf-device-on" : ""}${selected ? " nf-device-sel" : ""}`} transform="translate(${x} ${y})">
         <title>${entityName(host.hass, placed.entity_id)}</title>
         <circle r="18" class="nf-hit" /><circle r="12" />
-        <path d=${iconPath(kind)} transform="translate(-7.2 -7.2) scale(0.6)" />
+        ${icon
+          ? svg`<foreignObject class="nf-device-icon" x="-8" y="-8" width="16" height="16"><ha-icon icon=${icon}></ha-icon></foreignObject>`
+          : svg`<path d=${iconPath(kind)} transform="translate(-7.2 -7.2) scale(0.6)" />`}
       </g>
       ${selected && placed.locked ? svg`<text class="nf-lock" x=${x + 16} y=${y - 12}>🔒</text>` : nothing}`;
   };

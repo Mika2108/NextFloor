@@ -5,7 +5,7 @@ import { areaEntities, CLIMATE_CLASSES, entityAreaId, entityKind, entityName, gr
 import { iconPath } from "../../../icons.ts";
 import { pointInPolygon, type Room } from "../../../model.ts";
 import { entityOptions, isNumeric } from "../entities.ts";
-import { entityField, hint } from "../fields.ts";
+import { deviceIcon, entityField, hint } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { matchesQuery, placedElsewhere, placedInRoom, rankedBy, takeFirst, withToggled } from "../ops/device-list.ts";
 import type { SideState } from "../side-state.ts";
@@ -38,9 +38,12 @@ function rowFor(host: EditorHost, room: Room, here: Set<string>, elsewhere: Map<
     const placed = here.has(id);
     const other = placed ? undefined : elsewhere.get(id);
     const isHidden = hidden.includes(id);
+    const icon = deviceIcon(host, id);
     return html`<div class="nf-row nf-dev-row ${extra ? "nf-dev-extra" : ""} ${isHidden ? "nf-dev-hidden" : ""}">
       <button class="nf-dev-name ${placed ? "" : "nf-muted"}" ?disabled=${!placed} @click=${() => actions.select(id)}>
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${iconPath((host.hass ? entityKind(host.hass, id) : kindOf(id)) ?? "sensor")} /></svg>
+        ${icon
+          ? html`<ha-icon class="nf-dev-icon" style="--mdc-icon-size:16px" .icon=${icon}></ha-icon>`
+          : html`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${iconPath((host.hass ? entityKind(host.hass, id) : kindOf(id)) ?? "sensor")} /></svg>`}
         <span>${entityName(host.hass, id, nameArea)}${other ? html`<small class="nf-muted"> · ${host.t("devices_placed_in", { room: other })}</small>` : nothing}</span>
       </button>
       ${host.admin ? roomFlag(host, hidden, id, "hidden", ["🙈", "👁"], ["panel_unhide", "panel_hide"], actions) : nothing}

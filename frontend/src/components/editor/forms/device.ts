@@ -7,7 +7,7 @@ import { iconPath } from "../../../icons.ts";
 import { ceilingAt, FURNITURE_TYPES, isLamp, type LampMount, type Placement } from "../../../model.ts";
 import { packItemLabel, packLabel } from "../../../furniture-names.ts";
 import { isClimateFurniture, isElectric, isPackType, packType, type FurniturePack } from "../../../packs.ts";
-import { checkField, glowField, iconField, markerField, numberField, selectField, textField } from "../fields.ts";
+import { checkField, deviceIcon, glowField, iconField, markerField, numberField, selectField, textField } from "../fields.ts";
 import type { EditorHost } from "../host.ts";
 import { lightEffectFields } from "../light-effect-fields.ts";
 import { pluginDeviceSettings, pluginText, settingsWithDefaults } from "../../../plugins/registry.ts";
@@ -84,12 +84,15 @@ export function renderDeviceForm(host: EditorHost, placed: Placement, actions: D
   const mount = placed.mount ?? "ceiling";
   const automatic = kind ? defaultHeight(kind, host.floor ? ceilingAt(host.floor, placed.x, placed.z) : 2.5, light ? mount : null) : 1;
   const set = (patch: Partial<Placement>) => actions.update(patch);
+  const icon = deviceIcon(host, placed.entity_id, placed.icon);
   const mountChange = (value: LampMount) => set({ mount: value, y: null });
   const lampMounts = (["ceiling", "floor", "table", "wall"] as const).map((m): [LampMount, string] => [m, t(`lamp_${m}`)]);
   return html`<section>
     <div class="nf-h3row"><h3>${t("device")}</h3>${actions.lockButton}</div>
     <p class="nf-dev-title">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${kind ? iconPath(kind) : ""} /></svg>
+      ${icon
+        ? html`<ha-icon class="nf-dev-icon" .icon=${icon}></ha-icon>`
+        : html`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${kind ? iconPath(kind) : ""} /></svg>`}
       ${entityName(host.hass, placed.entity_id)}
     </p>
     <div class="nf-form">

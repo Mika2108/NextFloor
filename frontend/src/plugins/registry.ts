@@ -2,7 +2,7 @@
 // the house view: every call into plugin code is guarded and failures are recorded per plugin.
 
 import type { DeviceKind } from "../entities/kinds.ts";
-import type { HassEntity } from "../types.ts";
+import type { HassEntity, HomeAssistant } from "../types.ts";
 import {
   PLUGIN_API_VERSION,
   type DeviceSetting,
@@ -137,6 +137,14 @@ function* matchingDevices(entityId: string, state: HassEntity | undefined) {
 export function pluginKind(entityId: string, state: HassEntity | undefined): DeviceKind | null {
   for (const { device } of matchingDevices(entityId, state)) return device.kind ?? "sensor";
   return null;
+}
+
+/** The Material Design icon ("mdi:…") plugins give the entity's marker, for the editor, which shows no inline SVG; null: none. */
+export function pluginMdiIcon(hass: HomeAssistant, entityId: string): string | null {
+  const state = hass.states[entityId];
+  if (!state) return null;
+  const icon = pluginMarkerPatch({ hass, entityId, state })?.icon?.trim();
+  return icon && /^mdi:[a-z0-9-]+$/i.test(icon) ? icon : null;
 }
 
 /** Collected marker changes of every matching plugin; later plugins win on the same field. */

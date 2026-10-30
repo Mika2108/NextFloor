@@ -14,6 +14,7 @@ import {
   pluginKind,
   pluginLightAnimationNames,
   pluginMarkerPatch,
+  pluginMdiIcon,
   pluginRoomSections,
   pluginStatuses,
   pluginTap,
@@ -133,6 +134,17 @@ test("marker patches: an icon picked in the plan wins, text is capped, a throwin
   const [m] = buildMarkers(hassWith(post), building);
   assert.match(m.icon, /mdi:post-lamp/);
   assert.equal(pluginStatuses().find((s) => s.id === "b")?.errors[0], "match broke");
+});
+
+test("the editor gets a plugin's Material Design icon, not inline SVG or a throwing plugin's", () => {
+  registerPlugin(plugin({ id: "a", devices: [{ match: (id) => id === "camera.yard", marker: () => ({ icon: "mdi:cctv" }) }] }));
+  registerPlugin(plugin({ id: "b", devices: [{ match: (id) => id === "vacuum.robot", marker: () => ({ icon: "<svg viewBox='0 0 24 24'></svg>" }) }] }));
+  registerPlugin(plugin({ id: "c", devices: [{ match: (id) => id === "lawn_mower.m", marker: () => { throw new Error("broke"); } }] }));
+  const hass = hassWith(entity("camera.yard", "idle"), entity("vacuum.robot", "docked"), entity("lawn_mower.m", "docked"));
+  assert.equal(pluginMdiIcon(hass, "camera.yard"), "mdi:cctv");
+  assert.equal(pluginMdiIcon(hass, "vacuum.robot"), null);
+  assert.equal(pluginMdiIcon(hass, "lawn_mower.m"), null);
+  assert.equal(pluginMdiIcon(hass, "camera.gone"), null);
 });
 
 test("room sections render per room and skip empty or failing ones", () => {

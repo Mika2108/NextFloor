@@ -8,6 +8,7 @@ import type { I18nKey } from "../../i18n.ts";
 import { MARKER_SHOWS, type MarkerShow } from "../../model.ts";
 import type { EntityOption } from "./entities.ts";
 import type { EditorHost } from "./host.ts";
+import { pluginMdiIcon } from "../../plugins/registry.ts";
 import "../entity-picker.ts";
 
 const valueOf = (e: Event) => (e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).value;
@@ -105,6 +106,12 @@ export function entityField(host: EditorHost, label: string, value: string | nul
       }}
     ></nf-entity-picker>
   </label>`;
+}
+
+/** The icon a device shows in the editor, as in 3D: the one picked in the plan, else a plugin's; null: its kind's drawing. */
+export function deviceIcon(host: EditorHost, entityId: string, own?: string | null): string | null {
+  if (own) return (own.startsWith("mdi:") ? own : `mdi:${own}`).replace(/[^a-z0-9:-]/gi, "");
+  return host.hass ? pluginMdiIcon(host.hass, entityId) : null;
 }
 
 /** The icon of a marker: a Material Design icon name, with a small preview. */

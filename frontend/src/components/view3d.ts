@@ -22,6 +22,8 @@ import {
   gangEntities,
   isUnavailable,
   kindOf,
+  markerKind,
+  type MarkerKind,
   lightGlow,
   openingEntities,
   openingState,
@@ -99,6 +101,8 @@ export class NfView3d extends LitElement {
     keepRoof: { attribute: false },
     markerMode: { attribute: false },
     markerNames: { attribute: false },
+    markersOutside: { attribute: false },
+    tapInRoom: { type: Boolean },
     heatMode: { attribute: false },
     theme: { attribute: false },
     accent: { attribute: false },
@@ -176,6 +180,10 @@ export class NfView3d extends LitElement {
   declare markerMode: MarkerMode;
   /** Card option marker_names: every device with an own name shows it under its pin. */
   declare markerNames: boolean;
+  /** Card option markers_outside: outside the opened room only these kinds of markers show (null: as in the room). */
+  declare markersOutside: MarkerKind[] | null;
+  /** Card option tap_in_room: a tap switches a device only in the opened room, elsewhere it opens the floor or room. */
+  declare tapInRoom: boolean;
   declare heatMode: HeatMode;
   /** Imported furniture packs (a new list rebuilds pack furniture). */
   declare packs: unknown;
@@ -351,6 +359,8 @@ export class NfView3d extends LitElement {
     this.explode = true;
     this.keepRoof = false;
     this.markerMode = "important";
+    this.markersOutside = null;
+    this.tapInRoom = false;
     this.heatMode = "none";
     this.theme = "neon";
     this.accent = null;
@@ -513,6 +523,7 @@ export class NfView3d extends LitElement {
       this.viewer.setAccent(this.accent ?? null);
       this.viewer.setNavigationLocked(this._locked);
       this.viewer.setFurnishMode(this.furnish);
+      this.viewer.setTapInRoom(this.tapInRoom);
       this.viewer.setSurfaceGrab(this.surfaceGrab ?? null);
       this.viewer.setFurnishTypes(this.furnishTypes ?? null);
       this.viewer.setFloorStack(this.floorStack);
@@ -573,13 +584,16 @@ export class NfView3d extends LitElement {
       if (this.floorId === null) v.resetView();
     }
     if (changed.has("building") || changed.has("theme") || changed.has("floorThumbs") || changed.has("packs")) this.scheduleThumbs();
-    const forced = this.pluginsDirty || ["building", "markerMode", "heatMode", "flows", "alerts", "dimmed"].some((k) => changed.has(k));
+    // markers shown by kind outside the opened room change with the room
+    const byRoom = this.markersOutside ? ["markersOutside", "floorId", "roomId"] : ["markersOutside"];
+    const forced = this.pluginsDirty || ["building", "markerMode", "heatMode", "flows", "alerts", "dimmed", ...byRoom].some((k) => changed.has(k));
     this.pluginsDirty = false;
     if (forced || changed.has("hass")) this.syncDevices(forced);
     if (changed.has("autoOrbit")) v.setAutoOrbit(this.autoOrbit ? 0.06 : 0);
     if (changed.has("_thumbs") || changed.has("_narrowStage")) v.setLabelInset(this._thumbs.length ? (this.narrowThumbs ? 136 : 184) : 0);
     if (changed.has("floorId")) v.setFloor(this.floorId);
     if (changed.has("roomId") && (this.roomId || changed.get("roomId"))) v.selectRoom(this.roomId);
+    if (changed.has("tapInRoom")) v.setTapInRoom(this.tapInRoom);
     if (changed.has("wallMode")) v.setWallMode(this.wallMode);
     if (changed.has("solidWalls")) v.setPaintedWalls(this.solidWalls);
     if (changed.has("explode")) v.setExplode(this.explode);
@@ -885,6 +899,15 @@ export class NfView3d extends LitElement {
         const plate = packItem(f.type);
         // a curtain, roller screen, awning or gate: a tap opens the menu of the cover it follows
         if (f.cover_entity && hasMovingParts(plate)) targets.set(f.id, f.cover_entity);
+        // an item with its own tap action: a tap runs it (and nothing else of the item)
+        if (f.tap?.action) {
+          targets.set(f.id, `tap:${f.id}`);
+          // and a pin above it, like a device's, that does the same
+          const room = floor.rooms.find((r) => r.points.length >= 3 && pointInPolygon([f.x, f.z], r.points));
+          const name = f.name || furnitureName(hass, f.type);
+          markers.push({ id: `tap:${f.id}`, floorId: floor.id, roomId: room?.id ?? null, x: f.x, z: f.z, y: markerHeight(f) + mountBase(floor, f), icon: mdiIcon(f.icon || "gesture-tap-button"), name, ownName: f.name || undefined, showName: !!f.show_name, text: "", active: false, unavailable: false, glow: null, furnitureId: f.id, show: f.marker ?? undefined, fromFurniture: true });
+          continue;
+        }
         if (plate?.gangs) {
           const gangs = gangGlows(hass, (f.gang_entities ?? []).slice(0, plate.gangs), /socket/.test(f.type));
           if (gangs.length) screens.set(f.id, { color: gangs[0].color, level: gangs[0].level, gangs });
@@ -1225,7 +1248,10 @@ export class NfView3d extends LitElement {
     if (this.furnish && !m.fromFurniture) return true;
     // the device's own setting wins over the marker mode (except "none", which hides every marker)
     if (m.show === "never" || this.markerMode === "none") return false;
-    if (m.show === "always" || this.markerMode === "all") return true;
+    if (m.show === "always") return true;
+    // outside the opened room (the house, a floor, another room): the kinds chosen in the card
+    if (this.markersOutside && !(this.roomId && m.roomId === this.roomId)) return this.markersOutside.includes(markerKind(m.id, !!m.lamp));
+    if (this.markerMode === "all") return true;
     if (m.lamp) return false;
     const kind = kindOf(m.id);
     if (kind === "light") return false;
@@ -1233,6 +1259,8 @@ export class NfView3d extends LitElement {
     if (m.fromFurniture && kind === "fan") return true;
     // a bin to put out, post in the box, a thirsty plant: important while it is due
     if (m.care) return m.active;
+    // an item with its own tap action: its pin is the way to find it
+    if (m.id.startsWith("tap:")) return true;
     if (m.fromFurniture) return (m.power ?? 0) >= 1 || (kind === "media" && m.active) || (!!m.energyDevice && !!m.text);
     return true;
   }
@@ -1789,6 +1817,11 @@ export class NfView3d extends LitElement {
     // in the past nothing is switched
     if (this._travel) return;
     if (entityId.startsWith("gang:")) return this.tapPlate(entityId.slice(5), x, y);
+    if (entityId.startsWith("tap:")) {
+      const f = this.building?.floors.flatMap((fl) => fl.furniture).find((it) => it.id === entityId.slice(4));
+      if (f?.tap) runButton(this.hass, this, f.tap);
+      return;
+    }
     // the street end of the grid cable opens the grid sensor: the balance's, else the meter's (#223)
     if (entityId === "grid") {
       const b = this.building;

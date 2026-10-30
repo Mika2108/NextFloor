@@ -289,6 +289,8 @@ export class NextFloorCard extends LitElement {
       ?showStats=${c?.stats ?? false}
       .markerMode=${c?.markers ?? "important"}
       .markerNames=${c?.marker_names === true}
+      .markersOutside=${c?.markers_outside ?? null}
+      ?tapInRoom=${c?.tap_in_room === true}
       .central=${c?.central !== false}
       .buttons=${c?.buttons?.map((button, i) => ({ id: `card_${i}`, ...button })) ?? null}
       .heatMode=${s.heat}

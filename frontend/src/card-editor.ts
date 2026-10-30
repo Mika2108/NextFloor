@@ -3,6 +3,7 @@
 
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { fetchBuilding } from "./api.ts";
+import { MARKER_KINDS, type MarkerKind } from "./entities/kinds.ts";
 import { CARD_CONTROLS, type CardConfig, type CardControl } from "./card-config.ts";
 import { checkbox, choice, DEFAULTS, flagOption, followOrForce, numberChoice, switchOption, textField, type FormContext } from "./card-editor/form.ts";
 import { editorStyles } from "./card-editor/styles.ts";
@@ -220,6 +221,28 @@ export class NextFloorCardEditor extends LitElement {
       <p class="hint">${f.t("card_quality_hint")}</p>`;
   }
 
+  /** Which kinds of markers show outside the opened room (off: the same as in the room). */
+  private markersOutside(): TemplateResult {
+    const f = this.form;
+    const chosen = f.value.markers_outside;
+    // switched on, every kind but the lamps to start with (they are their own target in 3D)
+    return html`${checkbox(f, !!chosen, "card_markers_outside", "card_markers_outside_hint", (on) => f.set("markers_outside", on ? MARKER_KINDS.filter((k) => k !== "light") : undefined))}
+    ${chosen
+      ? html`<div class="sub">
+          ${MARKER_KINDS.map(
+            (kind: MarkerKind) => html`<label class="chip">
+              <input
+                type="checkbox"
+                .checked=${chosen.includes(kind)}
+                @change=${(e: Event) => f.set("markers_outside", (e.target as HTMLInputElement).checked ? MARKER_KINDS.filter((k) => k === kind || chosen.includes(k)) : chosen.filter((k) => k !== kind))}
+              />
+              ${f.t(`marker_kind_${kind}` as I18nKey)}
+            </label>`,
+          )}
+        </div>`
+      : nothing}`;
+  }
+
   /** What the card shows: markers, heat map, flows, holograms, and the plain switches. */
   private showSection(): TemplateResult {
     const f = this.form;
@@ -230,7 +253,7 @@ export class NextFloorCardEditor extends LitElement {
         ${choice(f, "heatmap", "heatmap", [["none", "heat_off"], ["temperature", "heat_temperature"], ["humidity", "heat_humidity"], ["co2", "heat_co2"], ["values", "heat_values"]], v.heatmap)}
         ${followOrForce(f, "flows", "flows", v.flows)} ${followOrForce(f, "holograms", "holos", v.holograms)}
       </div>
-      ${this.controlsSection()} ${this.floorThumbsToggle()} ${switchOption(f, "room_names", "card_room_names")} ${switchOption(f, "energy", "card_energy")}
+      ${switchOption(f, "tap_in_room", "card_tap_in_room", "card_tap_in_room_hint")} ${this.markersOutside()} ${this.controlsSection()} ${this.floorThumbsToggle()} ${switchOption(f, "room_names", "card_room_names")} ${switchOption(f, "energy", "card_energy")}
       ${switchOption(f, "room_buttons", "card_room_buttons", "card_room_buttons_hint")} ${switchOption(f, "room_panel", "card_room_panel", "card_room_panel_hint")} ${switchOption(f, "fullscreen_button", "card_fullscreen_button", "card_fullscreen_button_hint")}
       ${switchOption(f, "explode", "card_explode")} ${switchOption(f, "roof_fade", "card_roof_fade", "card_roof_fade_hint")} ${switchOption(f, "stats", "card_stats", "card_stats_hint")}`;
   }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { appColor, assumedCover, defaultHeight, domainOf, entityName, fromCelsius, isActive, isPlaceable, isStatusSensor, isUnavailable, kelvinToRgb, kindOf, lightGlow, tempUnit, toCelsius } from "./kinds.ts";
+import { appColor, assumedCover, defaultHeight, domainOf, entityName, fromCelsius, isActive, isPlaceable, isStatusSensor, isUnavailable, kelvinToRgb, kindOf, lightGlow, markerKind, tempUnit, toCelsius } from "./kinds.ts";
 import { entity, hassOf } from "./fixtures.ts";
 
 test("the domain decides the kind; unknown domains have none", () => {
@@ -113,4 +113,16 @@ test("a cover that only sends commands stays unknown but still counts as usable"
   assert.equal(assumedCover(entity("cover.garage", "unavailable", { assumed_state: true })), false);
   assert.equal(assumedCover(entity("switch.x", "unknown", { assumed_state: true })), false);
   assert.equal(assumedCover(undefined), false);
+});
+
+test("a marker's kind: its entity's, or NextFloor's own markers", () => {
+  assert.equal(markerKind("light.kitchen"), "light");
+  assert.equal(markerKind("lamp:f1"), "light");
+  assert.equal(markerKind("sensor.x", true), "light");
+  assert.equal(markerKind("tap:f2"), "tap");
+  assert.equal(markerKind("gang:f3"), "switch");
+  assert.equal(markerKind("grid"), "sensor");
+  assert.equal(markerKind("binary_sensor.door"), "binary");
+  assert.equal(markerKind("vacuum.robot"), "other");
+  assert.equal(markerKind("script.x"), "other");
 });

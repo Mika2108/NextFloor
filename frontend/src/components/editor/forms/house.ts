@@ -17,7 +17,7 @@ const MAX_BUTTONS = 20;
 const MAX_PRESETS = 30;
 const PRESET_TYPES = ["music", "url", "playlist", "SPOTIFY", "AMAZON_MUSIC", "TUNEIN", "APPLE_MUSIC"];
 
-const TARGET_EXAMPLES: Record<ButtonAction, string> = { navigate: "/lovelace/rollos", more_info: "cover.wohnzimmer", service: "script.turn_on", fire_dom_event: "" };
+export const TARGET_EXAMPLES: Record<ButtonAction, string> = { navigate: "/lovelace/rollos", more_info: "cover.wohnzimmer", service: "script.turn_on", fire_dom_event: "" };
 
 const iconButton = (title: string, label: string, onClick: () => void, disabled = false) => html`<button class="nf-pin" title=${title} ?disabled=${disabled} @click=${onClick}>${label}</button>`;
 
@@ -58,7 +58,7 @@ function mediaPresets(host: EditorHost): TemplateResult {
 }
 
 /** The extra data of an own button, as JSON; a text that is not an object is flagged on the field instead of being stored. */
-function dataField(host: EditorHost, button: CustomButton, onData: (data: Record<string, unknown> | null) => void): TemplateResult {
+export function dataField(host: EditorHost, button: Pick<CustomButton, "action" | "data">, onData: (data: Record<string, unknown> | null) => void): TemplateResult {
   const example = button.action === "fire_dom_event" ? '{"browser_mod": {"service": "browser_mod.popup", "data": {"title": "Rollos", "content": {"type": "custom:my-cover-card"}}}}' : '{"entity_id": "script.party"}';
   const onChange = (e: Event) => {
     const area = e.target as HTMLTextAreaElement;

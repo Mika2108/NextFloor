@@ -11,6 +11,10 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 - **Choose the markers outside the opened room** by @Mika2108 (#26): card option `markers_outside` with one chip per kind (lights, blinds, heating, media, switches, fans, locks, contacts and detectors, sensors, furniture with an action, other). In the opened room the usual marker setting applies.
 - **Own tap action for furniture** by @Mika2108 (#26): *Tapping the item* in the furniture form runs one of the own-button actions (open a path, an entity's details, a service, a browser_mod popup) instead of the usual tap, with a marker above the item.
 
+### Changed
+
+- **Hide any entity of a room** (#24): in a room's device list, the further entities of a device (behind *more*) can now be hidden from the room and have their state hidden too, like the device's main entity.
+
 ### Fixed
 
 - **Editing doors and windows froze the plan** (#25): when the form of a selected item could not be drawn, the whole editor stopped updating. A new door only showed up after a second click, the door form did not open and a dragged door stayed put. The plan now keeps working, and the side bar shows what went wrong (with a way back) so it can be reported.

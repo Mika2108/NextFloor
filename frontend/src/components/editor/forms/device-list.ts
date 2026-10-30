@@ -43,8 +43,8 @@ function rowFor(host: EditorHost, room: Room, here: Set<string>, elsewhere: Map<
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${iconPath((host.hass ? entityKind(host.hass, id) : kindOf(id)) ?? "sensor")} /></svg>
         <span>${entityName(host.hass, id, nameArea)}${other ? html`<small class="nf-muted"> · ${host.t("devices_placed_in", { room: other })}</small>` : nothing}</span>
       </button>
-      ${host.admin && !extra ? roomFlag(host, hidden, id, "hidden", ["🙈", "👁"], ["panel_unhide", "panel_hide"], actions) : nothing}
-      ${host.admin && !extra && !isHidden ? roomFlag(host, noState, id, "no_state", ["∅", "Aa"], ["panel_state_show", "panel_state_hide"], actions) : nothing}
+      ${host.admin ? roomFlag(host, hidden, id, "hidden", ["🙈", "👁"], ["panel_unhide", "panel_hide"], actions) : nothing}
+      ${host.admin && !isHidden ? roomFlag(host, noState, id, "no_state", ["∅", "Aa"], ["panel_state_show", "panel_state_hide"], actions) : nothing}
       ${host.admin && !placed ? roomFlag(host, pinned, id, "panel", ["★", "☆"], ["panel_unpin", "panel_pin"], actions) : nothing}
       ${host.admin
         ? placed

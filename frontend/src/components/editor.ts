@@ -2751,7 +2751,7 @@ export class NfEditor extends LitElement {
   /** The sidebar: always beside the plan, or, next to the 3D pane, folded to a strip while idle. */
   private renderAside(floor: Floor | undefined) {
     const folding = this._split && !this._sidePinned && !this.narrow;
-    if (!folding) return html`<aside class="nf-side">${this.renderPinRow()}${this.renderSide(floor)}</aside>`;
+    if (!folding) return html`<aside class="nf-side">${this.renderPinRow()}${this.safeSide(floor)}</aside>`;
     const open = this._sideOpen;
     if (!open) {
       return html`<aside class="nf-side nf-side-strip">
@@ -2767,8 +2767,22 @@ export class NfEditor extends LitElement {
     return html`<aside class="nf-side nf-side-strip"></aside>
       <aside class="nf-side nf-side-overlay">
         ${this.renderPinRow(true)}
-        ${this.renderSide(floor)}
+        ${this.safeSide(floor)}
       </aside>`;
+  }
+
+  /**
+   * The side bar. A form that fails to draw shows the error and a way back instead: an exception in render would
+   * otherwise stop the whole editor, plan included, from updating while the item stays selected.
+   */
+  private safeSide(floor: Floor | undefined) {
+    try {
+      return this.renderSide(floor);
+    } catch (error) {
+      console.error("NextFloor: the side bar could not be drawn", error);
+      return html`<button class="nf-btn nf-back" @click=${() => this.selectItem("room", null)}>‹ ${this.t("back_to_floor")}</button>
+        <p class="nf-note">${this.t("side_failed", { error: error instanceof Error ? error.message : String(error) })}</p>`;
+    }
   }
 
   private renderPinRow(overlay = false) {

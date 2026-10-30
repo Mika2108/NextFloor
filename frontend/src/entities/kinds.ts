@@ -42,7 +42,8 @@ export const assumedCover = (st: HassEntity | undefined): boolean => !!st && st.
 
 /** The entity's name without the area in front of it: "Lounge Ceiling light" in the Lounge reads "Ceiling light". */
 export function entityName(hass: HomeAssistant | undefined, entityId: string, areaName?: string): string {
-  const name = (hass?.states[entityId]?.attributes.friendly_name as string | undefined) ?? hass?.entities?.[entityId]?.name ?? entityId;
+  // a friendly_name set in YAML can be a number: the name is always text
+  const name = String(hass?.states[entityId]?.attributes.friendly_name ?? hass?.entities?.[entityId]?.name ?? entityId);
   if (!areaName || name.length <= areaName.length + 1) return name;
   if (!name.toLowerCase().startsWith(`${areaName.toLowerCase()} `)) return name;
   const rest = name.slice(areaName.length + 1);

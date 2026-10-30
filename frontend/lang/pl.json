@@ -177,6 +177,7 @@
   "area_m2": "{a} m²",
   "overlap_warning": "Pomieszczenia nachodzą na siebie – ściany są tam niepełne.",
   "read_only": "Tylko administratorzy mogą edytować plan.",
+  "side_failed": "Nie udało się wyświetlić tego formularza ({error}). Plan nadal działa. Zgłoś ten tekst w zgłoszeniu na GitHubie.",
   "mat_wood": "Drewno",
   "mat_oak": "Dąb",
   "mat_tiles": "Płytki",

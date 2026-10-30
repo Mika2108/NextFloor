@@ -8,6 +8,11 @@ All notable changes to NextFloor, newest first. Every release lists what is **Ad
 
 - **Wall-mounted air conditioner** (#23): the *Utility & building services* pack has a split air conditioner, an indoor unit for the wall and an outdoor unit. The indoor unit links to a climate entity like the wall thermostat.
 
+### Fixed
+
+- **Editing doors and windows froze the plan** (#25): when the form of a selected item could not be drawn, the whole editor stopped updating. A new door only showed up after a second click, the door form did not open and a dragged door stayed put. The plan now keeps working, and the side bar shows what went wrong (with a way back) so it can be reported.
+- An entity whose name is a number (set in YAML) no longer breaks the entity lists in the editor.
+
 ## 0.14.0
 
 ### Added

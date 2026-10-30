@@ -177,6 +177,7 @@
   "area_m2": "{a} m²",
   "overlap_warning": "Ruimtes overlappen; daar zijn de muren onvolledig.",
   "read_only": "Alleen beheerders kunnen de plattegrond bewerken.",
+  "side_failed": "Dit formulier kon niet worden getoond ({error}). De plattegrond blijft bruikbaar. Meld de tekst graag in een GitHub-issue.",
   "mat_wood": "Hout",
   "mat_oak": "Eiken",
   "mat_tiles": "Tegels",

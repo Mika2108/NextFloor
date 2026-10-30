@@ -29,6 +29,12 @@ test("a name loses the area it starts with, but not when nothing would be left",
   assert.equal(entityName(hass, "light.missing"), "light.missing");
 });
 
+test("a friendly name that is a number (set in YAML) still reads as text", () => {
+  const hass = hassOf([entity("lock.door", "locked", { friendly_name: 12 })]);
+  assert.equal(entityName(hass, "lock.door"), "12");
+  assert.equal(entityName(hass, "lock.door", "Hall"), "12");
+});
+
 test("what counts as active for each kind", () => {
   assert.equal(isActive(entity("light.a", "on")), true);
   assert.equal(isActive(entity("cover.a", "opening")), true);

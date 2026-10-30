@@ -177,6 +177,7 @@
   "area_m2": "{a} m²",
   "overlap_warning": "Las estancias se solapan; ahí las paredes están incompletas.",
   "read_only": "Solo los administradores pueden editar el plano.",
+  "side_failed": "No se pudo mostrar este formulario ({error}). El plano sigue funcionando. Por favor, informa del texto en un issue de GitHub.",
   "mat_wood": "Madera",
   "mat_oak": "Roble",
   "mat_tiles": "Baldosas",

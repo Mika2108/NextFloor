@@ -163,6 +163,7 @@
  "area_m2": "{a} m²",
  "overlap_warning": "Des pièces se chevauchent – les murs y sont incomplets.",
  "read_only": "Seuls les administrateurs peuvent modifier le plan.",
+ "side_failed": "Ce formulaire n'a pas pu s'afficher ({error}). Le plan reste utilisable. Merci de signaler ce texte dans une issue GitHub.",
  "mat_wood": "Bois",
  "mat_oak": "Chêne",
  "mat_tiles": "Carrelage",

@@ -177,6 +177,7 @@
   "area_m2": "{a} m²",
   "overlap_warning": "Rum överlappar – väggarna är ofullständiga där.",
   "read_only": "Endast administratörer kan redigera planritningen.",
+  "side_failed": "Formuläret kunde inte visas ({error}). Planritningen går fortfarande att använda. Rapportera gärna texten i ett GitHub-ärende.",
   "mat_wood": "Trä",
   "mat_oak": "Ek",
   "mat_tiles": "Kakel",

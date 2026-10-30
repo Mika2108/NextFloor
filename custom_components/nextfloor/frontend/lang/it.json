@@ -177,6 +177,7 @@
   "area_m2": "{a} m²",
   "overlap_warning": "Le stanze si sovrappongono: lì le pareti sono incomplete.",
   "read_only": "Solo gli amministratori possono modificare la planimetria.",
+  "side_failed": "Impossibile mostrare questo modulo ({error}). La planimetria resta utilizzabile. Segnala il testo in una issue su GitHub.",
   "mat_wood": "Legno",
   "mat_oak": "Rovere",
   "mat_tiles": "Piastrelle",

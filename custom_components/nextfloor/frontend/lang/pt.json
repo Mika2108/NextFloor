@@ -177,6 +177,7 @@
   "area_m2": "{a} m²",
   "overlap_warning": "As divisões sobrepõem-se; aí as paredes ficam incompletas.",
   "read_only": "Só os administradores podem editar a planta.",
+  "side_failed": "Não foi possível mostrar este formulário ({error}). A planta continua utilizável. Por favor, reporta o texto numa issue no GitHub.",
   "mat_wood": "Madeira",
   "mat_oak": "Carvalho",
   "mat_tiles": "Azulejo",
